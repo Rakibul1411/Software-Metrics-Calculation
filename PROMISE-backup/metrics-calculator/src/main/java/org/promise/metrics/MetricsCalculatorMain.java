@@ -130,11 +130,7 @@ public class MetricsCalculatorMain {
         System.out.println("  mvn exec:java -Dexec.args=\"../source\\ code/ant/jakarta-ant-1.3/src/main\"");
         System.out.println();
         System.out.println("Calculated Metrics:");
-        System.out.println("  - WMC     : Weighted Methods per Class (sum of cyclomatic complexity)");
         System.out.println("  - NPM     : Number of Public Methods");
         System.out.println("  - LOC     : Lines of Code (excluding blanks and comments)");
-        System.out.println("  - AMC     : Average Method Complexity");
-        System.out.println("  - MAX_CC  : Maximum Cyclomatic Complexity");
-        System.out.println("  - AVG_CC  : Average Cyclomatic Complexity");
     }
 }

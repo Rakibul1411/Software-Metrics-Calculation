@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>Java Metrics Calculator</name>
-    <description>Calculate code metrics (WMC, CC, LOC, NPM, etc.) from Java source code</description>
+    <description>Calculate code metrics (NPM, LOC etc.) from Java source code</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -23,7 +23,7 @@
         <dependency>
             <groupId>org.eclipse.jdt</groupId>
             <artifactId>org.eclipse.jdt.core</artifactId>
-            <version>3.32.0</version>
+            <version>3.37.0</version>
         </dependency>
 
         <!-- Apache Commons CSV for CSV export -->
@@ -37,7 +37,7 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.11.0</version>
+            <version>2.16.1</version>
         </dependency>
     </dependencies>
 

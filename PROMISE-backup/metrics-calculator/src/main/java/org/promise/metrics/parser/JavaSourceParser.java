@@ -3,7 +3,6 @@ package org.promise.metrics.parser;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.*;
-import org.promise.metrics.calculator.ComplexityCalculator;
 import org.promise.metrics.calculator.LOCCalculator;
 import org.promise.metrics.calculator.NPMCalculator;
 import org.promise.metrics.model.ClassMetrics;
@@ -29,6 +28,10 @@ public class JavaSourceParser {
      */
     public static List<ClassMetrics> parseFile(Path filePath) throws IOException {
         String sourceCode = new String(Files.readAllBytes(filePath));
+//        System.out.println(
+//                "Parsing file:" + filePath.toString() +
+//                        "\nSource code: " + sourceCode
+//        );
         return parseSource(sourceCode, filePath.toString());
     }
 
@@ -106,15 +109,6 @@ public class JavaSourceParser {
         ClassMetrics metrics = new ClassMetrics(fullyQualifiedName);
 
         try {
-            // Calculate complexity metrics
-            ComplexityCalculator.ComplexityResult complexity =
-                    ComplexityCalculator.calculateComplexity(compilationUnit);
-
-            metrics.setWmc(complexity.getWmc());
-            metrics.setMaxCC(complexity.getMaxCC());
-            metrics.setAvgCC(complexity.getAvgCC());
-            metrics.setNumberOfMethods(complexity.getMethodCount());
-
             // Calculate NPM
             int npm = NPMCalculator.calculateNPMForType(typeDeclaration);
             metrics.setNpm(npm);
@@ -122,9 +116,6 @@ public class JavaSourceParser {
             // Calculate LOC
             int loc = LOCCalculator.calculateLOCForType(compilationUnit, typeDeclaration, sourceCode);
             metrics.setLoc(loc);
-
-            // Calculate derived metrics (AMC)
-            metrics.calculateDerivedMetrics();
 
         } catch (Exception e) {
             System.err.println("Error calculating metrics for " + fullyQualifiedName + ": " + e.getMessage());
@@ -164,7 +155,7 @@ public class JavaSourceParser {
     }
 
     /**
-     * Calculate metrics for nested type with proper naming (OuterClass$InnerClass).
+     * Calculate metrics for a nested type with proper naming (OuterClass$InnerClass).
      */
     private static ClassMetrics calculateNestedTypeMetrics(CompilationUnit compilationUnit,
                                                            TypeDeclaration nestedType,
@@ -183,22 +174,12 @@ public class JavaSourceParser {
         ClassMetrics metrics = new ClassMetrics(fullyQualifiedName);
 
         try {
-            // For nested classes, we need to create a visitor specifically for this type
-            ComplexityCalculator.ComplexityResult complexity =
-                    calculateComplexityForTypeNode(nestedType);
-
-            metrics.setWmc(complexity.getWmc());
-            metrics.setMaxCC(complexity.getMaxCC());
-            metrics.setAvgCC(complexity.getAvgCC());
-            metrics.setNumberOfMethods(complexity.getMethodCount());
-
+            // Calculate NPM for nested type
             int npm = NPMCalculator.calculateNPMForType(nestedType);
             metrics.setNpm(npm);
 
             int loc = LOCCalculator.calculateLOCForType(compilationUnit, nestedType, sourceCode);
             metrics.setLoc(loc);
-
-            metrics.calculateDerivedMetrics();
 
         } catch (Exception e) {
             System.err.println("Error calculating metrics for nested class " + fullyQualifiedName);
@@ -206,112 +187,5 @@ public class JavaSourceParser {
         }
 
         return metrics;
-    }
-
-    /**
-     * Calculate complexity for a specific type node (used for nested classes).
-     */
-    private static ComplexityCalculator.ComplexityResult calculateComplexityForTypeNode(TypeDeclaration typeNode) {
-        MethodDeclaration[] methods = typeNode.getMethods();
-        List<Integer> methodComplexities = new ArrayList<>();
-
-        for (MethodDeclaration method : methods) {
-            int cc = calculateMethodCC(method);
-            methodComplexities.add(cc);
-        }
-
-        int wmc = 0;
-        int maxCC = 0;
-        for (int cc : methodComplexities) {
-            wmc += cc;
-            if (cc > maxCC) {
-                maxCC = cc;
-            }
-        }
-
-        double avgCC = methodComplexities.size() > 0
-                ? (double) wmc / methodComplexities.size()
-                : 0.0;
-
-        return new ComplexityCalculator.ComplexityResult(wmc, maxCC, avgCC, methodComplexities.size());
-    }
-
-    /**
-     * Calculate cyclomatic complexity for a single method.
-     */
-    private static int calculateMethodCC(MethodDeclaration method) {
-        CCVisitor visitor = new CCVisitor();
-        if (method.getBody() != null) {
-            method.getBody().accept(visitor);
-        }
-        return 1 + visitor.decisionPoints;
-    }
-
-    /**
-     * Simple visitor to count decision points.
-     */
-    private static class CCVisitor extends ASTVisitor {
-        int decisionPoints = 0;
-
-        @Override
-        public boolean visit(IfStatement node) {
-            decisionPoints++;
-            return true;
-        }
-
-        @Override
-        public boolean visit(ForStatement node) {
-            decisionPoints++;
-            return true;
-        }
-
-        @Override
-        public boolean visit(EnhancedForStatement node) {
-            decisionPoints++;
-            return true;
-        }
-
-        @Override
-        public boolean visit(WhileStatement node) {
-            decisionPoints++;
-            return true;
-        }
-
-        @Override
-        public boolean visit(DoStatement node) {
-            decisionPoints++;
-            return true;
-        }
-
-        @Override
-        public boolean visit(SwitchCase node) {
-            decisionPoints++;
-            return true;
-        }
-
-        @Override
-        public boolean visit(CatchClause node) {
-            decisionPoints++;
-            return true;
-        }
-
-        @Override
-        public boolean visit(ConditionalExpression node) {
-            decisionPoints++;
-            return true;
-        }
-
-        @Override
-        public boolean visit(InfixExpression node) {
-            InfixExpression.Operator operator = node.getOperator();
-            if (operator == InfixExpression.Operator.CONDITIONAL_AND ||
-                    operator == InfixExpression.Operator.CONDITIONAL_OR) {
-                decisionPoints++;
-                if (node.hasExtendedOperands()) {
-                    decisionPoints += node.extendedOperands().size();
-                }
-            }
-            return true;
-        }
     }
 }
