@@ -19,7 +19,7 @@ public class CSVExporter {
      *
      * @param metricsList List of class metrics to export
      * @param outputPath  Path to the output CSV file
-     * @throws IOException If file cannot be written
+     * @throws IOException If a file cannot be written
      */
     public static void exportToCSV(List<ClassMetrics> metricsList, Path outputPath) throws IOException {
         // Sort by fully qualified name
@@ -29,18 +29,14 @@ public class CSVExporter {
              CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
 
             // Write header
-            csvPrinter.printRecord("name", "wmc", "npm", "loc", "amc", "max_cc", "avg_cc");
+            csvPrinter.printRecord("name", "npm", "loc");
 
             // Write data rows
             for (ClassMetrics metrics : metricsList) {
                 csvPrinter.printRecord(
                         metrics.getFullyQualifiedName(),
-                        metrics.getWmc(),
                         metrics.getNpm(),
-                        metrics.getLoc(),
-                        String.format("%.10g", metrics.getAmc()),  // Use scientific notation if needed
-                        metrics.getMaxCC(),
-                        String.format("%.10g", metrics.getAvgCC())
+                        metrics.getLoc()
                 );
             }
         }
@@ -53,8 +49,8 @@ public class CSVExporter {
      *
      * @param metricsList List of class metrics
      * @param outputPath  Output file path
-     * @param includeAllColumns Whether to include placeholder columns for full 22-column format
-     * @throws IOException If file cannot be written
+     * @param includeAllColumns Whether to include placeholder columns for the full 22-column format
+     * @throws IOException If a file cannot be written
      */
     public static void exportToCSVWithFullFormat(List<ClassMetrics> metricsList, Path outputPath,
                                                   boolean includeAllColumns) throws IOException {
@@ -75,7 +71,7 @@ public class CSVExporter {
                 for (ClassMetrics metrics : metricsList) {
                     csvPrinter.printRecord(
                             metrics.getFullyQualifiedName(),
-                            metrics.getWmc(),
+                            0,  // wmc - not implemented
                             0,  // dit - not implemented
                             0,  // noc - not implemented
                             0,  // cbo - not implemented
@@ -92,25 +88,21 @@ public class CSVExporter {
                             0,  // cam - not implemented
                             0,  // ic - not implemented
                             0,  // cbm - not implemented
-                            String.format("%.10g", metrics.getAmc()),
-                            metrics.getMaxCC(),
-                            String.format("%.10g", metrics.getAvgCC()),
+                            0,  // amc - not implemented
+                            0,  // max_cc - not calculable from source
+                            0,  // avg_cc - not calculable from source
                             0   // bug - not calculable from source
                     );
                 }
             } else {
                 // Write only implemented columns
-                csvPrinter.printRecord("name", "wmc", "npm", "loc", "amc", "max_cc", "avg_cc");
+                csvPrinter.printRecord("name", "npm", "loc");
 
                 for (ClassMetrics metrics : metricsList) {
                     csvPrinter.printRecord(
                             metrics.getFullyQualifiedName(),
-                            metrics.getWmc(),
                             metrics.getNpm(),
-                            metrics.getLoc(),
-                            String.format("%.10g", metrics.getAmc()),
-                            metrics.getMaxCC(),
-                            String.format("%.10g", metrics.getAvgCC())
+                            metrics.getLoc()
                     );
                 }
             }
@@ -120,35 +112,26 @@ public class CSVExporter {
     }
 
     /**
-     * Print metrics summary to console.
+     * Print metrics summary to the console.
      */
     public static void printSummary(List<ClassMetrics> metricsList) {
         System.out.println("\n=== Metrics Summary ===");
         System.out.println("Total classes analyzed: " + metricsList.size());
 
         if (!metricsList.isEmpty()) {
-            int totalWMC = 0;
             int totalNPM = 0;
             int totalLOC = 0;
-            int maxCC = 0;
 
             for (ClassMetrics metrics : metricsList) {
-                totalWMC += metrics.getWmc();
                 totalNPM += metrics.getNpm();
                 totalLOC += metrics.getLoc();
-                if (metrics.getMaxCC() > maxCC) {
-                    maxCC = metrics.getMaxCC();
-                }
             }
 
-            double avgWMC = (double) totalWMC / metricsList.size();
             double avgNPM = (double) totalNPM / metricsList.size();
             double avgLOC = (double) totalLOC / metricsList.size();
 
-            System.out.println("Average WMC: " + String.format("%.2f", avgWMC));
             System.out.println("Average NPM: " + String.format("%.2f", avgNPM));
             System.out.println("Average LOC: " + String.format("%.2f", avgLOC));
-            System.out.println("Maximum CC found: " + maxCC);
             System.out.println("Total LOC: " + totalLOC);
         }
     }
