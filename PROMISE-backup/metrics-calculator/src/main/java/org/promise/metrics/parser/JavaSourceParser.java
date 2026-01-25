@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.compiler.IProblem;
@@ -13,6 +14,7 @@ import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.promise.metrics.calculator.CBOCalculator;
 import org.promise.metrics.calculator.DITCalculator;
 import org.promise.metrics.calculator.LOCCalculator;
 import org.promise.metrics.calculator.NOCCalculator;
@@ -127,6 +129,10 @@ public class JavaSourceParser {
             // Calculate WMC (Weighted Methods per Class)
             int wmc = WMCCalculator.calculateWMCForType(typeDeclaration);
             metrics.setWmc(wmc);
+
+            // Extract dependencies for CBO calculation (two-pass approach)
+            Set<String> dependencies = CBOCalculator.extractDependencies(typeDeclaration, fullyQualifiedName);
+            metrics.setDependencies(dependencies);
 
             // Calculate NPM
             int npm = NPMCalculator.calculateNPMForType(typeDeclaration);

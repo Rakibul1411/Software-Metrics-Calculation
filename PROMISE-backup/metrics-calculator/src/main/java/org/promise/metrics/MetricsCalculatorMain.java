@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.promise.metrics.calculator.CBOCalculator;
 import org.promise.metrics.calculator.DITCalculator;
 import org.promise.metrics.calculator.NOCCalculator;
 import org.promise.metrics.export.CSVExporter;
@@ -117,7 +118,37 @@ public class MetricsCalculatorMain {
         System.out.println("Calculating DIT (Depth of Inheritance Tree) for all classes...");
         calculateDITForAllClasses(allMetrics);
 
+        // Fourth pass: Calculate CBO (bidirectional coupling) for all classes
+        System.out.println("Calculating CBO (Coupling Between Objects) for all classes...");
+        calculateCBOForAllClasses(allMetrics);
+
         return allMetrics;
+    }
+
+    /**
+     * Calculate CBO (Coupling Between Objects) for all classes.
+     * This requires knowing all class dependencies (bidirectional coupling).
+     */
+    private static void calculateCBOForAllClasses(List<ClassMetrics> allMetrics) {
+        CBOCalculator cboCalculator = new CBOCalculator();
+
+        // First pass: register all classes and their dependencies
+        for (ClassMetrics metrics : allMetrics) {
+            cboCalculator.registerClass(
+                    metrics.getFullyQualifiedName(),
+                    metrics.getDependencies()
+            );
+        }
+
+        // Second pass: calculate CBO, CA, CE for each class
+        for (ClassMetrics metrics : allMetrics) {
+            int cbo = cboCalculator.calculateCBO(metrics.getFullyQualifiedName());
+            int ca = cboCalculator.calculateCA(metrics.getFullyQualifiedName());
+            int ce = cboCalculator.calculateCE(metrics.getFullyQualifiedName());
+            metrics.setCbo(cbo);
+            metrics.setCa(ca);
+            metrics.setCe(ce);
+        }
     }
 
     /**
@@ -190,9 +221,10 @@ public class MetricsCalculatorMain {
         System.out.println();
         System.out.println("Calculated Metrics:");
         System.out.println("  - WMC     : Weighted Methods per Class (method count)");
+        System.out.println("  - DIT     : Depth of Inheritance Tree");
+        System.out.println("  - NOC     : Number of Children (immediate subclasses)");
+        System.out.println("  - CBO     : Coupling Between Objects");
         System.out.println("  - NPM     : Number of Public Methods");
         System.out.println("  - LOC     : Lines of Code (excluding blanks and comments)");
-        System.out.println("  - NOC     : Number of Children (immediate subclasses)");
-        System.out.println("  - DIT     : Depth of Inheritance Tree");
     }
 }
