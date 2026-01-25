@@ -9,21 +9,20 @@ import java.util.List;
 
 /**
  * Calculator for Lines of Code (LOC).
- * PROMISE dataset LOC: counts all non-blank lines within the class body,
- * including lines with code (even if they also have comments).
- * Pure comment-only lines are excluded.
+ * This implementation counts ALL non-blank lines inside the class body,
+ * including all comments (Javadoc, block comments, line comments).
+ * Lines outside the class (license headers, package, imports) are excluded.
  */
 public class LOCCalculator {
 
     /**
-     * Calculate LOC for a compilation unit (class).
+     * Calculate LOC for a compilation unit (entire file).
      *
      * @param compilationUnit The parsed Java file
      * @param sourceCode      The original source code
-     * @return Number of lines of code (excluding blanks and pure comment lines)
+     * @return Number of non-blank lines inside all class bodies
      */
     public static int calculateLOC(CompilationUnit compilationUnit, String sourceCode) {
-        // Get all types (classes, interfaces, enums) in the file
         @SuppressWarnings("unchecked")
         List<AbstractTypeDeclaration> types = compilationUnit.types();
 
@@ -31,25 +30,24 @@ public class LOCCalculator {
             return 0;
         }
 
-        // For now, calculate LOC for the entire file
-        // (In case of multiple classes in one file, this gives the total)
-        int startLine = compilationUnit.getLineNumber(0);
-        int endPosition = compilationUnit.getLength() - 1;
-        int endLine = compilationUnit.getLineNumber(endPosition);
+        int totalLOC = 0;
+        for (AbstractTypeDeclaration type : types) {
+            totalLOC += calculateLOCForType(compilationUnit, type, sourceCode);
+        }
 
-        String[] lines = sourceCode.split("\n", -1);
-
-        return countLOCInRange(lines, startLine, endLine);
+        return totalLOC;
     }
 
     /**
      * Calculate LOC for a specific type declaration (class/interface/enum).
-     * Uses PROMISE dataset definition: counts non-blank, non-pure-comment lines.
+     * Counts ALL non-blank lines INSIDE the class body (between { and }),
+     * including all comments inside the class body.
+     * Comments outside the class body (like Javadoc before class declaration) are excluded.
      *
      * @param compilationUnit The parsed Java file
      * @param typeDeclaration The type to calculate LOC for
      * @param sourceCode      The original source code
-     * @return Number of lines of code for the type
+     * @return Number of non-blank lines inside the class body (including comments)
      */
     public static int calculateLOCForType(CompilationUnit compilationUnit,
                                           AbstractTypeDeclaration typeDeclaration,
@@ -57,89 +55,61 @@ public class LOCCalculator {
         int startPos = typeDeclaration.getStartPosition();
         int endPos = startPos + typeDeclaration.getLength() - 1;
 
-        int startLine = compilationUnit.getLineNumber(startPos);
+        int typeStartLine = compilationUnit.getLineNumber(startPos);
         int endLine = compilationUnit.getLineNumber(endPos);
 
         String[] lines = sourceCode.split("\n", -1);
 
-        return countLOCInRange(lines, startLine, endLine);
+        // Find the line with the opening brace '{' - this is where the class body starts
+        int bodyStartLine = findOpeningBraceLine(lines, typeStartLine, endLine);
+
+        // Count all non-blank lines from the '{' line to the '}' line (inclusive)
+        return countNonBlankLinesInRange(lines, bodyStartLine, endLine);
     }
 
     /**
-     * Count LOC in a specific line range.
-     * Counts non-blank lines that are not pure comment lines.
-     * Lines with both code and comments are counted as LOC.
+     * Find the line number containing the opening brace '{' of the class body.
+     *
+     * @param lines     Array of source lines (0-indexed)
+     * @param startLine Start line to search from (1-indexed)
+     * @param endLine   End line to search to (1-indexed)
+     * @return Line number (1-indexed) containing the opening brace
+     */
+    private static int findOpeningBraceLine(String[] lines, int startLine, int endLine) {
+        for (int lineNum = startLine; lineNum <= endLine; lineNum++) {
+            if (lineNum < 1 || lineNum > lines.length) {
+                continue;
+            }
+            String line = lines[lineNum - 1];
+            if (line.contains("{")) {
+                return lineNum;
+            }
+        }
+        return startLine; // Fallback
+    }
+
+    /**
+     * Count ALL non-blank lines in a specific line range.
+     * Counts everything including comments.
      *
      * @param lines     Array of source lines (0-indexed)
      * @param startLine Start line number (1-indexed)
      * @param endLine   End line number (1-indexed)
-     * @return LOC count
+     * @return Number of non-blank lines
      */
-    private static int countLOCInRange(String[] lines, int startLine, int endLine) {
+    private static int countNonBlankLinesInRange(String[] lines, int startLine, int endLine) {
         int loc = 0;
-        boolean inBlockComment = false;
 
         for (int lineNum = startLine; lineNum <= endLine; lineNum++) {
             if (lineNum < 1 || lineNum > lines.length) {
                 continue;
             }
 
-            String line = lines[lineNum - 1]; // Convert to 0-indexed
-            String trimmed = line.trim();
-
-            // Skip blank lines
-            if (trimmed.isEmpty()) {
-                continue;
+            String line = lines[lineNum - 1];
+            // Count any line that has at least one non-whitespace character
+            if (!line.trim().isEmpty()) {
+                loc++;
             }
-
-            // Handle block comments
-            if (inBlockComment) {
-                if (trimmed.contains("*/")) {
-                    inBlockComment = false;
-                    // Check if there's code after the comment ends
-                    int endIdx = trimmed.indexOf("*/") + 2;
-                    if (endIdx < trimmed.length()) {
-                        String afterComment = trimmed.substring(endIdx).trim();
-                        if (!afterComment.isEmpty() && !afterComment.startsWith("//") && !afterComment.startsWith("/*")) {
-                            loc++;
-                        }
-                    }
-                }
-                continue;
-            }
-
-            // Check for block comment start
-            if (trimmed.startsWith("/*")) {
-                // Check if it ends on the same line
-                if (trimmed.contains("*/")) {
-                    int endIdx = trimmed.indexOf("*/") + 2;
-                    // Check for code before the comment
-                    // Actually, if line starts with /*, there's no code before
-                    // Check for code after
-                    if (endIdx < trimmed.length()) {
-                        String afterComment = trimmed.substring(endIdx).trim();
-                        if (!afterComment.isEmpty() && !afterComment.startsWith("//") && !afterComment.startsWith("/*")) {
-                            loc++;
-                        }
-                    }
-                } else {
-                    inBlockComment = true;
-                }
-                continue;
-            }
-
-            // Check for single-line comment
-            if (trimmed.startsWith("//")) {
-                continue;
-            }
-
-            // Check for line that starts with * (continuation of Javadoc/block comment)
-            if (trimmed.startsWith("*")) {
-                continue;
-            }
-
-            // This is a code line (may contain inline comments, but has code)
-            loc++;
         }
 
         return loc;

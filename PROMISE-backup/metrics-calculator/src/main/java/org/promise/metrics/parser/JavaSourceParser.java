@@ -1,18 +1,24 @@
 package org.promise.metrics.parser;
 
-import org.eclipse.jdt.core.JavaCore;
-import org.eclipse.jdt.core.compiler.IProblem;
-import org.eclipse.jdt.core.dom.*;
-import org.promise.metrics.calculator.LOCCalculator;
-import org.promise.metrics.calculator.NPMCalculator;
-import org.promise.metrics.model.ClassMetrics;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.compiler.IProblem;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.promise.metrics.calculator.DITCalculator;
+import org.promise.metrics.calculator.LOCCalculator;
+import org.promise.metrics.calculator.NOCCalculator;
+import org.promise.metrics.calculator.NPMCalculator;
+import org.promise.metrics.calculator.WMCCalculator;
+import org.promise.metrics.model.ClassMetrics;
 
 /**
  * Parser for Java source files using Eclipse JDT.
@@ -37,6 +43,7 @@ public class JavaSourceParser {
 
     /**
      * Parse Java source code and calculate metrics.
+     * Includes all top-level classes in the file (not inner classes).
      *
      * @param sourceCode The Java source code
      * @param fileName   The file name (for error reporting)
@@ -52,7 +59,9 @@ public class JavaSourceParser {
         parser.setResolveBindings(false);
         parser.setBindingsRecovery(false);
 
-        // Set compiler options for Java 1.4 (compatible with old Ant source)
+        //System.out.println("Parsing file: " + parser);
+
+        // Set compiler options for Java 1.4 (compatible with an old Ant source)
         Map<String, String> options = JavaCore.getOptions();
         options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_1_4);
         options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_1_4);
@@ -76,19 +85,24 @@ public class JavaSourceParser {
         @SuppressWarnings("unchecked")
         List<AbstractTypeDeclaration> types = compilationUnit.types();
 
+        // Include ALL top-level classes in the file (PROMISE dataset includes secondary classes like MailPrintStream)
         for (AbstractTypeDeclaration typeDeclaration : types) {
+
             ClassMetrics metrics = calculateMetricsForType(compilationUnit, typeDeclaration, sourceCode);
             if (metrics != null) {
                 metricsList.add(metrics);
             }
 
-            // Handle nested classes
-            List<ClassMetrics> nestedMetrics = extractNestedClasses(compilationUnit, typeDeclaration, sourceCode);
-            metricsList.addAll(nestedMetrics);
+            // Note: Inner/nested classes are NOT output separately.
+            // Their LOC is included in the parent class LOC since we count
+            // all non-blank lines within the parent class body brackets.
+            // This matches the PROMISE dataset behavior where inner classes
+            // like ProjectHelper$AbstractHandler are not listed separately.
         }
 
         return metricsList;
     }
+
 
     /**
      * Calculate metrics for a single type (class/interface/enum).
@@ -96,6 +110,7 @@ public class JavaSourceParser {
     private static ClassMetrics calculateMetricsForType(CompilationUnit compilationUnit,
                                                         AbstractTypeDeclaration typeDeclaration,
                                                         String sourceCode) {
+        //System.out.println("Calculating metrics for " + typeDeclaration + ":");
         // Get a fully qualified name
         String packageName = "";
         if (compilationUnit.getPackage() != null) {
@@ -109,6 +124,10 @@ public class JavaSourceParser {
         ClassMetrics metrics = new ClassMetrics(fullyQualifiedName);
 
         try {
+            // Calculate WMC (Weighted Methods per Class)
+            int wmc = WMCCalculator.calculateWMCForType(typeDeclaration);
+            metrics.setWmc(wmc);
+
             // Calculate NPM
             int npm = NPMCalculator.calculateNPMForType(typeDeclaration);
             metrics.setNpm(npm);
@@ -117,74 +136,19 @@ public class JavaSourceParser {
             int loc = LOCCalculator.calculateLOCForType(compilationUnit, typeDeclaration, sourceCode);
             metrics.setLoc(loc);
 
+            // Extract superclass name for NOC and DIT calculation
+            String superclassName = NOCCalculator.extractSuperclassName(typeDeclaration);
+            metrics.setSuperclassName(superclassName);
+
+            // Check if it's an interface (for DIT calculation)
+            boolean isInterface = DITCalculator.isInterface(typeDeclaration);
+            metrics.setInterface(isInterface);
+
         } catch (Exception e) {
             System.err.println("Error calculating metrics for " + fullyQualifiedName + ": " + e.getMessage());
             return null;
         }
 
-        return metrics;
-    }
-
-    /**
-     * Extract nested classes and calculate their metrics separately.
-     */
-    private static List<ClassMetrics> extractNestedClasses(CompilationUnit compilationUnit,
-                                                           AbstractTypeDeclaration typeDeclaration,
-                                                           String sourceCode) {
-        List<ClassMetrics> nestedMetrics = new ArrayList<>();
-
-        if (typeDeclaration instanceof TypeDeclaration) {
-            TypeDeclaration classDecl = (TypeDeclaration) typeDeclaration;
-
-            // Get nested types
-            TypeDeclaration[] nestedTypes = classDecl.getTypes();
-            for (TypeDeclaration nestedType : nestedTypes) {
-                ClassMetrics metrics = calculateNestedTypeMetrics(compilationUnit, nestedType,
-                        typeDeclaration.getName().getIdentifier(), sourceCode);
-                if (metrics != null) {
-                    nestedMetrics.add(metrics);
-                }
-
-                // Recursively handle deeply nested classes
-                List<ClassMetrics> deeplyNested = extractNestedClasses(compilationUnit, nestedType, sourceCode);
-                nestedMetrics.addAll(deeplyNested);
-            }
-        }
-
-        return nestedMetrics;
-    }
-
-    /**
-     * Calculate metrics for a nested type with proper naming (OuterClass$InnerClass).
-     */
-    private static ClassMetrics calculateNestedTypeMetrics(CompilationUnit compilationUnit,
-                                                           TypeDeclaration nestedType,
-                                                           String outerClassName,
-                                                           String sourceCode) {
-        String packageName = "";
-        if (compilationUnit.getPackage() != null) {
-            packageName = compilationUnit.getPackage().getName().getFullyQualifiedName();
-        }
-
-        String nestedClassName = nestedType.getName().getIdentifier();
-        String fullyQualifiedName = packageName.isEmpty()
-                ? outerClassName + "$" + nestedClassName
-                : packageName + "." + outerClassName + "$" + nestedClassName;
-
-        ClassMetrics metrics = new ClassMetrics(fullyQualifiedName);
-
-        try {
-            // Calculate NPM for nested type
-            int npm = NPMCalculator.calculateNPMForType(nestedType);
-            metrics.setNpm(npm);
-
-            int loc = LOCCalculator.calculateLOCForType(compilationUnit, nestedType, sourceCode);
-            metrics.setLoc(loc);
-
-        } catch (Exception e) {
-            System.err.println("Error calculating metrics for nested class " + fullyQualifiedName);
-            return null;
-        }
 
         return metrics;
     }
