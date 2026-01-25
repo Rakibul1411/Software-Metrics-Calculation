@@ -24,3 +24,6 @@ Thumbs.db
 
 # Output files (keep directory structure)
 output/*.csv
+/target/*.jar
+/target
+target/

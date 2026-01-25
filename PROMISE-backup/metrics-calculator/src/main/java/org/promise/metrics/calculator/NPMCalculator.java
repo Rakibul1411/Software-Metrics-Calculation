@@ -33,39 +33,58 @@ public class NPMCalculator {
 
     /**
      * AST Visitor to count public methods.
+     * Only counts methods directly in the top-level type, NOT in nested/inner classes.
      */
     private static class NPMVisitor extends ASTVisitor {
         int publicMethodCount = 0;
+        int nestingLevel = 0;
 
         @Override
         public boolean visit(MethodDeclaration node) {
-            int modifiers = node.getModifiers();
-
-            // Check if method is public
-            if (Modifier.isPublic(modifiers)) {
-                publicMethodCount++;
+            // Only count methods at the top level (not in nested classes)
+            if (nestingLevel == 1) {
+                int modifiers = node.getModifiers();
+                // Check if the method is public
+                if (Modifier.isPublic(modifiers)) {
+                    publicMethodCount++;
+                }
             }
-
-            // Continue visiting nested types
+            // Don't visit children of method
             return false;
         }
 
         @Override
         public boolean visit(TypeDeclaration node) {
-            // Visit methods in this type
-            return true;
+            nestingLevel++;
+            // Only visit the first level type, not nested types
+            return nestingLevel == 1;
+        }
+
+        @Override
+        public void endVisit(TypeDeclaration node) {
+            nestingLevel--;
         }
 
         @Override
         public boolean visit(EnumDeclaration node) {
-            // Visit methods in enum
-            return true;
+            nestingLevel++;
+            return nestingLevel == 1;
+        }
+
+        @Override
+        public void endVisit(EnumDeclaration node) {
+            nestingLevel--;
         }
 
         @Override
         public boolean visit(AnnotationTypeDeclaration node) {
-            // Visit methods in annotation
-            return true;
+            nestingLevel++;
+            return nestingLevel == 1;
+        }
+
+        @Override
+        public void endVisit(AnnotationTypeDeclaration node) {
+            nestingLevel--;
         }
     }
 
@@ -96,29 +115,52 @@ public class NPMCalculator {
 
     /**
      * AST Visitor to count all methods.
+     * Only counts methods directly in the top-level type, NOT in nested/inner classes.
      */
     private static class MethodCountVisitor extends ASTVisitor {
         int methodCount = 0;
+        int nestingLevel = 0;
 
         @Override
         public boolean visit(MethodDeclaration node) {
-            methodCount++;
-            return false; // Don't visit nested types
+            // Only count methods at the top level (not in nested classes)
+            if (nestingLevel == 1) {
+                methodCount++;
+            }
+            return false; // Don't visit children of method
         }
 
         @Override
         public boolean visit(TypeDeclaration node) {
-            return true;
+            nestingLevel++;
+            return nestingLevel == 1;
+        }
+
+        @Override
+        public void endVisit(TypeDeclaration node) {
+            nestingLevel--;
         }
 
         @Override
         public boolean visit(EnumDeclaration node) {
-            return true;
+            nestingLevel++;
+            return nestingLevel == 1;
+        }
+
+        @Override
+        public void endVisit(EnumDeclaration node) {
+            nestingLevel--;
         }
 
         @Override
         public boolean visit(AnnotationTypeDeclaration node) {
-            return true;
+            nestingLevel++;
+            return nestingLevel == 1;
+        }
+
+        @Override
+        public void endVisit(AnnotationTypeDeclaration node) {
+            nestingLevel--;
         }
     }
 }

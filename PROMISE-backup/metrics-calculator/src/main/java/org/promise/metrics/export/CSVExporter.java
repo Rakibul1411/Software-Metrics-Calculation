@@ -1,13 +1,13 @@
 package org.promise.metrics.export;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
-import org.promise.metrics.model.ClassMetrics;
-
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import org.promise.metrics.model.ClassMetrics;
 
 /**
  * Export metrics to CSV format.
@@ -29,14 +29,17 @@ public class CSVExporter {
              CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
 
             // Write header
-            csvPrinter.printRecord("name", "npm", "loc");
+            csvPrinter.printRecord("name", "wmc", "npm", "loc", "noc", "dit");
 
             // Write data rows
             for (ClassMetrics metrics : metricsList) {
                 csvPrinter.printRecord(
                         metrics.getFullyQualifiedName(),
+                        metrics.getWmc(),
                         metrics.getNpm(),
-                        metrics.getLoc()
+                        metrics.getLoc(),
+                        metrics.getNoc(),
+                        metrics.getDit()
                 );
             }
         }
@@ -71,9 +74,9 @@ public class CSVExporter {
                 for (ClassMetrics metrics : metricsList) {
                     csvPrinter.printRecord(
                             metrics.getFullyQualifiedName(),
-                            0,  // wmc - not implemented
-                            0,  // dit - not implemented
-                            0,  // noc - not implemented
+                            metrics.getWmc(),  // wmc - Weighted Methods per Class
+                            metrics.getDit(),  // dit - Depth of Inheritance Tree
+                            metrics.getNoc(),  // noc - Number of Children
                             0,  // cbo - not implemented
                             0,  // rfc - not implemented
                             0,  // lcom - not implemented
@@ -96,13 +99,16 @@ public class CSVExporter {
                 }
             } else {
                 // Write only implemented columns
-                csvPrinter.printRecord("name", "npm", "loc");
+                csvPrinter.printRecord("name", "wmc", "npm", "loc", "noc", "dit");
 
                 for (ClassMetrics metrics : metricsList) {
                     csvPrinter.printRecord(
                             metrics.getFullyQualifiedName(),
+                            metrics.getWmc(),
                             metrics.getNpm(),
-                            metrics.getLoc()
+                            metrics.getLoc(),
+                            metrics.getNoc(),
+                            metrics.getDit()
                     );
                 }
             }
@@ -119,17 +125,21 @@ public class CSVExporter {
         System.out.println("Total classes analyzed: " + metricsList.size());
 
         if (!metricsList.isEmpty()) {
+            int totalWMC = 0;
             int totalNPM = 0;
             int totalLOC = 0;
 
             for (ClassMetrics metrics : metricsList) {
+                totalWMC += metrics.getWmc();
                 totalNPM += metrics.getNpm();
                 totalLOC += metrics.getLoc();
             }
 
+            double avgWMC = (double) totalWMC / metricsList.size();
             double avgNPM = (double) totalNPM / metricsList.size();
             double avgLOC = (double) totalLOC / metricsList.size();
 
+            System.out.println("Average WMC: " + String.format("%.2f", avgWMC));
             System.out.println("Average NPM: " + String.format("%.2f", avgNPM));
             System.out.println("Average LOC: " + String.format("%.2f", avgLOC));
             System.out.println("Total LOC: " + totalLOC);

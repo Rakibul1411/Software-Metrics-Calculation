@@ -1,9 +1,5 @@
 package org.promise.metrics;
 
-import org.promise.metrics.export.CSVExporter;
-import org.promise.metrics.model.ClassMetrics;
-import org.promise.metrics.parser.JavaSourceParser;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,6 +7,12 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
+import org.promise.metrics.calculator.DITCalculator;
+import org.promise.metrics.calculator.NOCCalculator;
+import org.promise.metrics.export.CSVExporter;
+import org.promise.metrics.model.ClassMetrics;
+import org.promise.metrics.parser.JavaSourceParser;
 
 /**
  * Main entry point for the Metrics Calculator.
@@ -83,10 +85,11 @@ public class MetricsCalculatorMain {
 
         System.out.println("Scanning for Java files...");
 
-        // Find all .java files recursively
+        // Find all .java files recursively, excluding 'optional' package
         try (Stream<Path> paths = Files.walk(sourcePath)) {
             paths.filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> !path.toString().contains("/optional/") && !path.toString().contains("\\optional\\"))
                     .forEach(javaFile -> {
                         try {
                             System.out.println("Processing: " + javaFile);
@@ -105,7 +108,63 @@ public class MetricsCalculatorMain {
         }
 
         System.out.println("\nTotal classes found: " + allMetrics.size());
+
+        // Second pass: Calculate NOC for all classes
+        System.out.println("Calculating NOC (Number of Children) for all classes...");
+        calculateNOCForAllClasses(allMetrics);
+
+        // Third pass: Calculate DIT for all classes
+        System.out.println("Calculating DIT (Depth of Inheritance Tree) for all classes...");
+        calculateDITForAllClasses(allMetrics);
+
         return allMetrics;
+    }
+
+    /**
+     * Calculate NOC (Number of Children) for all classes.
+     * This requires knowing all classes and their inheritance relationships.
+     */
+    private static void calculateNOCForAllClasses(List<ClassMetrics> allMetrics) {
+        // Create NOC calculator and register all classes
+        NOCCalculator nocCalculator = new NOCCalculator();
+
+        // First pass: register all classes and their superclasses
+        for (ClassMetrics metrics : allMetrics) {
+            nocCalculator.registerClass(
+                    metrics.getFullyQualifiedName(),
+                    metrics.getSuperclassName()
+            );
+        }
+
+        // Second pass: calculate NOC for each class
+        for (ClassMetrics metrics : allMetrics) {
+            int noc = nocCalculator.calculateNOC(metrics.getFullyQualifiedName());
+            metrics.setNoc(noc);
+        }
+    }
+
+    /**
+     * Calculate DIT (Depth of Inheritance Tree) for all classes.
+     * This requires knowing all classes and their inheritance relationships.
+     */
+    private static void calculateDITForAllClasses(List<ClassMetrics> allMetrics) {
+        // Create DIT calculator and register all classes
+        DITCalculator ditCalculator = new DITCalculator();
+
+        // First pass: register all classes and their superclasses
+        for (ClassMetrics metrics : allMetrics) {
+            ditCalculator.registerClass(
+                    metrics.getFullyQualifiedName(),
+                    metrics.getSuperclassName(),
+                    metrics.isInterface()
+            );
+        }
+
+        // Second pass: calculate DIT for each class
+        for (ClassMetrics metrics : allMetrics) {
+            int dit = ditCalculator.calculateDIT(metrics.getFullyQualifiedName());
+            metrics.setDit(dit);
+        }
     }
 
     /**
@@ -130,7 +189,10 @@ public class MetricsCalculatorMain {
         System.out.println("  mvn exec:java -Dexec.args=\"../source\\ code/ant/jakarta-ant-1.3/src/main\"");
         System.out.println();
         System.out.println("Calculated Metrics:");
+        System.out.println("  - WMC     : Weighted Methods per Class (method count)");
         System.out.println("  - NPM     : Number of Public Methods");
         System.out.println("  - LOC     : Lines of Code (excluding blanks and comments)");
+        System.out.println("  - NOC     : Number of Children (immediate subclasses)");
+        System.out.println("  - DIT     : Depth of Inheritance Tree");
     }
 }
