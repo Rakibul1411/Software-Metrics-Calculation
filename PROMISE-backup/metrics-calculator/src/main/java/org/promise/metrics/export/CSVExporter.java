@@ -29,17 +29,20 @@ public class CSVExporter {
              CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
 
             // Write header
-            csvPrinter.printRecord("name", "wmc", "npm", "loc", "noc", "dit");
+            csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "ca", "ce", "npm", "loc");
 
             // Write data rows
             for (ClassMetrics metrics : metricsList) {
                 csvPrinter.printRecord(
                         metrics.getFullyQualifiedName(),
                         metrics.getWmc(),
-                        metrics.getNpm(),
-                        metrics.getLoc(),
+                        metrics.getDit(),
                         metrics.getNoc(),
-                        metrics.getDit()
+                        metrics.getCbo(),
+                        metrics.getCa(),
+                        metrics.getCe(),
+                        metrics.getNpm(),
+                        metrics.getLoc()
                 );
             }
         }
@@ -77,11 +80,11 @@ public class CSVExporter {
                             metrics.getWmc(),  // wmc - Weighted Methods per Class
                             metrics.getDit(),  // dit - Depth of Inheritance Tree
                             metrics.getNoc(),  // noc - Number of Children
-                            0,  // cbo - not implemented
+                            metrics.getCbo(),  // cbo - Coupling Between Objects
                             0,  // rfc - not implemented
                             0,  // lcom - not implemented
-                            0,  // ca - not implemented
-                            0,  // ce - not implemented
+                            metrics.getCa(),   // ca - Afferent Coupling
+                            metrics.getCe(),   // ce - Efferent Coupling
                             metrics.getNpm(),
                             0,  // lcom3 - not implemented
                             metrics.getLoc(),
@@ -99,16 +102,19 @@ public class CSVExporter {
                 }
             } else {
                 // Write only implemented columns
-                csvPrinter.printRecord("name", "wmc", "npm", "loc", "noc", "dit");
+                csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "ca", "ce", "npm", "loc");
 
                 for (ClassMetrics metrics : metricsList) {
                     csvPrinter.printRecord(
                             metrics.getFullyQualifiedName(),
                             metrics.getWmc(),
-                            metrics.getNpm(),
-                            metrics.getLoc(),
+                            metrics.getDit(),
                             metrics.getNoc(),
-                            metrics.getDit()
+                            metrics.getCbo(),
+                            metrics.getCa(),
+                            metrics.getCe(),
+                            metrics.getNpm(),
+                            metrics.getLoc()
                     );
                 }
             }
@@ -126,20 +132,24 @@ public class CSVExporter {
 
         if (!metricsList.isEmpty()) {
             int totalWMC = 0;
+            int totalCBO = 0;
             int totalNPM = 0;
             int totalLOC = 0;
 
             for (ClassMetrics metrics : metricsList) {
                 totalWMC += metrics.getWmc();
+                totalCBO += metrics.getCbo();
                 totalNPM += metrics.getNpm();
                 totalLOC += metrics.getLoc();
             }
 
             double avgWMC = (double) totalWMC / metricsList.size();
+            double avgCBO = (double) totalCBO / metricsList.size();
             double avgNPM = (double) totalNPM / metricsList.size();
             double avgLOC = (double) totalLOC / metricsList.size();
 
             System.out.println("Average WMC: " + String.format("%.2f", avgWMC));
+            System.out.println("Average CBO: " + String.format("%.2f", avgCBO));
             System.out.println("Average NPM: " + String.format("%.2f", avgNPM));
             System.out.println("Average LOC: " + String.format("%.2f", avgLOC));
             System.out.println("Total LOC: " + totalLOC);
