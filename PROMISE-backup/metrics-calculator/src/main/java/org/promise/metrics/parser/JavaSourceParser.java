@@ -14,11 +14,16 @@ import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.ImportDeclaration;
+import org.promise.metrics.calculator.CBMCalculator;
 import org.promise.metrics.calculator.CBOCalculator;
 import org.promise.metrics.calculator.DITCalculator;
+import org.promise.metrics.calculator.ICCalculator;
 import org.promise.metrics.calculator.LOCCalculator;
+import org.promise.metrics.calculator.MOACalculator;
 import org.promise.metrics.calculator.NOCCalculator;
 import org.promise.metrics.calculator.NPMCalculator;
+import org.promise.metrics.calculator.RFCCalculator;
 import org.promise.metrics.calculator.WMCCalculator;
 import org.promise.metrics.model.ClassMetrics;
 
@@ -131,8 +136,14 @@ public class JavaSourceParser {
             metrics.setWmc(wmc);
 
             // Extract dependencies for CBO calculation (two-pass approach)
-            Set<String> dependencies = CBOCalculator.extractDependencies(typeDeclaration, fullyQualifiedName);
+            @SuppressWarnings("unchecked")
+            List<ImportDeclaration> imports = compilationUnit.imports();
+            Set<String> dependencies = CBOCalculator.extractDependencies(typeDeclaration, fullyQualifiedName, imports);
             metrics.setDependencies(dependencies);
+
+            // Calculate RFC (Response For a Class)
+            int rfc = RFCCalculator.calculateRFCForType(typeDeclaration);
+            metrics.setRfc(rfc);
 
             // Calculate NPM
             int npm = NPMCalculator.calculateNPMForType(typeDeclaration);
@@ -142,6 +153,10 @@ public class JavaSourceParser {
             int loc = LOCCalculator.calculateLOCForType(compilationUnit, typeDeclaration, sourceCode);
             metrics.setLoc(loc);
 
+            // Calculate MOA (Measure of Aggregation)
+            int moa = MOACalculator.calculateMOAForType(typeDeclaration);
+            metrics.setMoa(moa);
+
             // Extract superclass name for NOC and DIT calculation
             String superclassName = NOCCalculator.extractSuperclassName(typeDeclaration);
             metrics.setSuperclassName(superclassName);
@@ -149,6 +164,17 @@ public class JavaSourceParser {
             // Check if it's an interface (for DIT calculation)
             boolean isInterface = DITCalculator.isInterface(typeDeclaration);
             metrics.setInterface(isInterface);
+
+            // Extract method names and invoked methods for IC calculation
+            Set<String> methodNames = ICCalculator.extractMethodNames(typeDeclaration);
+            metrics.setMethodNames(methodNames);
+            
+            Set<String> invokedMethods = ICCalculator.extractInvokedMethods(typeDeclaration);
+            metrics.setInvokedMethods(invokedMethods);
+
+            // Extract inherited method invocations for CBM calculation
+            Set<String> inheritedMethodInvocations = CBMCalculator.extractInheritedMethodInvocations(typeDeclaration);
+            metrics.setInheritedMethodInvocations(inheritedMethodInvocations);
 
         } catch (Exception e) {
             System.err.println("Error calculating metrics for " + fullyQualifiedName + ": " + e.getMessage());

@@ -29,7 +29,7 @@ public class CSVExporter {
              CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
 
             // Write header
-            csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "ca", "ce", "npm", "loc");
+            csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "rfc", "ca", "ce", "npm", "loc", "moa", "ic", "cbm");
 
             // Write data rows
             for (ClassMetrics metrics : metricsList) {
@@ -39,10 +39,14 @@ public class CSVExporter {
                         metrics.getDit(),
                         metrics.getNoc(),
                         metrics.getCbo(),
+                        metrics.getRfc(),
                         metrics.getCa(),
                         metrics.getCe(),
                         metrics.getNpm(),
-                        metrics.getLoc()
+                        metrics.getLoc(),
+                        metrics.getMoa(),
+                        metrics.getIc(),
+                        metrics.getCbm()
                 );
             }
         }
@@ -81,7 +85,7 @@ public class CSVExporter {
                             metrics.getDit(),  // dit - Depth of Inheritance Tree
                             metrics.getNoc(),  // noc - Number of Children
                             metrics.getCbo(),  // cbo - Coupling Between Objects
-                            0,  // rfc - not implemented
+                            metrics.getRfc(),  // rfc - Response For a Class
                             0,  // lcom - not implemented
                             metrics.getCa(),   // ca - Afferent Coupling
                             metrics.getCe(),   // ce - Efferent Coupling
@@ -89,11 +93,11 @@ public class CSVExporter {
                             0,  // lcom3 - not implemented
                             metrics.getLoc(),
                             0,  // dam - not implemented
-                            0,  // moa - not implemented
+                            metrics.getMoa(),  // moa - Measure of Aggregation
                             0,  // mfa - not implemented
                             0,  // cam - not implemented
-                            0,  // ic - not implemented
-                            0,  // cbm - not implemented
+                            metrics.getIc(),  // ic - Inheritance Coupling
+                            metrics.getCbm(),  // cbm - Coupling Between Methods
                             0,  // amc - not implemented
                             0,  // max_cc - not calculable from source
                             0,  // avg_cc - not calculable from source
@@ -102,7 +106,7 @@ public class CSVExporter {
                 }
             } else {
                 // Write only implemented columns
-                csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "ca", "ce", "npm", "loc");
+                csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "rfc", "ca", "ce", "npm", "loc", "moa", "ic", "cbm");
 
                 for (ClassMetrics metrics : metricsList) {
                     csvPrinter.printRecord(
@@ -111,10 +115,14 @@ public class CSVExporter {
                             metrics.getDit(),
                             metrics.getNoc(),
                             metrics.getCbo(),
+                            metrics.getRfc(),
                             metrics.getCa(),
                             metrics.getCe(),
                             metrics.getNpm(),
-                            metrics.getLoc()
+                            metrics.getLoc(),
+                            metrics.getMoa(),
+                            metrics.getIc(),
+                            metrics.getCbm()
                     );
                 }
             }
@@ -133,23 +141,27 @@ public class CSVExporter {
         if (!metricsList.isEmpty()) {
             int totalWMC = 0;
             int totalCBO = 0;
+            int totalRFC = 0;
             int totalNPM = 0;
             int totalLOC = 0;
 
             for (ClassMetrics metrics : metricsList) {
                 totalWMC += metrics.getWmc();
                 totalCBO += metrics.getCbo();
+                totalRFC += metrics.getRfc();
                 totalNPM += metrics.getNpm();
                 totalLOC += metrics.getLoc();
             }
 
             double avgWMC = (double) totalWMC / metricsList.size();
             double avgCBO = (double) totalCBO / metricsList.size();
+            double avgRFC = (double) totalRFC / metricsList.size();
             double avgNPM = (double) totalNPM / metricsList.size();
             double avgLOC = (double) totalLOC / metricsList.size();
 
             System.out.println("Average WMC: " + String.format("%.2f", avgWMC));
             System.out.println("Average CBO: " + String.format("%.2f", avgCBO));
+            System.out.println("Average RFC: " + String.format("%.2f", avgRFC));
             System.out.println("Average NPM: " + String.format("%.2f", avgNPM));
             System.out.println("Average LOC: " + String.format("%.2f", avgLOC));
             System.out.println("Total LOC: " + totalLOC);
