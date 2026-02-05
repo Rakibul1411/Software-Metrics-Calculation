@@ -12,13 +12,20 @@ public class ClassMetrics {
     private int dit;           // Depth of Inheritance Tree
     private int noc;           // Number of Children (immediate subclasses)
     private int cbo;           // Coupling Between Objects
+    private int rfc;           // Response For a Class
     private int ca;            // Afferent Coupling (classes that depend on this class)
     private int ce;            // Efferent Coupling (classes this class depends on)
     private int npm;           // Number of Public Methods
     private int loc;           // Lines of Code (excluding blanks and comments)
+    private int moa;           // Measure of Aggregation (user-defined class fields)
+    private int ic;            // Inheritance Coupling (parent classes coupled through method calls)
+    private int cbm;           // Coupling Between Methods (method invocations to parent methods)
     private String superclassName;  // Used for NOC and DIT calculation
     private boolean isInterface;    // Whether this type is an interface
     private Set<String> dependencies = new HashSet<>();  // For CBO calculation
+    private Set<String> methodNames = new HashSet<>();   // Methods defined in this class
+    private Set<String> invokedMethods = new HashSet<>(); // Methods invoked by this class
+    private Set<String> inheritedMethodInvocations = new HashSet<>(); // Parent method invocations for CBM
 
     public ClassMetrics() {
     }
@@ -68,6 +75,14 @@ public class ClassMetrics {
         this.cbo = cbo;
     }
 
+    public int getRfc() {
+        return rfc;
+    }
+
+    public void setRfc(int rfc) {
+        this.rfc = rfc;
+    }
+
     public int getCa() {
         return ca;
     }
@@ -108,6 +123,54 @@ public class ClassMetrics {
         this.loc = loc;
     }
 
+    public int getMoa() {
+        return moa;
+    }
+
+    public void setMoa(int moa) {
+        this.moa = moa;
+    }
+
+    public int getIc() {
+        return ic;
+    }
+
+    public void setIc(int ic) {
+        this.ic = ic;
+    }
+
+    public int getCbm() {
+        return cbm;
+    }
+
+    public void setCbm(int cbm) {
+        this.cbm = cbm;
+    }
+
+    public Set<String> getMethodNames() {
+        return methodNames;
+    }
+
+    public void setMethodNames(Set<String> methodNames) {
+        this.methodNames = methodNames;
+    }
+
+    public Set<String> getInvokedMethods() {
+        return invokedMethods;
+    }
+
+    public void setInvokedMethods(Set<String> invokedMethods) {
+        this.invokedMethods = invokedMethods;
+    }
+
+    public Set<String> getInheritedMethodInvocations() {
+        return inheritedMethodInvocations;
+    }
+
+    public void setInheritedMethodInvocations(Set<String> inheritedMethodInvocations) {
+        this.inheritedMethodInvocations = inheritedMethodInvocations;
+    }
+
     public String getSuperclassName() {
         return superclassName;
     }
@@ -126,7 +189,7 @@ public class ClassMetrics {
 
     @Override
     public String toString() {
-        return String.format("ClassMetrics{name='%s', wmc=%d, dit=%d, noc=%d, cbo=%d, npm=%d, loc=%d}",
-                fullyQualifiedName, wmc, dit, noc, cbo, npm, loc);
+        return String.format("ClassMetrics{name='%s', wmc=%d, dit=%d, noc=%d, cbo=%d, rfc=%d, npm=%d, loc=%d, moa=%d, ic=%d, cbm=%d}",
+                fullyQualifiedName, wmc, dit, noc, cbo, rfc, npm, loc, moa, ic, cbm);
     }
 }

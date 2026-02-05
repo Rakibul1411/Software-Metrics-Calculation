@@ -1,0 +1,8 @@
+python3 compare_metrics.py -c output/ant-1.3-calculated.csv -p ../bug-data/ant/ant-1.3.csv -o matching-calculated-value/ant-1.3-mismatch.csv
+
+Software metrics generation and transfer learning
+
+
+Project Command: 
+1. mvn clean package
+2. java -jar target/metrics-calculator-1.0.0.jar "../source code/ant/jakarta-ant-1.3/src/main" "output/ant-1.3-calculated.csv"

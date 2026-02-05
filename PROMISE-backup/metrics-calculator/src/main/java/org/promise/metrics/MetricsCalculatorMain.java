@@ -8,8 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.promise.metrics.calculator.CBMCalculator;
 import org.promise.metrics.calculator.CBOCalculator;
 import org.promise.metrics.calculator.DITCalculator;
+import org.promise.metrics.calculator.ICCalculator;
 import org.promise.metrics.calculator.NOCCalculator;
 import org.promise.metrics.export.CSVExporter;
 import org.promise.metrics.model.ClassMetrics;
@@ -122,6 +124,14 @@ public class MetricsCalculatorMain {
         System.out.println("Calculating CBO (Coupling Between Objects) for all classes...");
         calculateCBOForAllClasses(allMetrics);
 
+        // Fifth pass: Calculate IC (Inheritance Coupling) for all classes
+        System.out.println("Calculating IC (Inheritance Coupling) for all classes...");
+        calculateICForAllClasses(allMetrics);
+
+        // Sixth pass: Calculate CBM (Coupling Between Methods) for all classes
+        System.out.println("Calculating CBM (Coupling Between Methods) for all classes...");
+        calculateCBMForAllClasses(allMetrics);
+
         return allMetrics;
     }
 
@@ -136,9 +146,13 @@ public class MetricsCalculatorMain {
         for (ClassMetrics metrics : allMetrics) {
             cboCalculator.registerClass(
                     metrics.getFullyQualifiedName(),
+                    metrics.getSuperclassName(),
                     metrics.getDependencies()
             );
         }
+        
+        // Resolve implicit dependencies (like Task inheriting dependency on Project)
+        cboCalculator.postProcessDependencies();
 
         // Second pass: calculate CBO, CA, CE for each class
         for (ClassMetrics metrics : allMetrics) {
@@ -195,6 +209,60 @@ public class MetricsCalculatorMain {
         for (ClassMetrics metrics : allMetrics) {
             int dit = ditCalculator.calculateDIT(metrics.getFullyQualifiedName());
             metrics.setDit(dit);
+        }
+    }
+
+    /**
+     * Calculate IC (Inheritance Coupling) for all classes.
+     * IC measures how many parent classes are coupled to through method calls.
+     */
+    private static void calculateICForAllClasses(List<ClassMetrics> allMetrics) {
+        // Create IC calculator
+        ICCalculator icCalculator = new ICCalculator();
+
+        // First pass: register all classes with their superclass and method names
+        for (ClassMetrics metrics : allMetrics) {
+            icCalculator.registerClass(
+                    metrics.getFullyQualifiedName(),
+                    metrics.getSuperclassName(),
+                    metrics.getMethodNames()
+            );
+        }
+
+        // Second pass: calculate IC for each class
+        for (ClassMetrics metrics : allMetrics) {
+            int ic = icCalculator.calculateIC(
+                    metrics.getFullyQualifiedName(),
+                    metrics.getInvokedMethods()
+            );
+            metrics.setIc(ic);
+        }
+    }
+
+    /**
+     * Calculate CBM (Coupling Between Methods) for all classes.
+     * CBM measures the number of method invocations to parent class methods.
+     */
+    private static void calculateCBMForAllClasses(List<ClassMetrics> allMetrics) {
+        // Create CBM calculator
+        CBMCalculator cbmCalculator = new CBMCalculator();
+
+        // First pass: register all classes with their superclass and method names
+        for (ClassMetrics metrics : allMetrics) {
+            cbmCalculator.registerClass(
+                    metrics.getFullyQualifiedName(),
+                    metrics.getSuperclassName(),
+                    metrics.getMethodNames()
+            );
+        }
+
+        // Second pass: calculate CBM for each class
+        for (ClassMetrics metrics : allMetrics) {
+            int cbm = cbmCalculator.calculateCBMSimple(
+                    metrics.getFullyQualifiedName(),
+                    metrics.getInheritedMethodInvocations()
+            );
+            metrics.setCbm(cbm);
         }
     }
 
