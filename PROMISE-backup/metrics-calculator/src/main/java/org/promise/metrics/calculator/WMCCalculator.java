@@ -36,6 +36,8 @@ public class WMCCalculator {
     /**
      * Calculate WMC for a specific type declaration.
      * Counts all methods directly declared in the type (not in nested classes).
+     * Includes implicit default constructor if no explicit constructor exists
+     * (matching ckjm-extended behavior which counts compiler-generated constructors).
      *
      * @param typeDeclaration The type to analyze
      * @return Number of methods (WMC) in the type
@@ -43,7 +45,25 @@ public class WMCCalculator {
     public static int calculateWMCForType(AbstractTypeDeclaration typeDeclaration) {
         WMCVisitor visitor = new WMCVisitor();
         typeDeclaration.accept(visitor);
-        return visitor.methodCount;
+        int wmc = visitor.methodCount;
+
+        // Add implicit default constructor if none was explicitly declared
+        // and the type is not an interface (ckjm counts the compiler-generated default constructor)
+        if (!visitor.hasExplicitConstructor && !isInterfaceType(typeDeclaration)) {
+            wmc++;
+        }
+
+        return wmc;
+    }
+
+    /**
+     * Check if a type declaration is an interface.
+     */
+    public static boolean isInterfaceType(AbstractTypeDeclaration type) {
+        if (type instanceof TypeDeclaration) {
+            return ((TypeDeclaration) type).isInterface();
+        }
+        return false;
     }
 
     /**
@@ -53,6 +73,7 @@ public class WMCCalculator {
      */
     private static class WMCVisitor extends ASTVisitor {
         int methodCount = 0;
+        boolean hasExplicitConstructor = false;
         int nestingLevel = 0;
 
         @Override
@@ -93,6 +114,9 @@ public class WMCCalculator {
             // Only count methods at the top level (nesting level 1)
             // This excludes methods in nested/inner classes
             if (nestingLevel == 1) {
+                if (node.isConstructor()) {
+                    hasExplicitConstructor = true;
+                }
                 methodCount++;
             }
             return false; // Don't need to visit method body
