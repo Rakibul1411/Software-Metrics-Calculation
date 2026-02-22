@@ -20,6 +20,14 @@ public class ClassMetrics {
     private int moa;           // Measure of Aggregation (user-defined class fields)
     private int ic;            // Inheritance Coupling (parent classes coupled through method calls)
     private int cbm;           // Coupling Between Methods (method invocations to parent methods)
+    private int maxCc;         // Maximum Cyclomatic Complexity
+    private double avgCc;      // Average Cyclomatic Complexity
+    private int lcom;          // Lack of Cohesion of Methods (Chidamber & Kemerer)
+    private double lcom3;      // LCOM variant 3 (Henderson-Sellers)
+    private double amc;        // Average Method Complexity (avg method LOC)
+    private double dam;        // Data Access Metric (ratio of private/protected attributes)
+    private double mfa;        // Measure of Functional Abstraction (ratio of inherited methods)
+    private double cam;        // Cohesion Among Methods (parameter type cohesion)
     private String superclassName;  // Used for NOC and DIT calculation
     private boolean isInterface;    // Whether this type is an interface
     private Set<String> dependencies = new HashSet<>();  // For CBO calculation
@@ -147,6 +155,70 @@ public class ClassMetrics {
         this.cbm = cbm;
     }
 
+    public int getMaxCc() {
+        return maxCc;
+    }
+
+    public void setMaxCc(int maxCc) {
+        this.maxCc = maxCc;
+    }
+
+    public double getAvgCc() {
+        return avgCc;
+    }
+
+    public void setAvgCc(double avgCc) {
+        this.avgCc = avgCc;
+    }
+
+    public int getLcom() {
+        return lcom;
+    }
+
+    public void setLcom(int lcom) {
+        this.lcom = lcom;
+    }
+
+    public double getLcom3() {
+        return lcom3;
+    }
+
+    public void setLcom3(double lcom3) {
+        this.lcom3 = lcom3;
+    }
+
+    public double getAmc() {
+        return amc;
+    }
+
+    public void setAmc(double amc) {
+        this.amc = amc;
+    }
+
+    public double getDam() {
+        return dam;
+    }
+
+    public void setDam(double dam) {
+        this.dam = dam;
+    }
+
+    public double getMfa() {
+        return mfa;
+    }
+
+    public void setMfa(double mfa) {
+        this.mfa = mfa;
+    }
+
+    public double getCam() {
+        return cam;
+    }
+
+    public void setCam(double cam) {
+        this.cam = cam;
+    }
+
     public Set<String> getMethodNames() {
         return methodNames;
     }
@@ -189,7 +261,7 @@ public class ClassMetrics {
 
     @Override
     public String toString() {
-        return String.format("ClassMetrics{name='%s', wmc=%d, dit=%d, noc=%d, cbo=%d, rfc=%d, npm=%d, loc=%d, moa=%d, ic=%d, cbm=%d}",
-                fullyQualifiedName, wmc, dit, noc, cbo, rfc, npm, loc, moa, ic, cbm);
+        return String.format("ClassMetrics{name='%s', wmc=%d, dit=%d, noc=%d, cbo=%d, rfc=%d, npm=%d, loc=%d, moa=%d, ic=%d, cbm=%d, max_cc=%d, avg_cc=%.2f, lcom=%d, lcom3=%.2f, amc=%.2f, dam=%.2f, mfa=%.2f, cam=%.2f}",
+                fullyQualifiedName, wmc, dit, noc, cbo, rfc, npm, loc, moa, ic, cbm, maxCc, avgCc, lcom, lcom3, amc, dam, mfa, cam);
     }
 }

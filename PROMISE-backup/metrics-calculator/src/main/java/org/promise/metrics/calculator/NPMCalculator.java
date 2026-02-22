@@ -1,6 +1,13 @@
 package org.promise.metrics.calculator;
 
-import org.eclipse.jdt.core.dom.*;
+import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.AnnotationTypeDeclaration;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.EnumDeclaration;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /**
  * Calculator for Number of Public Methods (NPM).
@@ -21,6 +28,8 @@ public class NPMCalculator {
 
     /**
      * Calculate NPM for a specific type declaration.
+     * Includes implicit default constructor if no explicit constructor exists
+     * and the class is public (default constructor inherits class access).
      *
      * @param typeDeclaration The type to analyze
      * @return Number of public methods in the type
@@ -28,7 +37,18 @@ public class NPMCalculator {
     public static int calculateNPMForType(AbstractTypeDeclaration typeDeclaration) {
         NPMVisitor visitor = new NPMVisitor();
         typeDeclaration.accept(visitor);
-        return visitor.publicMethodCount;
+        int npm = visitor.publicMethodCount;
+
+        // Add implicit default public constructor if none was explicitly declared
+        // Default constructor has same access as the class
+        if (!visitor.hasExplicitConstructor && !WMCCalculator.isInterfaceType(typeDeclaration)) {
+            // The default constructor is public if the class is public
+            if (Modifier.isPublic(typeDeclaration.getModifiers())) {
+                npm++;
+            }
+        }
+
+        return npm;
     }
 
     /**
@@ -37,12 +57,16 @@ public class NPMCalculator {
      */
     private static class NPMVisitor extends ASTVisitor {
         int publicMethodCount = 0;
+        boolean hasExplicitConstructor = false;
         int nestingLevel = 0;
 
         @Override
         public boolean visit(MethodDeclaration node) {
             // Only count methods at the top level (not in nested classes)
             if (nestingLevel == 1) {
+                if (node.isConstructor()) {
+                    hasExplicitConstructor = true;
+                }
                 int modifiers = node.getModifiers();
                 // Check if the method is public
                 if (Modifier.isPublic(modifiers)) {

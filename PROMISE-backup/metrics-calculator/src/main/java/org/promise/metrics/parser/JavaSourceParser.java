@@ -15,10 +15,16 @@ import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
+import org.promise.metrics.calculator.AMCCalculator;
+import org.promise.metrics.calculator.CAMCalculator;
 import org.promise.metrics.calculator.CBMCalculator;
 import org.promise.metrics.calculator.CBOCalculator;
+import org.promise.metrics.calculator.CyclomaticComplexityCalculator;
+import org.promise.metrics.calculator.DAMCalculator;
 import org.promise.metrics.calculator.DITCalculator;
 import org.promise.metrics.calculator.ICCalculator;
+import org.promise.metrics.calculator.LCOM3Calculator;
+import org.promise.metrics.calculator.LCOMCalculator;
 import org.promise.metrics.calculator.LOCCalculator;
 import org.promise.metrics.calculator.MOACalculator;
 import org.promise.metrics.calculator.NOCCalculator;
@@ -175,6 +181,51 @@ public class JavaSourceParser {
             // Extract inherited method invocations for CBM calculation
             Set<String> inheritedMethodInvocations = CBMCalculator.extractInheritedMethodInvocations(typeDeclaration);
             metrics.setInheritedMethodInvocations(inheritedMethodInvocations);
+
+            // Calculate Cyclomatic Complexity (max_cc and avg_cc)
+            CyclomaticComplexityCalculator.CCResult ccResult = CyclomaticComplexityCalculator.calculateCCForType(typeDeclaration);
+            metrics.setMaxCc(ccResult.getMaxCC());
+            metrics.setAvgCc(ccResult.getAvgCC());
+
+            // Calculate LCOM (Lack of Cohesion of Methods - Chidamber & Kemerer)
+            Set<String> instanceVariables = LCOMCalculator.extractInstanceVariables(typeDeclaration);
+            java.util.Map<String, Set<String>> methodFieldAccess = LCOMCalculator.extractMethodFieldAccess(typeDeclaration, instanceVariables);
+            int lcom = LCOMCalculator.calculateLCOMForType(typeDeclaration);
+            metrics.setLcom(lcom);
+
+            // Determine if type is an interface and if it has an explicit constructor
+            boolean isIfaceType = WMCCalculator.isInterfaceType(typeDeclaration);
+
+            // Check for explicit constructor via method declarations
+            java.util.Map<String, Set<String>> lcom3MethodFieldAccess = new java.util.HashMap<>(methodFieldAccess);
+            boolean foundConstructor = false;
+            for (Object bodyDecl : typeDeclaration.bodyDeclarations()) {
+                if (bodyDecl instanceof org.eclipse.jdt.core.dom.MethodDeclaration) {
+                    if (((org.eclipse.jdt.core.dom.MethodDeclaration) bodyDecl).isConstructor()) {
+                        foundConstructor = true;
+                        break;
+                    }
+                }
+            }
+            if (!foundConstructor && !isIfaceType) {
+                lcom3MethodFieldAccess.put("<init>#default", new java.util.HashSet<>());
+            }
+
+            // Calculate LCOM3 (Henderson-Sellers variant) — reuses data from LCOM
+            double lcom3 = LCOM3Calculator.calculateLCOM3(instanceVariables, lcom3MethodFieldAccess, isIfaceType);
+            metrics.setLcom3(lcom3);
+
+            // Calculate AMC (Average Method Complexity)
+            double amc = AMCCalculator.calculateAMCForType(compilationUnit, typeDeclaration, sourceCode);
+            metrics.setAmc(amc);
+
+            // Calculate DAM (Data Access Metric)
+            double dam = DAMCalculator.calculateDAMForType(typeDeclaration);
+            metrics.setDam(dam);
+
+            // Calculate CAM (Cohesion Among Methods)
+            double cam = CAMCalculator.calculateCAMForType(typeDeclaration);
+            metrics.setCam(cam);
 
         } catch (Exception e) {
             System.err.println("Error calculating metrics for " + fullyQualifiedName + ": " + e.getMessage());

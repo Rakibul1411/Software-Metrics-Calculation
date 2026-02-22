@@ -12,6 +12,7 @@ import org.promise.metrics.calculator.CBMCalculator;
 import org.promise.metrics.calculator.CBOCalculator;
 import org.promise.metrics.calculator.DITCalculator;
 import org.promise.metrics.calculator.ICCalculator;
+import org.promise.metrics.calculator.MFACalculator;
 import org.promise.metrics.calculator.NOCCalculator;
 import org.promise.metrics.export.CSVExporter;
 import org.promise.metrics.model.ClassMetrics;
@@ -131,6 +132,10 @@ public class MetricsCalculatorMain {
         // Sixth pass: Calculate CBM (Coupling Between Methods) for all classes
         System.out.println("Calculating CBM (Coupling Between Methods) for all classes...");
         calculateCBMForAllClasses(allMetrics);
+
+        // Seventh pass: Calculate MFA (Measure of Functional Abstraction) for all classes
+        System.out.println("Calculating MFA (Measure of Functional Abstraction) for all classes...");
+        calculateMFAForAllClasses(allMetrics);
 
         return allMetrics;
     }
@@ -263,6 +268,30 @@ public class MetricsCalculatorMain {
                     metrics.getInheritedMethodInvocations()
             );
             metrics.setCbm(cbm);
+        }
+    }
+
+    /**
+     * Calculate MFA (Measure of Functional Abstraction) for all classes.
+     * MFA measures the ratio of inherited methods to total methods available.
+     * This requires knowing all classes and their inheritance relationships.
+     */
+    private static void calculateMFAForAllClasses(List<ClassMetrics> allMetrics) {
+        MFACalculator mfaCalculator = new MFACalculator();
+
+        // First pass: register all classes with their superclass and method names
+        for (ClassMetrics metrics : allMetrics) {
+            mfaCalculator.registerClass(
+                    metrics.getFullyQualifiedName(),
+                    metrics.getSuperclassName(),
+                    metrics.getMethodNames()
+            );
+        }
+
+        // Second pass: calculate MFA for each class
+        for (ClassMetrics metrics : allMetrics) {
+            double mfa = mfaCalculator.calculateMFA(metrics.getFullyQualifiedName());
+            metrics.setMfa(mfa);
         }
     }
 

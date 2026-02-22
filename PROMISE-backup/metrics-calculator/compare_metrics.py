@@ -31,7 +31,7 @@ def compare_metrics(calculated_file, predefined_file, output_file):
         output_file: Path to output the mismatch report CSV
     """
     # Metrics to compare (common between both files)
-    metrics_to_compare = ['wmc', 'dit', 'noc', 'cbo', 'rfc', 'ca', 'ce', 'npm', 'loc', 'moa', 'ic', 'cbm']
+    metrics_to_compare = ['wmc', 'dit', 'noc', 'cbo', 'rfc', 'lcom', 'ca', 'ce', 'npm', 'lcom3', 'loc', 'dam', 'moa', 'mfa', 'cam', 'ic', 'cbm', 'amc', 'max_cc', 'avg_cc']
     
     # Load both CSV files
     calculated_data = load_csv_as_dict(calculated_file)

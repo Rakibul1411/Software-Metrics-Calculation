@@ -51,6 +51,7 @@ public class RFCCalculator {
      * Calculate RFC for a specific type declaration.
      * Counts all methods directly declared in the type plus
      * all distinct method names called from within those methods.
+     * Includes implicit default constructor if no explicit constructor exists.
      *
      * @param typeDeclaration The type to analyze
      * @return RFC value for the type
@@ -58,7 +59,14 @@ public class RFCCalculator {
     public static int calculateRFCForType(AbstractTypeDeclaration typeDeclaration) {
         RFCVisitor visitor = new RFCVisitor();
         typeDeclaration.accept(visitor);
-        return visitor.getRFC();
+        int rfc = visitor.getRFC();
+
+        // Add implicit default constructor to own methods if none was explicitly declared
+        if (!visitor.hasExplicitConstructor && !WMCCalculator.isInterfaceType(typeDeclaration)) {
+            rfc++; // Default constructor adds 1 to the response set
+        }
+
+        return rfc;
     }
 
     /**
@@ -75,6 +83,7 @@ public class RFCCalculator {
         private Set<String> calledMethods = new HashSet<>();
         private int nestingLevel = 0;
         private int innerClassNesting = 0;
+        boolean hasExplicitConstructor = false;
 
         /**
          * Get the RFC value.
@@ -141,6 +150,9 @@ public class RFCCalculator {
             if (nestingLevel == 1 && innerClassNesting == 0) {
                 String methodName = node.getName().getIdentifier();
                 ownMethods.add(methodName);
+                if (node.isConstructor()) {
+                    hasExplicitConstructor = true;
+                }
             }
             return true; // Visit method body to find method invocations
         }

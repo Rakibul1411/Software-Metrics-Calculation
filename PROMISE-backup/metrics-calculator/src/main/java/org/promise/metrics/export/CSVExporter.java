@@ -29,7 +29,8 @@ public class CSVExporter {
              CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
 
             // Write header
-            csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "rfc", "ca", "ce", "npm", "loc", "moa", "ic", "cbm");
+            csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce", "npm",
+                    "lcom3", "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc", "max_cc", "avg_cc");
 
             // Write data rows
             for (ClassMetrics metrics : metricsList) {
@@ -40,13 +41,21 @@ public class CSVExporter {
                         metrics.getNoc(),
                         metrics.getCbo(),
                         metrics.getRfc(),
+                        metrics.getLcom(),
                         metrics.getCa(),
                         metrics.getCe(),
                         metrics.getNpm(),
+                        String.format("%.2f", metrics.getLcom3()),
                         metrics.getLoc(),
+                        String.format("%.2f", metrics.getDam()),
                         metrics.getMoa(),
+                        String.format("%.2f", metrics.getMfa()),
+                        String.format("%.2f", metrics.getCam()),
                         metrics.getIc(),
-                        metrics.getCbm()
+                        metrics.getCbm(),
+                        String.format("%.2f", metrics.getAmc()),
+                        metrics.getMaxCc(),
+                        String.format("%.2f", metrics.getAvgCc())
                 );
             }
         }
@@ -86,27 +95,28 @@ public class CSVExporter {
                             metrics.getNoc(),  // noc - Number of Children
                             metrics.getCbo(),  // cbo - Coupling Between Objects
                             metrics.getRfc(),  // rfc - Response For a Class
-                            0,  // lcom - not implemented
+                            metrics.getLcom(),  // lcom - Lack of Cohesion of Methods
                             metrics.getCa(),   // ca - Afferent Coupling
                             metrics.getCe(),   // ce - Efferent Coupling
                             metrics.getNpm(),
-                            0,  // lcom3 - not implemented
+                            String.format("%.2f", metrics.getLcom3()),  // lcom3 - LCOM variant 3
                             metrics.getLoc(),
-                            0,  // dam - not implemented
+                            String.format("%.2f", metrics.getDam()),  // dam - Data Access Metric
                             metrics.getMoa(),  // moa - Measure of Aggregation
-                            0,  // mfa - not implemented
-                            0,  // cam - not implemented
+                            String.format("%.2f", metrics.getMfa()),  // mfa - Measure of Functional Abstraction
+                            String.format("%.2f", metrics.getCam()),  // cam - Cohesion Among Methods
                             metrics.getIc(),  // ic - Inheritance Coupling
                             metrics.getCbm(),  // cbm - Coupling Between Methods
-                            0,  // amc - not implemented
-                            0,  // max_cc - not calculable from source
-                            0,  // avg_cc - not calculable from source
+                            String.format("%.2f", metrics.getAmc()),  // amc - Average Method Complexity
+                            metrics.getMaxCc(),  // max_cc - Maximum Cyclomatic Complexity
+                            String.format("%.2f", metrics.getAvgCc()),  // avg_cc - Average Cyclomatic Complexity
                             0   // bug - not calculable from source
                     );
                 }
             } else {
                 // Write only implemented columns
-                csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "rfc", "ca", "ce", "npm", "loc", "moa", "ic", "cbm");
+                csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce", "npm",
+                        "lcom3", "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc", "max_cc", "avg_cc");
 
                 for (ClassMetrics metrics : metricsList) {
                     csvPrinter.printRecord(
@@ -116,13 +126,21 @@ public class CSVExporter {
                             metrics.getNoc(),
                             metrics.getCbo(),
                             metrics.getRfc(),
+                            metrics.getLcom(),
                             metrics.getCa(),
                             metrics.getCe(),
                             metrics.getNpm(),
+                            String.format("%.2f", metrics.getLcom3()),
                             metrics.getLoc(),
+                            String.format("%.2f", metrics.getDam()),
                             metrics.getMoa(),
+                            String.format("%.2f", metrics.getMfa()),
+                            String.format("%.2f", metrics.getCam()),
                             metrics.getIc(),
-                            metrics.getCbm()
+                            metrics.getCbm(),
+                            String.format("%.2f", metrics.getAmc()),
+                            metrics.getMaxCc(),
+                            String.format("%.2f", metrics.getAvgCc())
                     );
                 }
             }
