@@ -114,7 +114,7 @@ def compare_metrics(calculated_file, predefined_file, output_file):
     print(f"Match rate: {match_count / (match_count + mismatch_count) * 100:.2f}%")
     print(f"\nMismatch report saved to: {output_file}")
     
-    # Print mismatch summary by metric
+    # Print mismatch summary by metric and write summary CSV
     if mismatches:
         print(f"\nMismatches by metric:")
         metric_counts = {}
@@ -123,6 +123,22 @@ def compare_metrics(calculated_file, predefined_file, output_file):
             metric_counts[metric] = metric_counts.get(metric, 0) + 1
         for metric, count in sorted(metric_counts.items(), key=lambda x: -x[1]):
             print(f"  {metric}: {count} mismatches")
+
+        # Write per-metric mismatch summary to a separate CSV file
+        output_dir = os.path.dirname(output_file)
+        output_basename = os.path.basename(output_file)
+        if '-mismatch.csv' in output_basename:
+            dataset_prefix = output_basename.replace('-mismatch.csv', '')
+        else:
+            dataset_prefix = Path(output_basename).stem
+
+        summary_file = os.path.join(output_dir, f"{dataset_prefix}-mismatch-summary.csv")
+        with open(summary_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=['metric', 'mismatches'])
+            writer.writeheader()
+            for metric, count in sorted(metric_counts.items(), key=lambda x: -x[1]):
+                writer.writerow({'metric': metric, 'mismatches': count})
+        print(f"\nMismatch summary saved to: {summary_file}")
     
     return mismatches
 
