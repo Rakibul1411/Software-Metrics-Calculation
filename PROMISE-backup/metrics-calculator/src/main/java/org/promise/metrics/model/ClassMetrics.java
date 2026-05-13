@@ -34,6 +34,7 @@ public class ClassMetrics {
     private Set<String> methodNames = new HashSet<>();   // Methods defined in this class
     private Set<String> invokedMethods = new HashSet<>(); // Methods invoked by this class
     private Set<String> inheritedMethodInvocations = new HashSet<>(); // Parent method invocations for CBM
+    private java.util.List<String> fieldTypes = new java.util.ArrayList<>(); // Field types for MOA
 
     public ClassMetrics() {
     }
@@ -241,6 +242,14 @@ public class ClassMetrics {
 
     public void setInheritedMethodInvocations(Set<String> inheritedMethodInvocations) {
         this.inheritedMethodInvocations = inheritedMethodInvocations;
+    }
+
+    public java.util.List<String> getFieldTypes() {
+        return fieldTypes;
+    }
+
+    public void setFieldTypes(java.util.List<String> fieldTypes) {
+        this.fieldTypes = fieldTypes;
     }
 
     public String getSuperclassName() {

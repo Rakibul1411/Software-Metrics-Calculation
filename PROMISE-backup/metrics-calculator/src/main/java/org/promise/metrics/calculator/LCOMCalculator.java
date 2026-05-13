@@ -42,10 +42,6 @@ public class LCOMCalculator {
         // Step 1: Collect all instance variable names declared in the class
         Set<String> instanceVariables = extractInstanceVariables(typeDeclaration);
 
-        if (instanceVariables.isEmpty()) {
-            return 0;
-        }
-
         // Step 2: For each method, find which instance variables it accesses
         Map<String, Set<String>> methodFieldAccess = extractMethodFieldAccess(typeDeclaration, instanceVariables);
 

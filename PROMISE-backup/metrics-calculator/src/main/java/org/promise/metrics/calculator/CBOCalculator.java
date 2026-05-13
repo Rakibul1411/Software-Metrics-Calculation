@@ -118,8 +118,6 @@ public class CBOCalculator {
             }
         }
         
-        // Add afferent coupling (classes that use this class)
-        // Note: Afferent coupling sources are already project classes (since only they register)
         Set<String> afferent = afferentCoupling.getOrDefault(simpleName, Collections.emptySet());
         for (String dep : afferent) {
             if (allClassNames.contains(dep)) {
@@ -153,27 +151,9 @@ public class CBOCalculator {
     }
 
     private Set<String> getImplicitDependencies(String className) {
-        Set<String> implicit = new HashSet<>();
-        String current = className;
-        int depth = 0;
-        
-        while (current != null && depth < 10) {
-            String parent = inheritanceMap.get(current);
-            if (parent == null) break;
-            
-            // Heuristic: If we extend Task, MatchingTask, or ProjectComponent, we depend on Project
-            if ("Task".equals(parent) || "MatchingTask".equals(parent) || "ProjectComponent".equals(parent)) {
-                implicit.add("Project");
-            }
-            // Heuristic: If we extend Task, we depend on Target?
-            if ("Task".equals(parent) || "MatchingTask".equals(parent)) {
-                 implicit.add("Target"); 
-            }
-            
-            current = parent;
-            depth++;
-        }
-        return implicit;
+        // Removed hardcoded heuristics (e.g., Task -> Target) as they inflate CA/CBO
+        // relative to the original CKJM bytecode analysis.
+        return new HashSet<>();
     }
     
     // Helper used inside calculateCBO above (kept for compatibility if method structure changed)

@@ -47,13 +47,13 @@ public class LCOM3Calculator {
         int a = instanceVariables.size();  // number of attributes
 
         // Special cases
-        if (m <= 1) {
-            return 0.0;
-        }
-
         if (a == 0) {
             // No attributes but has methods - return 2 as sentinel (matching ckjm for classes with no fields)
             return 2.0;
+        }
+
+        if (m <= 1) {
+            return 0.0;
         }
 
         // For each attribute, count how many methods access it

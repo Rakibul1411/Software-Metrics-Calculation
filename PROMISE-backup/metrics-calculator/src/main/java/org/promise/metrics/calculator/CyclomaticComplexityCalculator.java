@@ -100,11 +100,11 @@ public class CyclomaticComplexityCalculator {
             }
         }
 
-        // Add default constructor CC = 1
+        // Add default constructor CC = 0 (constructors have base CC 0)
         if (!hasExplicitConstructor && !isInterface) {
-            totalCC += 1;
-            if (1 > maxCC) {
-                maxCC = 1;
+            totalCC += 0;
+            if (0 > maxCC) {
+                maxCC = 0;
             }
         }
 
@@ -122,12 +122,19 @@ public class CyclomaticComplexityCalculator {
     public static int calculateMethodCC(MethodDeclaration method) {
         if (method.getBody() == null) {
             // Abstract or interface method with no body
-            return 1;
+            return 0;
         }
 
         CCMethodVisitor visitor = new CCMethodVisitor();
         method.getBody().accept(visitor);
-        return 1 + visitor.decisionPoints;
+        
+        if (method.isConstructor()) {
+            // Constructors have base CC of 0 in CKJM
+            return visitor.decisionPoints;
+        } else {
+            // Regular methods have base CC of 1
+            return 1 + visitor.decisionPoints;
+        }
     }
 
     /**

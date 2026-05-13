@@ -1,11 +1,15 @@
 package org.promise.metrics;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.promise.metrics.calculator.CBMCalculator;
@@ -30,23 +34,45 @@ public class MetricsCalculatorMain {
             System.exit(1);
         }
 
-        String sourceDir = args[0];
+        String[] sourceDirs = args[0].split(",");
         String outputFile = args.length > 1 ? args[1] : "output/metrics.csv";
-        boolean fullFormat = args.length > 2 && args[2].equals("--full-format");
+
+        // Parse optional flags from remaining arguments
+        boolean fullFormat = false;
+        String filterFile = null;
+        for (int i = 2; i < args.length; i++) {
+            if ("--full-format".equals(args[i])) {
+                fullFormat = true;
+            } else if ("--filter".equals(args[i]) && i + 1 < args.length) {
+                filterFile = args[++i];
+            }
+        }
 
         System.out.println("Java Metrics Calculator");
         System.out.println("======================");
-        System.out.println("Source directory: " + sourceDir);
+        System.out.println("Source directories: " + String.join(", ", sourceDirs));
         System.out.println("Output file: " + outputFile);
+        if (filterFile != null) {
+            System.out.println("Filter file: " + filterFile);
+        }
         System.out.println();
 
         try {
             // Calculate metrics
-            List<ClassMetrics> allMetrics = calculateMetricsForDirectory(sourceDir);
+            List<ClassMetrics> allMetrics = calculateMetricsForDirectories(sourceDirs);
 
             if (allMetrics.isEmpty()) {
                 System.err.println("No Java files found or no metrics calculated.");
                 System.exit(1);
+            }
+
+            // Filter: keep only classes that exist in the predefined dataset
+            if (filterFile != null) {
+                Set<String> predefinedClasses = loadClassNamesFromCSV(filterFile);
+                int beforeSize = allMetrics.size();
+                allMetrics.removeIf(m -> !predefinedClasses.contains(m.getFullyQualifiedName()));
+                int afterSize = allMetrics.size();
+                System.out.println("Filtering: " + beforeSize + " -> " + afterSize + " classes (removed " + (beforeSize - afterSize) + " classes not in predefined dataset)");
             }
 
             // Create an output directory if it doesn't exist
@@ -73,42 +99,70 @@ public class MetricsCalculatorMain {
     }
 
     /**
-     * Calculate metrics for all Java files in a directory (recursively).
+     * Load class names (first column) from a predefined PROMISE CSV file.
+     * The CSV has no header; the first column is the fully qualified class name.
      */
-    private static List<ClassMetrics> calculateMetricsForDirectory(String dirPath) throws IOException {
+    private static Set<String> loadClassNamesFromCSV(String csvPath) throws IOException {
+        Set<String> classNames = new HashSet<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(csvPath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                // First column is the class name (comma-separated)
+                int commaIndex = line.indexOf(',');
+                if (commaIndex > 0) {
+                    classNames.add(line.substring(0, commaIndex).trim());
+                }
+            }
+        }
+        System.out.println("Loaded " + classNames.size() + " class names from predefined dataset: " + csvPath);
+        return classNames;
+    }
+
+    /**
+     * Calculate metrics for all Java files in multiple directories (recursively).
+     */
+    private static List<ClassMetrics> calculateMetricsForDirectories(String[] dirPaths) throws IOException {
         List<ClassMetrics> allMetrics = new ArrayList<>();
-        Path sourcePath = Paths.get(dirPath);
-
-        if (!Files.exists(sourcePath)) {
-            throw new IOException("Source directory does not exist: " + dirPath);
-        }
-
-        if (!Files.isDirectory(sourcePath)) {
-            throw new IOException("Source path is not a directory: " + dirPath);
-        }
-
+        
         System.out.println("Scanning for Java files...");
 
-        // Find all .java files recursively, excluding 'optional' package
-        try (Stream<Path> paths = Files.walk(sourcePath)) {
-            paths.filter(Files::isRegularFile)
-                    .filter(path -> path.toString().endsWith(".java"))
-                    .filter(path -> !path.toString().contains("/optional/") && !path.toString().contains("\\optional\\"))
-                    .forEach(javaFile -> {
-                        try {
-                            System.out.println("Processing: " + javaFile);
-                            List<ClassMetrics> metrics = JavaSourceParser.parseFile(javaFile);
-                            allMetrics.addAll(metrics);
+        for (String dirPath : dirPaths) {
+            Path sourcePath = Paths.get(dirPath.trim());
 
-                            // Print each class found
-                            for (ClassMetrics m : metrics) {
-                                System.out.println("  - " + m.getFullyQualifiedName());
+            if (!Files.exists(sourcePath)) {
+                System.err.println("Warning: Source directory does not exist: " + dirPath);
+                continue;
+            }
+
+            if (!Files.isDirectory(sourcePath)) {
+                System.err.println("Warning: Source path is not a directory: " + dirPath);
+                continue;
+            }
+
+            // Find all .java files recursively, excluding 'optional' and 'test' packages
+            try (Stream<Path> paths = Files.walk(sourcePath)) {
+                paths.filter(Files::isRegularFile)
+                        .filter(path -> path.toString().endsWith(".java"))
+                        .filter(path -> !path.toString().contains("/optional/") && !path.toString().contains("\\optional\\"))
+                        .filter(path -> !path.toString().contains("/test/") && !path.toString().contains("\\test\\"))
+                        .forEach(javaFile -> {
+                            try {
+                                System.out.println("Processing: " + javaFile);
+                                List<ClassMetrics> metrics = JavaSourceParser.parseFile(javaFile);
+                                allMetrics.addAll(metrics);
+
+                                // Print each class found
+                                for (ClassMetrics m : metrics) {
+                                    System.out.println("  - " + m.getFullyQualifiedName());
+                                }
+
+                            } catch (Exception e) {
+                                System.err.println("Error processing " + javaFile + ": " + e.getMessage());
                             }
-
-                        } catch (Exception e) {
-                            System.err.println("Error processing " + javaFile + ": " + e.getMessage());
-                        }
-                    });
+                        });
+            }
         }
 
         System.out.println("\nTotal classes found: " + allMetrics.size());
@@ -137,7 +191,43 @@ public class MetricsCalculatorMain {
         System.out.println("Calculating MFA (Measure of Functional Abstraction) for all classes...");
         calculateMFAForAllClasses(allMetrics);
 
+        // Eighth pass: Calculate MOA (Measure of Aggregation) for all classes
+        System.out.println("Calculating MOA (Measure of Aggregation) for all classes...");
+        calculateMOAForAllClasses(allMetrics);
+
         return allMetrics;
+    }
+
+    /**
+     * Calculate MOA (Measure of Aggregation) for all classes.
+     * MOA is the count of fields whose types are user-defined classes (project classes).
+     */
+    private static void calculateMOAForAllClasses(List<ClassMetrics> allMetrics) {
+        java.util.Set<String> projectClassNames = new java.util.HashSet<>();
+        
+        // Build a registry of all classes defined in this project
+        for (ClassMetrics metrics : allMetrics) {
+            projectClassNames.add(metrics.getFullyQualifiedName());
+            
+            // Also add simple name since AST fields often only use simple names
+            String simpleName = metrics.getFullyQualifiedName();
+            int lastDot = simpleName.lastIndexOf('.');
+            if (lastDot >= 0) {
+                simpleName = simpleName.substring(lastDot + 1);
+            }
+            projectClassNames.add(simpleName);
+        }
+
+        // Compare each field against the project classes
+        for (ClassMetrics metrics : allMetrics) {
+            int moa = 0;
+            for (String fieldType : metrics.getFieldTypes()) {
+                if (projectClassNames.contains(fieldType)) {
+                    moa++;
+                }
+            }
+            metrics.setMoa(moa);
+        }
     }
 
     /**
@@ -290,8 +380,12 @@ public class MetricsCalculatorMain {
 
         // Second pass: calculate MFA for each class
         for (ClassMetrics metrics : allMetrics) {
-            double mfa = mfaCalculator.calculateMFA(metrics.getFullyQualifiedName());
-            metrics.setMfa(mfa);
+            if (metrics.isInterface()) {
+                metrics.setMfa(0.0);
+            } else {
+                double mfa = mfaCalculator.calculateMFA(metrics.getFullyQualifiedName());
+                metrics.setMfa(mfa);
+            }
         }
     }
 
@@ -299,29 +393,27 @@ public class MetricsCalculatorMain {
      * Print usage information.
      */
     private static void printUsage() {
-        System.out.println("Usage: java -jar metrics-calculator.jar <source-directory> [output-file] [--full-format]");
+        System.out.println("Usage: java -jar metrics-calculator.jar <source-directories> [output-file] [options]");
         System.out.println();
         System.out.println("Arguments:");
-        System.out.println("  source-directory  Path to the Java source code directory");
+        System.out.println("  source-directories  Comma-separated paths to Java source code directories");
         System.out.println("  output-file       (Optional) Path to output CSV file (default: output/metrics.csv)");
-        System.out.println("  --full-format     (Optional) Export with all 22 columns (unimplemented metrics as 0)");
+        System.out.println();
+        System.out.println("Options:");
+        System.out.println("  --full-format         Export with all 22 columns (unimplemented metrics as 0)");
+        System.out.println("  --filter <csv-file>   Filter output to only include classes present in the");
+        System.out.println("                        given predefined PROMISE CSV file");
         System.out.println();
         System.out.println("Examples:");
         System.out.println("  # Basic usage");
-        System.out.println("  java -jar metrics-calculator.jar ../source\\ code/ant/jakarta-ant-1.3/src/main");
+        System.out.println("  java -jar metrics-calculator.jar \"src/main\" output/metrics.csv");
         System.out.println();
-        System.out.println("  # Specify output file");
-        System.out.println("  java -jar metrics-calculator.jar ../source\\ code/ant/jakarta-ant-1.3/src/main output/ant-1.3.csv");
-        System.out.println();
-        System.out.println("  # Using Maven exec plugin");
-        System.out.println("  mvn exec:java -Dexec.args=\"../source\\ code/ant/jakarta-ant-1.3/src/main\"");
+        System.out.println("  # With filtering (output will only contain classes from the predefined CSV)");
+        System.out.println("  java -jar metrics-calculator.jar \"src/main\" output/ant-1.3.csv --filter ../bug-data/ant/ant-1.3.csv");
         System.out.println();
         System.out.println("Calculated Metrics:");
-        System.out.println("  - WMC     : Weighted Methods per Class (method count)");
-        System.out.println("  - DIT     : Depth of Inheritance Tree");
-        System.out.println("  - NOC     : Number of Children (immediate subclasses)");
-        System.out.println("  - CBO     : Coupling Between Objects");
-        System.out.println("  - NPM     : Number of Public Methods");
-        System.out.println("  - LOC     : Lines of Code (excluding blanks and comments)");
+        System.out.println("  - WMC, DIT, NOC, CBO, RFC, LCOM, CA, CE, NPM");
+        System.out.println("  - LCOM3, LOC, DAM, MOA, MFA, CAM, IC, CBM, AMC");
+        System.out.println("  - MAX_CC, AVG_CC");
     }
 }

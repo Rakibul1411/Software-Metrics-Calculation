@@ -79,15 +79,23 @@ public class CAMCalculator {
         List<Set<String>> methodParamTypes = new ArrayList<>();
         Set<String> allTypes = new HashSet<>();
 
+        String className = typeDeclaration.getName().getIdentifier();
+
         for (MethodDeclaration method : methods) {
             Set<String> paramTypes = extractParameterTypes(method);
+            // Add the class itself as an implicit parameter (simulating 'this' pointer in CKJM)
+            paramTypes.add(className);
+            
             methodParamTypes.add(paramTypes);
             allTypes.addAll(paramTypes);
         }
 
-        // Default constructor has no parameters - add empty set
+        // Default constructor has no explicit parameters, but still has 'this'
         if (!hasExplicitConstructor && !isInterface) {
-            methodParamTypes.add(new HashSet<>());
+            Set<String> defaultConstructorParams = new HashSet<>();
+            defaultConstructorParams.add(className);
+            methodParamTypes.add(defaultConstructorParams);
+            allTypes.add(className);
         }
 
         int l = allTypes.size(); // total distinct parameter types
@@ -123,12 +131,21 @@ public class CAMCalculator {
     private static Set<String> extractParameterTypes(MethodDeclaration method) {
         Set<String> types = new HashSet<>();
 
-        // Collect parameter types only (not return type)
+        // Collect parameter types
         List<SingleVariableDeclaration> params = method.parameters();
         for (SingleVariableDeclaration param : params) {
             String typeName = resolveTypeName(param.getType());
             if (typeName != null && !typeName.isEmpty()) {
                 types.add(typeName);
+            }
+        }
+
+        // Add return type if not void
+        Type returnType = method.getReturnType2();
+        if (returnType != null) {
+            String rName = resolveTypeName(returnType);
+            if (rName != null && !rName.isEmpty() && !rName.equals("void")) {
+                types.add(rName);
             }
         }
 

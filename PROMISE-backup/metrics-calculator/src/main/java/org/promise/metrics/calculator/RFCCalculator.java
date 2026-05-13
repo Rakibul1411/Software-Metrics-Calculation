@@ -80,6 +80,7 @@ public class RFCCalculator {
      */
     private static class RFCVisitor extends ASTVisitor {
         private Set<String> ownMethods = new HashSet<>();
+        private int ownMethodCount = 0;
         private Set<String> calledMethods = new HashSet<>();
         private int nestingLevel = 0;
         private int innerClassNesting = 0;
@@ -96,7 +97,7 @@ public class RFCCalculator {
             Set<String> externalCalls = new HashSet<>(calledMethods);
             externalCalls.removeAll(ownMethods);
             
-            return ownMethods.size() + externalCalls.size();
+            return ownMethodCount + externalCalls.size();
         }
 
         @Override
@@ -150,6 +151,7 @@ public class RFCCalculator {
             if (nestingLevel == 1 && innerClassNesting == 0) {
                 String methodName = node.getName().getIdentifier();
                 ownMethods.add(methodName);
+                ownMethodCount++;
                 if (node.isConstructor()) {
                     hasExplicitConstructor = true;
                 }
