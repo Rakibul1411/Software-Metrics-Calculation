@@ -159,9 +159,9 @@ public class JavaSourceParser {
             int loc = LOCCalculator.calculateLOCForType(compilationUnit, typeDeclaration, sourceCode);
             metrics.setLoc(loc);
 
-            // Calculate MOA (Measure of Aggregation)
-            int moa = MOACalculator.calculateMOAForType(typeDeclaration);
-            metrics.setMoa(moa);
+            // Extract field types for MOA (calculated in 2nd pass)
+            java.util.List<String> fieldTypes = MOACalculator.extractFieldTypes(typeDeclaration);
+            metrics.setFieldTypes(fieldTypes);
 
             // Extract superclass name for NOC and DIT calculation
             String superclassName = NOCCalculator.extractSuperclassName(typeDeclaration);

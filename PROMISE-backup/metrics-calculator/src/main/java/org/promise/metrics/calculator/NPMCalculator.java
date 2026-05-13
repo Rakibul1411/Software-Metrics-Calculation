@@ -68,8 +68,12 @@ public class NPMCalculator {
                     hasExplicitConstructor = true;
                 }
                 int modifiers = node.getModifiers();
-                // Check if the method is public
-                if (Modifier.isPublic(modifiers)) {
+                boolean isInterfaceMethod = false;
+                if (node.getParent() instanceof TypeDeclaration) {
+                    isInterfaceMethod = ((TypeDeclaration) node.getParent()).isInterface();
+                }
+                // Check if the method is public (interface methods are implicitly public)
+                if (Modifier.isPublic(modifiers) || isInterfaceMethod) {
                     publicMethodCount++;
                 }
             }

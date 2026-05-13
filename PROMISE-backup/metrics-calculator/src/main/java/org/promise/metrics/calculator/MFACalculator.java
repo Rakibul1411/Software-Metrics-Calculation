@@ -72,14 +72,8 @@ public class MFACalculator {
         return (double) nonOverriddenInherited.size() / totalMethods;
     }
 
-    /**
-     * Standard java.lang.Object methods that all classes inherit.
-     * These are included as inherited methods for MFA calculation (matching ckjm behavior).
-     */
-    private static final Set<String> OBJECT_METHODS = new HashSet<>(Arrays.asList(
-        "toString", "hashCode", "equals", "getClass",
-        "notify", "notifyAll", "wait", "clone", "finalize"
-    ));
+    // Removed OBJECT_METHODS constant because PROMISE dataset (CKJM)
+    // does not count java.lang.Object methods as inherited methods for MFA.
 
     /**
      * Collect all inherited methods by walking up the inheritance chain.
@@ -92,9 +86,6 @@ public class MFACalculator {
         Set<String> inherited = new HashSet<>();
         Set<String> visited = new HashSet<>();
         visited.add(className);
-
-        // Always include java.lang.Object methods as inherited
-        inherited.addAll(OBJECT_METHODS);
 
         String current = superclassMap.get(className);
 

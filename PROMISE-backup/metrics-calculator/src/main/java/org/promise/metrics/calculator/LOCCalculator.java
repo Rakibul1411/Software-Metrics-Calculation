@@ -52,19 +52,15 @@ public class LOCCalculator {
     public static int calculateLOCForType(CompilationUnit compilationUnit,
                                           AbstractTypeDeclaration typeDeclaration,
                                           String sourceCode) {
+        if (typeDeclaration instanceof TypeDeclaration && ((TypeDeclaration)typeDeclaration).isInterface()) {
+            return WMCCalculator.calculateWMCForType(typeDeclaration);
+        }
+
         int startPos = typeDeclaration.getStartPosition();
         int endPos = startPos + typeDeclaration.getLength() - 1;
+        String typeSource = sourceCode.substring(startPos, endPos + 1);
 
-        int typeStartLine = compilationUnit.getLineNumber(startPos);
-        int endLine = compilationUnit.getLineNumber(endPos);
-
-        String[] lines = sourceCode.split("\n", -1);
-
-        // Find the line with the opening brace '{' - this is where the class body starts
-        int bodyStartLine = findOpeningBraceLine(lines, typeStartLine, endLine);
-
-        // Count all non-blank lines from the '{' line to the '}' line (inclusive)
-        return countNonBlankLinesInRange(lines, bodyStartLine, endLine);
+        return calculateSimpleLOC(typeSource);
     }
 
     /**
