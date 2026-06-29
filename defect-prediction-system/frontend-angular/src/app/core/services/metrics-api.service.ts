@@ -1,28 +1,34 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MetricsPreview } from '../models/metrics-preview.model';
 import { environment } from '../../../environments/environment';
 
-@Injectable({
-  providedIn: 'root'
-})
+export interface MetricsExtractionRequest {
+  datasetFormat: 'promise' | 'aeeem';
+  projectZip?: File;
+  githubUrl?: string;
+}
+
+@Injectable({ providedIn: 'root' })
 export class MetricsApiService {
-  private baseUrl = `${environment.apiUrl}/api/metrics`;
+  private readonly baseUrl = `${environment.apiUrl}/api/metrics`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
-  extractMetrics(sourceDirectory: string, datasetFormat: string = 'promise', filterFile?: string): Observable<MetricsPreview> {
-    let params = new HttpParams()
-      .set('sourceDirectory', sourceDirectory)
-      .set('datasetFormat', datasetFormat);
-    if (filterFile) {
-      params = params.set('filterFile', filterFile);
+  extractMetrics(request: MetricsExtractionRequest): Observable<MetricsPreview> {
+    const formData = new FormData();
+    formData.append('datasetFormat', request.datasetFormat);
+    if (request.projectZip) {
+      formData.append('projectZip', request.projectZip, request.projectZip.name);
     }
-    return this.http.post<MetricsPreview>(`${this.baseUrl}/extract`, null, { params });
+    if (request.githubUrl) {
+      formData.append('githubUrl', request.githubUrl.trim());
+    }
+    return this.http.post<MetricsPreview>(`${this.baseUrl}/extract`, formData);
   }
 
   downloadDataset(datasetId: string): string {
-    return `${this.baseUrl}/download/${datasetId}`;
+    return `${this.baseUrl}/download/${encodeURIComponent(datasetId)}`;
   }
 }
