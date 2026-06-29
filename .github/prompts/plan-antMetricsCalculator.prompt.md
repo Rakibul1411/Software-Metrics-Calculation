@@ -1,290 +1,854 @@
-# Java Metrics Calculator for Ant Source Code
+# Prompt: Software Defect Prediction System
 
-A Java-based metrics calculator using Eclipse JDT to parse ant-1.3 source code and generate CSV output matching the bug-data/ant/ant-1.3.csv format.
+## Project Title
+
+**Static Java Source Code Defect Prediction Using Eclipse JDT AST Parser, CORAL Transfer Learning, and KNN Classification**
+
+---
 
 ## Objective
 
-Calculate the following 7 metrics from Java source code:
+Develop a full-stack software defect prediction system that predicts defect-prone Java classes in a new software project by using static source-code metrics and labelled historical defect datasets.
 
-| Metric         | Formula                                         |
-| -------------- | ----------------------------------------------- |
-| **CC(method)** | `1 + (# if + for + while + case + catch + && + \|\| + ?:)` |
-| **WMC**        | `Σ CC(method)`                                  |
-| **NPM**        | `count(public methods)`                         |
-| **LOC**        | `line(end) - line(start) - blank/comment lines` |
-| **AMC**        | `WMC / number_of_methods`                       |
-| **MAX_CC**     | `max(CC(method))`                               |
-| **AVG_CC**     | `Σ CC(method) / number_of_methods`              |
+The system must support:
 
-## Source Code Information
+- Java source-code metrics extraction.
+- PROMISE-compatible metrics generation.
+- AEEEM-compatible static metric subset generation.
+- Transfer learning/domain adaptation using CORAL.
+- Classification using K-Nearest Neighbors (KNN).
+- Prediction output mapped back to Java class names or file paths.
+- Angular frontend, Java Spring Boot backend, and Python FastAPI ML service.
 
-### Ant-1.3 Structure
-- **Location**: `/Users/md.rakibulislam/IIT/SPL-3/promise-dataset-source-code/PROMISE-backup/source code/ant/jakarta-ant-1.3/src/main`
-- **Total Java Files**: ~120-130 files
-- **Main Packages**:
-  - `org.apache.tools.ant` - Core Ant classes (28 files)
-  - `org.apache.tools.ant.taskdefs` - Task definitions (64+ files)
-    - `taskdefs.compilers` - Compiler adapters (7 files)
-    - `taskdefs.optional` - Optional tasks
-  - `org.apache.tools.ant.types` - Type definitions (13 files)
-  - `org.apache.tools.ant.util` - Utility classes (8 files)
-    - `util.regexp` - Regular expression utilities
-  - `org.apache.tools.tar` - TAR archive handling (6 files)
-  - `org.apache.tools.mail` - Mail utilities (2 files)
+The system should be understood as a **defect-proneness prediction and testing-prioritization tool**, not an exact bug detector. It predicts which Java classes are more likely to be buggy based on historical patterns.
 
-### Expected Output Format
+---
 
-CSV file matching bug-data/ant/ant-1.3.csv with columns:
-- `name` - Fully qualified class name (e.g., "org.apache.tools.ant.taskdefs.ExecuteOn")
-- `wmc` - Weighted Methods per Class
-- `npm` - Number of Public Methods
-- `loc` - Lines of Code
-- `amc` - Average Method Complexity
-- `max_cc` - Maximum Cyclomatic Complexity
-- `avg_cc` - Average Cyclomatic Complexity
+## Core Concept
 
-Note: The full CSV has 22 columns, but we're implementing only the 7 required metrics initially.
+The system has two dataset types:
 
-## Proposed Project Structure
+### 1. Source Dataset
 
-```
-PROMISE-backup/
-└── metrics-calculator/
-    ├── pom.xml                           # Maven configuration
-    ├── README.md                         # Documentation
-    ├── src/
-    │   └── main/
-    │       └── java/
-    │           └── org/
-    │               └── promise/
-    │                   └── metrics/
-    │                       ├── MetricsCalculatorMain.java
-    │                       ├── parser/
-    │                       │   └── ASTParser.java
-    │                       ├── calculator/
-    │                       │   ├── ComplexityCalculator.java
-    │                       │   ├── LOCCalculator.java
-    │                       │   └── NPMCalculator.java
-    │                       ├── model/
-    │                       │   └── ClassMetrics.java
-    │                       └── export/
-    │                           └── CSVExporter.java
-    └── output/                           # Generated CSV files
-        └── ant-1.3-calculated.csv
+The source dataset is a labelled historical defect dataset, such as PROMISE or AEEEM.
+
+It contains:
+
+```text
+metric columns + label column
 ```
 
-## Implementation Steps
+The label column may be named:
 
-### 1. Setup Maven Project
+```text
+bug
+class
+label
+```
 
-Create `pom.xml` with dependencies:
-- **Eclipse JDT Core** - For parsing Java source files and AST traversal
-- **Apache Commons CSV** - For CSV file generation
-- Java version: 8+ (compatible with older source code)
+The label indicates whether a class/module is:
 
-### 2. Implement ComplexityCalculator
+```text
+buggy / clean
+```
 
-**Purpose**: Calculate cyclomatic complexity (CC) for each method
+or:
 
-**Algorithm**:
-1. Use Eclipse JDT ASTVisitor to traverse method declarations
-2. Count control flow nodes:
-   - `if` statements
-   - `for` loops
-   - `while` loops
-   - `do-while` loops
-   - `case` statements in switch
-   - `catch` blocks
-   - `&&` operators
-   - `||` operators
-   - `?:` ternary operators
-3. CC = 1 + count of these nodes
-4. Aggregate for class-level metrics:
-   - **WMC**: Sum of all method CC values
-   - **MAX_CC**: Maximum CC across all methods
-   - **AVG_CC**: WMC / number_of_methods
-   - **AMC**: Same as AVG_CC (Average Method Complexity)
+```text
+1 / 0
+```
 
-### 3. Implement LOCCalculator
+### 2. Target Dataset
 
-**Purpose**: Calculate lines of code excluding blanks and comments
+The target dataset is generated from the user's new Java source code.
 
-**Algorithm**:
-1. Get CompilationUnit from JDT parser
-2. Get line range: `line(end) - line(start)`
-3. Use JDT's comment visitor to identify comment ranges
-4. Count blank lines using regex
-5. Subtract comments and blank lines from total
+It contains:
 
-### 4. Implement NPMCalculator
+```text
+identifier column + metric columns
+```
 
-**Purpose**: Count public methods
+The identifier column may be:
 
-**Algorithm**:
-1. Visit all method declarations using JDT ASTVisitor
-2. Check method modifiers with `Modifier.isPublic()`
-3. Count methods where public flag is true
-4. Exclude constructors if needed (clarify requirement)
+```text
+class_name
+file_path
+name
+```
 
-### 5. Create ClassMetrics Model
+The target dataset does not contain a true defect label, because the new project's actual buggy/clean status is unknown.
 
-**Data structure** to hold:
-```java
-public class ClassMetrics {
-    private String fullyQualifiedName;
-    private int wmc;
-    private int npm;
-    private int loc;
-    private double amc;
-    private int maxCC;
-    private double avgCC;
-    // Additional fields for other metrics if needed
+Therefore:
+
+```text
+Source dataset = labelled training data
+Target dataset = unlabelled prediction data
+```
+
+---
+
+## Complete System Workflow
+
+1. The user opens the Angular frontend.
+2. The user selects the dataset format: `PROMISE` or `AEEEM`.
+3. The user provides Java source code by uploading a ZIP file or entering a GitHub repository URL.
+4. Angular calls the Java Spring Boot backend.
+5. The Java backend parses the Java files using Eclipse JDT AST Parser.
+6. The system extracts the required static metrics for the selected dataset format.
+7. The system generates a target metrics CSV file containing `class_name` or `file_path` plus metric columns.
+8. Angular displays a preview of the extracted metrics CSV file.
+9. The user uploads one or multiple labelled source datasets.
+10. Angular calls the Java backend prediction API.
+11. The Java backend sends the generated target CSV and labelled source datasets to the Python FastAPI model service.
+12. The Python service validates feature compatibility between source and target datasets.
+13. The Python service preprocesses the data, including numeric conversion, missing value handling, and scaling.
+14. The Python service applies CORAL using source metrics and target metrics.
+15. The Python service trains KNN using adapted source metrics and source labels.
+16. The Python service predicts buggy or clean labels for the target classes.
+17. The Python service returns the prediction results to the Java backend.
+18. The Java backend returns the final prediction result to the Angular frontend.
+19. Angular displays the result as `class_name/file_path`, `predicted_label`, and optional `risk_score`.
+
+---
+
+## High-Level Architecture
+
+```text
+Angular Frontend
+      ↓
+Java Spring Boot Backend
+      ↓
+Eclipse JDT AST Parser
+      ↓
+Generated Target Metrics CSV
+      ↓
+Python FastAPI ML Service
+      ↓
+Preprocessing + CORAL + KNN
+      ↓
+Prediction JSON
+      ↓
+Java Spring Boot Backend
+      ↓
+Angular Result Table
+```
+
+Angular should call only the Java backend. The Java backend should internally call the Python FastAPI service.
+
+---
+
+## Main Modules
+
+### Module 1: Metrics Extraction Module
+
+The metrics extraction module is implemented in Java.
+
+Responsibilities:
+
+- Receive Java source code from Angular.
+- Support GitHub repository URL.
+- Support uploaded ZIP file.
+- Extract Java files.
+- Parse Java files using Eclipse JDT AST Parser.
+- Calculate static object-oriented metrics.
+- Generate PROMISE-compatible or AEEEM static-subset-compatible target CSV.
+- Save generated CSV on the server.
+- Return preview data and `targetDatasetId` to Angular.
+
+The generated CSV must contain:
+
+```text
+class_name, file_path, metric_1, metric_2, metric_3, ...
+```
+
+The identifier columns are used only for result mapping, not for model training.
+
+---
+
+### Module 2: Prediction Module
+
+The prediction module uses both Java and Python.
+
+Java backend responsibilities:
+
+- Receive `targetDatasetId`.
+- Receive one or multiple labelled source datasets.
+- Receive settings such as `labelColumn`, `idColumn`, `kValue`, and `useCoral`.
+- Load the generated target CSV.
+- Send target CSV and source datasets to Python FastAPI.
+- Receive prediction result from Python.
+- Return result to Angular.
+
+Python FastAPI responsibilities:
+
+- Read source and target datasets.
+- Combine multiple source datasets.
+- Separate source features and labels.
+- Separate target identifiers and target features.
+- Validate feature compatibility.
+- Apply preprocessing.
+- Apply CORAL.
+- Train KNN.
+- Predict target labels.
+- Return JSON prediction results.
+
+---
+
+## Important Machine Learning Rules
+
+### Rule 1: Do not use identifier columns as ML features
+
+Columns like these must not be used for CORAL or KNN:
+
+```text
+class_name
+file_path
+name
+```
+
+They must be stored separately and attached back after prediction.
+
+---
+
+### Rule 2: Only the source dataset has labels
+
+The source dataset contains:
+
+```text
+metrics + label
+```
+
+The target dataset contains:
+
+```text
+identifier + metrics
+```
+
+The target dataset does not need a label for prediction.
+
+---
+
+### Rule 3: Labels are required only for evaluation
+
+For a new unlabelled project, the system can only provide predictions. It cannot calculate accuracy, precision, recall, F1-score, MCC, or AUC because true labels are unavailable.
+
+To evaluate the model, use labelled benchmark datasets. In evaluation mode, hide the target labels during prediction and compare predictions with actual labels after prediction.
+
+---
+
+### Rule 4: Source and target feature columns must match
+
+Before CORAL and KNN:
+
+```text
+X_source columns == X_target columns
+```
+
+The columns must have:
+
+- Same feature names.
+- Same order.
+- Compatible numeric data types.
+- Same preprocessing steps.
+
+If feature columns are mismatched, the system should show an error or use a validated common static metric subset.
+
+---
+
+### Rule 5: AEEEM full dataset may contain non-static metrics
+
+AEEEM may include process/history metrics such as:
+
+```text
+CvsEntropy
+CvsLogEntropy
+numberOfBugsFoundUntil
+numberOfCriticalBugsFoundUntil
+numberOfMajorBugsFoundUntil
+```
+
+These cannot be extracted from Java source code using Eclipse JDT AST Parser alone.
+
+Therefore, if AEEEM is selected, use only the AEEEM static metric subset that can be extracted from Java source code.
+
+---
+
+## CORAL + KNN Workflow
+
+1. Read labelled source dataset.
+2. Read unlabelled generated target dataset.
+3. Separate source features:
+
+```text
+X_source = source metric columns
+y_source = source label column
+```
+
+4. Separate target features:
+
+```text
+target_ids = target class_name/file_path
+X_target = target metric columns
+```
+
+5. Validate feature compatibility.
+6. Convert all metric columns to numeric.
+7. Handle missing values.
+8. Apply scaling/normalization.
+9. Apply CORAL using:
+
+```text
+X_source + X_target
+```
+
+10. Train KNN using:
+
+```text
+adapted X_source + y_source
+```
+
+11. Predict:
+
+```text
+X_target → predicted_label
+```
+
+12. Attach predictions back to identifiers:
+
+```text
+class_name/file_path + predicted_label + risk_score
+```
+
+---
+
+## Final Prediction Output
+
+The final output should be JSON and CSV-compatible.
+
+Example:
+
+```json
+{
+  "status": "success",
+  "message": "Prediction completed successfully",
+  "results": [
+    {
+      "class_name": "com.project.PaymentService",
+      "file_path": "src/main/java/com/project/PaymentService.java",
+      "predicted_label": "buggy",
+      "risk_score": 0.82
+    },
+    {
+      "class_name": "com.project.LoginController",
+      "file_path": "src/main/java/com/project/LoginController.java",
+      "predicted_label": "clean",
+      "risk_score": 0.21
+    }
+  ]
 }
 ```
 
-### 6. Implement MetricsCalculatorMain
+Frontend result table:
 
-**Workflow**:
-1. Accept command-line argument for source directory
-2. Recursively scan for `.java` files
-3. For each file:
-   - Parse using Eclipse JDT
-   - Extract class declarations
-   - Calculate all 7 metrics
-   - Store in ClassMetrics object
-4. Collect all ClassMetrics
-5. Pass to CSVExporter
-
-### 7. Implement CSVExporter
-
-**Output format**:
-- Header: `name,wmc,npm,loc,amc,max_cc,avg_cc`
-- Data rows: One per class with comma-separated values
-- Use Apache Commons CSV for proper escaping
-- Sort by fully qualified class name (alphabetically)
-
-## Technical Decisions
-
-### Parsing Library: Eclipse JDT Core
-
-**Why JDT?**
-- Most robust for older Java versions (ant-1.3 is from ~2000-2001)
-- Better handling of incomplete/legacy code
-- No compilation required (works on source only)
-- Industry standard for Java static analysis
-
-**Alternatives considered**:
-- JavaParser: Modern but may struggle with old syntax
-- Spoon: Requires compilation
-- ANTLR: Too low-level for this task
-
-### Handling Inner Classes
-
-**Question**: Should inner/nested classes get separate CSV rows?
-
-**Options**:
-1. **Separate rows** with naming like `OuterClass$InnerClass`
-2. **Roll up** inner class metrics into parent
-3. **Exclude** inner classes entirely
-
-**Recommendation**: Option 1 (separate rows) - matches typical CKJM output and provides granular metrics
-
-### Build Tool: Maven
-
-**Why Maven?**
-- Standard dependency management
-- Easy to reproduce builds
-- Well-supported by IDEs
-- Simple to add additional libraries later
-
-## Open Questions
-
-### 1. Full Metrics vs. Subset
-
-The existing CSV has 22 columns:
-- name, wmc, dit, noc, cbo, rfc, lcom, ca, ce, npm, lcom3, loc, dam, moa, mfa, cam, ic, cbm, amc, max_cc, avg_cc, bug
-
-We're implementing only 7: wmc, npm, loc, amc, max_cc, avg_cc, (+ name)
-
-**Question**: Should we:
-- A) Implement only the 7 required metrics?
-- B) Implement all 22 to match existing format?
-- C) Use external library (CKJM) for CK metrics suite?
-
-**Recommendation**: Start with 7, add others if validation requires full comparison.
-
-### 2. Bug Column
-
-The `bug` column contains defect counts (0-3 in sample).
-
-**Question**: How to handle this?
-- A) Omit entirely (not calculable from source)
-- B) Default all to 0
-- C) Merge with existing CSV data for validation
-
-**Recommendation**: Option A (omit) - bug data requires external issue tracking.
-
-### 3. Method Count Definition
-
-**Question**: Does "number_of_methods" include:
-- Constructors? 
-- Static initializers?
-- Private methods?
-
-**Recommendation**: Include all methods (public, protected, private) and constructors, exclude static initializers.
-
-### 4. CC Edge Cases
-
-**Question**: How to count:
-- Short-circuit evaluation: `a && b && c` (count as 2 or 3?)
-- Nested ternary: `a ? b : c ? d : e` (count as 1 or 2?)
-
-**Recommendation**: Each operator counts as +1, so `a && b && c` = +2, nested ternary = +2.
-
-## Validation Strategy
-
-1. **Generate metrics** for ant-1.3 source
-2. **Compare** with existing bug-data/ant/ant-1.3.csv
-3. **Focus on** the 7 implemented metrics
-4. **Acceptable tolerance**: ±5% due to differences in:
-   - Comment line counting
-   - Blank line definitions
-   - Inner class handling
-
-## Next Steps
-
-1. Create project structure in `metrics-calculator/` directory
-2. Set up Maven `pom.xml` with dependencies
-3. Implement core calculators (Complexity, LOC, NPM)
-4. Test on sample Java file
-5. Run on full ant-1.3 source
-6. Validate against existing CSV
-7. Document discrepancies and refine algorithms
-8. Generalize to work with other Ant versions (1.4, 1.5, etc.)
-
-## Usage Example
-
-```bash
-cd metrics-calculator
-mvn clean compile
-mvn exec:java -Dexec.mainClass="org.promise.metrics.MetricsCalculatorMain" \
-  -Dexec.args="../source code/ant/jakarta-ant-1.3/src/main"
-# Output: output/ant-1.3-calculated.csv
+```text
+Class Name                         File Path                                      Prediction   Risk Score
+com.project.PaymentService          src/main/java/com/project/PaymentService.java  buggy        0.82
+com.project.LoginController         src/main/java/com/project/LoginController.java clean        0.21
 ```
 
-## Expected Timeline
+---
 
-- **Setup & Dependencies**: 30 minutes
-- **Complexity Calculator**: 2-3 hours
-- **LOC Calculator**: 1-2 hours  
-- **NPM Calculator**: 30 minutes
-- **CSV Export**: 1 hour
-- **Testing & Validation**: 2-3 hours
-- **Total**: ~8-10 hours
+## Recommended API Flow
 
-## References
+### API 1: Extract Metrics
 
-- Eclipse JDT Documentation: https://www.eclipse.org/jdt/core/
-- Cyclomatic Complexity: McCabe (1976)
-- CKJM Tool: https://www.spinellis.gr/sw/ckjm/
-- Apache Commons CSV: https://commons.apache.org/proper/commons-csv/
+```http
+POST /api/metrics/extract
+```
+
+Called by:
+
+```text
+Angular → Java Spring Boot
+```
+
+Request type:
+
+```text
+multipart/form-data
+```
+
+Request fields:
+
+```text
+datasetType = PROMISE / AEEEM
+sourceType = GITHUB / ZIP
+githubUrl = optional
+sourceZip = optional
+```
+
+Response:
+
+```json
+{
+  "status": "success",
+  "message": "Metrics extracted successfully",
+  "targetDatasetId": "target_001",
+  "fileName": "target_metrics.csv",
+  "columns": ["class_name", "file_path", "wmc", "dit", "noc", "cbo", "rfc", "lcom", "loc"],
+  "preview": [
+    {
+      "class_name": "com.project.PaymentService",
+      "file_path": "src/main/java/com/project/PaymentService.java",
+      "wmc": 35,
+      "dit": 2,
+      "noc": 0,
+      "cbo": 18,
+      "rfc": 70,
+      "lcom": 45,
+      "loc": 420
+    }
+  ],
+  "downloadUrl": "/api/metrics/download/target_001"
+}
+```
+
+---
+
+### API 2: Download Generated Metrics CSV
+
+```http
+GET /api/metrics/download/{targetDatasetId}
+```
+
+Called by:
+
+```text
+Angular → Java Spring Boot
+```
+
+Purpose:
+
+- Download `target_metrics.csv`.
+
+---
+
+### API 3: Run Prediction
+
+```http
+POST /api/prediction/run
+```
+
+Called by:
+
+```text
+Angular → Java Spring Boot
+```
+
+Request type:
+
+```text
+multipart/form-data
+```
+
+Request fields:
+
+```text
+targetDatasetId = generated target dataset ID
+datasetType = PROMISE / AEEEM
+sourceFiles = one or multiple labelled source dataset files
+labelColumn = bug / class / label
+idColumn = class_name / file_path / name
+knnValue = 5
+coralOption = true / false
+```
+
+Java should internally call Python.
+
+---
+
+### API 4: Python Prediction API
+
+```http
+POST /ml/predict
+```
+
+Called by:
+
+```text
+Java Spring Boot → Python FastAPI
+```
+
+Request type:
+
+```text
+multipart/form-data
+```
+
+Request fields:
+
+```text
+target_file
+source_files
+dataset_type
+label_column
+id_column
+k_value
+use_coral
+```
+
+Response:
+
+```json
+{
+  "status": "success",
+  "message": "Prediction completed successfully",
+  "results": [
+    {
+      "class_name": "com.project.PaymentService",
+      "file_path": "src/main/java/com/project/PaymentService.java",
+      "predicted_label": "buggy",
+      "risk_score": 0.82
+    }
+  ]
+}
+```
+
+---
+
+## Recommended Folder Structure
+
+```text
+defect-prediction-system/
+│
+├── frontend-angular/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── core/
+│   │   │   │   ├── services/
+│   │   │   │   │   ├── metrics-api.service.ts
+│   │   │   │   │   └── prediction-api.service.ts
+│   │   │   │   └── models/
+│   │   │   │       ├── metrics-preview.model.ts
+│   │   │   │       └── prediction-result.model.ts
+│   │   │   │
+│   │   │   ├── features/
+│   │   │   │   ├── metrics-extraction/
+│   │   │   │   │   ├── metrics-extraction.component.ts
+│   │   │   │   │   ├── metrics-extraction.component.html
+│   │   │   │   │   └── metrics-extraction.component.css
+│   │   │   │   │
+│   │   │   │   └── prediction/
+│   │   │   │       ├── prediction.component.ts
+│   │   │   │       ├── prediction.component.html
+│   │   │   │       └── prediction.component.css
+│   │   │   │
+│   │   │   ├── shared/
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── file-upload/
+│   │   │   │   │   └── data-table/
+│   │   │   │   └── utils/
+│   │   │   │
+│   │   │   └── app.module.ts
+│   │   │
+│   │   └── environments/
+│   │       └── environment.ts
+│   │
+│   ├── angular.json
+│   ├── package.json
+│   └── README.md
+│
+├── backend-java/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/
+│   │   │   │   └── org/
+│   │   │   │       └── metrics/
+│   │   │   │           ├── MetricsCalculatorMain.java
+│   │   │   │           ├── controller/
+│   │   │   │           │   ├── MetricsController.java
+│   │   │   │           │   └── PredictionController.java
+│   │   │   │           ├── service/
+│   │   │   │           │   ├── MetricsExtractionService.java
+│   │   │   │           │   ├── PredictionService.java
+│   │   │   │           │   ├── FileStorageService.java
+│   │   │   │           │   ├── GitHubCloneService.java
+│   │   │   │           │   └── ZipExtractionService.java
+│   │   │   │           ├── client/
+│   │   │   │           │   └── PythonPredictionClient.java
+│   │   │   │           ├── common/
+│   │   │   │           │   ├── enums/
+│   │   │   │           │   │   └── DatasetType.java
+│   │   │   │           │   ├── dto/
+│   │   │   │           │   │   ├── MetricsExtractionResponse.java
+│   │   │   │           │   │   ├── PredictionRequest.java
+│   │   │   │           │   │   └── PredictionResponse.java
+│   │   │   │           │   ├── exception/
+│   │   │   │           │   │   └── GlobalExceptionHandler.java
+│   │   │   │           │   ├── validation/
+│   │   │   │           │   │   └── FeatureSchemaValidator.java
+│   │   │   │           │   └── csv/
+│   │   │   │           │       └── CsvWriterService.java
+│   │   │   │           ├── promise/
+│   │   │   │           │   ├── parser/
+│   │   │   │           │   │   └── PromiseJavaSourceParser.java
+│   │   │   │           │   ├── calculator/
+│   │   │   │           │   │   ├── PromiseMetricsCalculator.java
+│   │   │   │           │   │   ├── WmcCalculator.java
+│   │   │   │           │   │   ├── DitCalculator.java
+│   │   │   │           │   │   ├── NocCalculator.java
+│   │   │   │           │   │   ├── CboCalculator.java
+│   │   │   │           │   │   ├── RfcCalculator.java
+│   │   │   │           │   │   ├── LcomCalculator.java
+│   │   │   │           │   │   └── LocCalculator.java
+│   │   │   │           │   ├── model/
+│   │   │   │           │   │   └── PromiseMetricResult.java
+│   │   │   │           │   └── export/
+│   │   │   │           │       └── PromiseCsvExporter.java
+│   │   │   │           └── aeeem/
+│   │   │   │               ├── parser/
+│   │   │   │               │   └── AeeemJavaSourceParser.java
+│   │   │   │               ├── calculator/
+│   │   │   │               │   └── AeeemStaticMetricsCalculator.java
+│   │   │   │               ├── model/
+│   │   │   │               │   └── AeeemMetricResult.java
+│   │   │   │               └── export/
+│   │   │   │                   └── AeeemCsvExporter.java
+│   │   │   │
+│   │   │   └── resources/
+│   │   │       ├── application.properties
+│   │   │       └── metric-profiles/
+│   │   │           ├── promise-metrics.json
+│   │   │           └── aeeem-static-metrics.json
+│   │   │
+│   │   └── test/
+│   │       └── java/
+│   │
+│   ├── storage/
+│   │   ├── uploads/
+│   │   ├── extracted-projects/
+│   │   ├── generated-datasets/
+│   │   └── prediction-results/
+│   │
+│   ├── pom.xml
+│   ├── .gitignore
+│   └── README.md
+│
+├── ml-service-python/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── api/
+│   │   │   └── prediction_routes.py
+│   │   ├── core/
+│   │   │   └── config.py
+│   │   ├── services/
+│   │   │   ├── prediction_service.py
+│   │   │   ├── preprocessing_service.py
+│   │   │   ├── coral_service.py
+│   │   │   └── knn_service.py
+│   │   ├── validation/
+│   │   │   └── feature_schema_validator.py
+│   │   ├── schemas/
+│   │   │   └── prediction_schema.py
+│   │   └── utils/
+│   │       ├── file_reader.py
+│   │       └── response_builder.py
+│   │
+│   ├── temp/
+│   ├── requirements.txt
+│   └── README.md
+│
+├── docs/
+│   ├── system-workflow.md
+│   ├── api-documentation.md
+│   └── dataset-format.md
+│
+├── .gitignore
+└── README.md
+```
+
+---
+
+## Implementation Requirements
+
+### Java Backend
+
+Use Spring Boot.
+
+Responsibilities:
+
+- Provide REST APIs.
+- Handle file upload.
+- Handle ZIP extraction.
+- Handle GitHub cloning.
+- Run Eclipse JDT AST Parser.
+- Generate metrics CSV.
+- Store generated target dataset.
+- Call Python FastAPI prediction service.
+- Return prediction results to Angular.
+
+Recommended Java server port:
+
+```text
+http://localhost:8080
+```
+
+---
+
+### Python ML Service
+
+Use FastAPI.
+
+Responsibilities:
+
+- Provide `/ml/predict`.
+- Receive target dataset and one or multiple source datasets.
+- Validate feature compatibility.
+- Combine multiple source datasets.
+- Preprocess metric columns.
+- Apply CORAL.
+- Train KNN.
+- Return prediction JSON.
+
+Recommended Python server port:
+
+```text
+http://localhost:8000
+```
+
+---
+
+### Angular Frontend
+
+Responsibilities:
+
+- Dataset type selection: PROMISE/AEEEM.
+- Source code input: GitHub URL or ZIP upload.
+- Call `/api/metrics/extract`.
+- Show generated target metrics preview.
+- Upload one or multiple labelled source datasets.
+- Call `/api/prediction/run`.
+- Display final prediction result table.
+
+Recommended Angular server port:
+
+```text
+http://localhost:4200
+```
+
+---
+
+## Runtime Commands
+
+### Run Angular
+
+```bash
+cd frontend-angular
+npm install
+ng serve
+```
+
+### Run Java Backend
+
+```bash
+cd backend-java
+mvn spring-boot:run
+```
+
+### Run Python ML Service
+
+```bash
+cd ml-service-python
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+---
+
+## Git Ignore Requirements
+
+Use this root `.gitignore`:
+
+```gitignore
+# Java
+target/
+*.class
+
+# Angular
+node_modules/
+dist/
+.angular/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Runtime storage
+backend-java/storage/uploads/
+backend-java/storage/extracted-projects/
+backend-java/storage/generated-datasets/
+backend-java/storage/prediction-results/
+ml-service-python/temp/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+```
+
+---
+
+## Expected Final Behavior
+
+The user should be able to:
+
+1. Select PROMISE or AEEEM.
+2. Upload Java source project or provide GitHub URL.
+3. Extract static metrics.
+4. Preview generated target metrics dataset.
+5. Upload one or multiple labelled source datasets.
+6. Run CORAL + KNN prediction.
+7. View final defect-prone class predictions.
+
+Final output example:
+
+```text
+class_name,file_path,predicted_label,risk_score
+com.project.PaymentService,src/main/java/com/project/PaymentService.java,buggy,0.82
+com.project.LoginController,src/main/java/com/project/LoginController.java,clean,0.21
+```
+
+---
+
+## Development Priority
+
+Implement in this order:
+
+1. Java Spring Boot metrics extraction API.
+2. CSV generation and storage.
+3. Angular metrics extraction UI.
+4. Python FastAPI prediction endpoint.
+5. Java-to-Python API client.
+6. Angular prediction UI.
+7. Feature validation and error handling.
+8. Model evaluation mode using labelled benchmark datasets.
+
+---
+
+## Final Note
+
+For a new unlabelled Java project, the system cannot know the true correctness of each prediction immediately. It can only predict defect-prone classes. Evaluation requires labelled test data. The system should therefore present the result as:
+
+```text
+Predicted Defect-Prone
+Predicted Clean
+```
+
+rather than:
+
+```text
+Bug Found
+No Bug Found
+```
