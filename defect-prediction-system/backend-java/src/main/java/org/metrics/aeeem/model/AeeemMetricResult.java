@@ -1,11 +1,19 @@
 package org.metrics.aeeem.model;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Data model to hold calculated metrics for a Java class (AEEEM format).
- * Includes all 61 metrics and the class label.
+ * Holds AEEEM-compatible static metrics plus internal hierarchy data.
  */
 public class AeeemMetricResult {
     private String fullyQualifiedName;
+    private String superclassName;
+    private boolean isInterface;
+    private Set<String> dependencies = new HashSet<>();
+    private Set<String> methodNames = new HashSet<>();
+    private int declaredAttributeCount;
 
     // ck_oo metrics
     private double ckOoNumberOfPrivateMethods;
@@ -95,6 +103,17 @@ public class AeeemMetricResult {
     public void setFullyQualifiedName(String fullyQualifiedName) {
         this.fullyQualifiedName = fullyQualifiedName;
     }
+
+    public String getSuperclassName() { return superclassName; }
+    public void setSuperclassName(String superclassName) { this.superclassName = superclassName; }
+    public boolean isInterface() { return isInterface; }
+    public void setInterface(boolean anInterface) { isInterface = anInterface; }
+    public Set<String> getDependencies() { return dependencies; }
+    public void setDependencies(Set<String> dependencies) { this.dependencies = dependencies; }
+    public Set<String> getMethodNames() { return methodNames; }
+    public void setMethodNames(Set<String> methodNames) { this.methodNames = methodNames; }
+    public int getDeclaredAttributeCount() { return declaredAttributeCount; }
+    public void setDeclaredAttributeCount(int count) { this.declaredAttributeCount = count; }
 
     // Getters and Setters for ck_oo
     public double getCkOoNumberOfPrivateMethods() { return ckOoNumberOfPrivateMethods; }

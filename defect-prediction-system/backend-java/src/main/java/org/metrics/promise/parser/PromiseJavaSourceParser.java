@@ -66,16 +66,16 @@ public class PromiseJavaSourceParser {
     }
 
     private static CompilationUnit parseCompilationUnit(String sourceCode, String fileName) {
-        ASTParser parser = ASTParser.newParser(AST.JLS8);
+        ASTParser parser = ASTParser.newParser(AST.JLS17);
         parser.setSource(sourceCode.toCharArray());
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
         parser.setResolveBindings(false);
         parser.setBindingsRecovery(false);
 
         Map<String, String> options = JavaCore.getOptions();
-        options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_1_4);
-        options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_1_4);
-        options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_1_4);
+        options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_17);
+        options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_17);
+        options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_17);
         parser.setCompilerOptions(options);
 
         CompilationUnit compilationUnit = (CompilationUnit) parser.createAST(null);

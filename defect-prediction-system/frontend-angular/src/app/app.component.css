@@ -1,0 +1,28 @@
+:host { display: block; min-height: 100vh; }
+
+.app-header {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 max(24px, calc((100vw - 1180px) / 2));
+  border-bottom: 1px solid rgba(226, 231, 240, 0.9);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  position: relative;
+  z-index: 5;
+}
+
+.brand { color: #17213d; text-decoration: none; display: flex; align-items: center; gap: 10px; font-weight: 800; }
+.brand small { font-size: 11px; color: #7c859b; text-transform: uppercase; letter-spacing: .09em; padding-left: 10px; border-left: 1px solid #d8deea; }
+.brand-mark { width: 31px; height: 31px; border-radius: 9px; background: linear-gradient(145deg, #5d72e3, #4054c9); display: flex; align-items: flex-end; justify-content: center; gap: 3px; padding: 8px; box-shadow: 0 6px 15px rgba(82,103,220,.25); }
+.brand-mark span { display: block; width: 3px; background: white; border-radius: 2px; transform: rotate(22deg); }
+.brand-mark span:nth-child(1) { height: 7px; }.brand-mark span:nth-child(2) { height: 14px; }.brand-mark span:nth-child(3) { height: 10px; }
+.header-meta { color: #657087; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.header-meta span { width: 8px; height: 8px; border-radius: 50%; background: #26b889; box-shadow: 0 0 0 4px rgba(38,184,137,.12); }
+footer { text-align: center; color: #8991a4; font-size: 12px; padding: 36px 16px; }
+
+@media (max-width: 620px) {
+  .app-header { height: 64px; padding: 0 18px; }
+  .header-meta, .brand small { display: none; }
+}

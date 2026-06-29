@@ -1,9 +1,30 @@
-# Frontend Angular Application
+# Metrics Extraction Frontend
 
-This folder contains the Angular frontend for the Software Defect Prediction System.
+Angular 19 UI for the metrics-extraction stage of the defect prediction system.
 
-## Structure
-- `src/app/core/services/`: API Services (`metrics-api.service.ts`, `prediction-api.service.ts`)
-- `src/app/core/models/`: Data Models (`metrics-preview.model.ts`, `prediction-result.model.ts`)
-- `src/app/features/`: Feature components (`metrics-extraction/`, `prediction/`)
-- `src/app/shared/`: Shared components (`file-upload/`, `data-table/`)
+## Features
+
+- PROMISE or AEEEM-static format selection
+- Java project ZIP upload (50 MB maximum)
+- Public GitHub repository URL input
+- Extraction progress, API error feedback, CSV preview, and CSV download
+- Responsive layout and keyboard-accessible controls
+
+The prediction UI is intentionally not included yet.
+
+## Run locally
+
+Start `backend-java` on port 8080, then:
+
+```bash
+npm install
+npm start
+```
+
+Open `http://localhost:4200`. The backend URL is configured in `src/environments/environment.ts`.
+
+## Verify
+
+```bash
+npm run build
+```
