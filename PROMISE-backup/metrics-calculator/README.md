@@ -264,8 +264,8 @@ mvn clean install -U
 
 To extend this tool with additional metrics:
 
-1. Create a new calculator in `org.promise.metrics.calculator`
-2. Update `ClassMetrics.java` to include new fields
+1. Create a new calculator in `org.metrics.promise.calculator` or `org.metrics.aeeem.calculator`
+2. Update `PromiseClassMetrics.java` or `AeeemClassMetrics.java` to include new fields
 3. Modify `JavaSourceParser.java` to call your calculator
 4. Update `CSVExporter.java` to export new columns
 
