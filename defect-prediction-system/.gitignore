@@ -1,4 +1,8 @@
 /.idea
 .idea/
+.DS_Store
+backend-java/output/
+backend-java/storage/uploads/
+backend-java/storage/extracted-projects/
 .idea/
 source code/

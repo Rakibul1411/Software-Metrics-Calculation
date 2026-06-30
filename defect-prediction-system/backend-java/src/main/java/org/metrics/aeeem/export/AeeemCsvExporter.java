@@ -23,30 +23,25 @@ public class AeeemCsvExporter {
         try (FileWriter writer = new FileWriter(outputPath.toFile());
              CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
 
-            // Write header exactly matching AEEEM attribute names (with colons for bug attributes)
+            // Target projects have no defect history or label, so only AST-derived static features are exported.
             csvPrinter.printRecord(
                     "name",
                     "ck_oo_numberOfPrivateMethods",
                     "LDHH_lcom",
                     "LDHH_fanIn",
-                    "numberOfNonTrivialBugsFoundUntil:",
                     "WCHU_numberOfPublicAttributes",
                     "WCHU_numberOfAttributes",
-                    "CvsWEntropy",
                     "LDHH_numberOfPublicMethods",
                     "WCHU_fanIn",
                     "LDHH_numberOfPrivateAttributes",
-                    "CvsEntropy",
                     "LDHH_numberOfPublicAttributes",
                     "WCHU_numberOfPrivateMethods",
                     "WCHU_numberOfMethods",
                     "ck_oo_numberOfPublicAttributes",
                     "ck_oo_noc",
-                    "numberOfCriticalBugsFoundUntil:",
                     "ck_oo_wmc",
                     "LDHH_numberOfPrivateMethods",
                     "WCHU_numberOfPrivateAttributes",
-                    "CvsLogEntropy",
                     "WCHU_noc",
                     "LDHH_numberOfAttributesInherited",
                     "WCHU_wmc",
@@ -69,15 +64,11 @@ public class AeeemCsvExporter {
                     "ck_oo_cbo",
                     "WCHU_rfc",
                     "ck_oo_numberOfAttributes",
-                    "numberOfHighPriorityBugsFoundUntil:",
                     "ck_oo_numberOfPrivateAttributes",
-                    "numberOfMajorBugsFoundUntil:",
                     "WCHU_numberOfPublicMethods",
                     "LDHH_dit",
                     "WCHU_cbo",
-                    "CvsLinEntropy",
                     "WCHU_numberOfMethodsInherited",
-                    "numberOfBugsFoundUntil:",
                     "LDHH_fanOut",
                     "LDHH_numberOfMethodsInherited",
                     "LDHH_rfc",
@@ -85,9 +76,7 @@ public class AeeemCsvExporter {
                     "ck_oo_numberOfPublicMethods",
                     "LDHH_cbo",
                     "WCHU_numberOfLinesOfCode",
-                    "CvsExpEntropy",
-                    "LDHH_numberOfMethods",
-                    "class"
+                    "LDHH_numberOfMethods"
             );
 
             for (AeeemMetricResult metrics : metricsList) {
@@ -96,24 +85,19 @@ public class AeeemCsvExporter {
                         metrics.getCkOoNumberOfPrivateMethods(),
                         metrics.getLdhhLcom(),
                         metrics.getLdhhFanIn(),
-                        metrics.getNumberOfNonTrivialBugsFoundUntil(),
                         metrics.getWchuNumberOfPublicAttributes(),
                         metrics.getWchuNumberOfAttributes(),
-                        metrics.getCvsWEntropy(),
                         metrics.getLdhhNumberOfPublicMethods(),
                         metrics.getWchuFanIn(),
                         metrics.getLdhhNumberOfPrivateAttributes(),
-                        metrics.getCvsEntropy(),
                         metrics.getLdhhNumberOfPublicAttributes(),
                         metrics.getWchuNumberOfPrivateMethods(),
                         metrics.getWchuNumberOfMethods(),
                         metrics.getCkOoNumberOfPublicAttributes(),
                         metrics.getCkOoNoc(),
-                        metrics.getNumberOfCriticalBugsFoundUntil(),
                         metrics.getCkOoWmc(),
                         metrics.getLdhhNumberOfPrivateMethods(),
                         metrics.getWchuNumberOfPrivateAttributes(),
-                        metrics.getCvsLogEntropy(),
                         metrics.getWchuNoc(),
                         metrics.getLdhhNumberOfAttributesInherited(),
                         metrics.getWchuWmc(),
@@ -136,15 +120,11 @@ public class AeeemCsvExporter {
                         metrics.getCkOoCbo(),
                         metrics.getWchuRfc(),
                         metrics.getCkOoNumberOfAttributes(),
-                        metrics.getNumberOfHighPriorityBugsFoundUntil(),
                         metrics.getCkOoNumberOfPrivateAttributes(),
-                        metrics.getNumberOfMajorBugsFoundUntil(),
                         metrics.getWchuNumberOfPublicMethods(),
                         metrics.getLdhhDit(),
                         metrics.getWchuCbo(),
-                        metrics.getCvsLinEntropy(),
                         metrics.getWchuNumberOfMethodsInherited(),
-                        metrics.getNumberOfBugsFoundUntil(),
                         metrics.getLdhhFanOut(),
                         metrics.getLdhhNumberOfMethodsInherited(),
                         metrics.getLdhhRfc(),
@@ -152,9 +132,7 @@ public class AeeemCsvExporter {
                         metrics.getCkOoNumberOfPublicMethods(),
                         metrics.getLdhhCbo(),
                         metrics.getWchuNumberOfLinesOfCode(),
-                        metrics.getCvsExpEntropy(),
-                        metrics.getLdhhNumberOfMethods(),
-                        metrics.getClassification()
+                        metrics.getLdhhNumberOfMethods()
                 );
             }
         }

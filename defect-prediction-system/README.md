@@ -8,7 +8,7 @@ A full-stack, microservice-based Software Defect Prediction System.
 |---|---|---|
 | `backend-java/` | Java 8 + Spring Boot 2.7 | Metrics extraction API and prediction orchestrator |
 | `ml-service-python/` | Python 3 + FastAPI | CORAL + KNN defect prediction engine |
-| `frontend-angular/` | Angular + TypeScript | (Coming soon) Web UI for the full prediction workflow |
+| `frontend-angular/` | Angular 19 + TypeScript | Metrics extraction UI for ZIP and GitHub Java projects |
 | `docs/` | Markdown | Architecture and API documentation |
 
 ## Workflow Overview
@@ -43,22 +43,40 @@ mvn spring-boot:run
 # Runs at http://localhost:8080
 ```
 
-### 2. Start the Python ML Service
+### 2. Start the Angular Frontend
+```bash
+cd frontend-angular
+npm install
+npm start
+# Runs at http://localhost:4200
+```
+
+The current UI covers metrics extraction and CSV preview/download. Prediction remains an API-only module for now.
+
+### 3. Start the Python ML Service (prediction API only)
 ```bash
 cd ml-service-python
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python3 -m venv venv
+source venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 # Runs at http://localhost:8000
 ```
 
-### 3. Extract Metrics (example)
+Python 3.11 through 3.14 is supported. Keep the ML service running while using
+the prediction UI; `http://localhost:8000/health` can be used as a health check.
+
+### 4. Extract Metrics (example)
 ```bash
 curl -X POST "http://localhost:8080/api/metrics/extract" \
-  -d "sourceDirectory=/path/to/your/java/project" \
-  -d "datasetFormat=promise"
+  -F "projectZip=@/path/to/your/java-project.zip" \
+  -F "datasetFormat=promise"
 ```
 
-### 4. Run Prediction (example)
+For a public GitHub repository, replace `projectZip` with `-F "githubUrl=https://github.com/owner/repository"`.
+
+### 5. Run Prediction (example)
 ```bash
 curl -X POST "http://localhost:8080/api/prediction/run" \
   -F "targetDatasetId=YOUR_DATASET_ID" \
@@ -73,4 +91,6 @@ curl -X POST "http://localhost:8080/api/prediction/run" \
 | Format | Columns | Label |
 |---|---|---|
 | PROMISE | 20 CK metrics (wmc, dit, noc, cbo, rfc, lcom, ...) | `bug` (0/1) |
-| AEEEM | 61 multi-tool metrics (ck_oo_*, LDHH_*, WCHU_*, Cvs*) | `class` (buggy/clean) |
+| AEEEM target | 51 AST-derived static metrics (ck_oo_*, LDHH_*, WCHU_*) | none |
+
+Generated target datasets never include a defect label. AEEEM repository-history fields (`Cvs*`, historical bug counts) cannot be derived from source ASTs and are deliberately excluded.

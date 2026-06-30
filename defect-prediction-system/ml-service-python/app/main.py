@@ -10,3 +10,8 @@ app.include_router(prediction_routes.router, prefix="/ml", tags=["prediction"])
 @app.get("/")
 def root():
     return {"message": "Software Defect Prediction ML Service", "version": "1.0.0"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
