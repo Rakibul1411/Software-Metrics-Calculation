@@ -59,6 +59,9 @@ public class MetricsController {
             if (hasZip) {
                 uploadedFile = fileStorageService.storeUploadedFile(projectZip);
                 sourceDirectory = zipExtractionService.extractZipFile(uploadedFile);
+            } else if (gitHubCloneService.isZipFileUrl(githubUrl)) {
+                uploadedFile = gitHubCloneService.downloadZipFile(githubUrl);
+                sourceDirectory = zipExtractionService.extractZipFile(uploadedFile);
             } else {
                 sourceDirectory = gitHubCloneService.cloneRepository(githubUrl);
             }

@@ -3,12 +3,16 @@ package org.metrics.service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -19,11 +23,66 @@ public class GitHubCloneService {
 
     private static final long CLONE_TIMEOUT_SECONDS = 120;
     private static final int MAX_COMMAND_OUTPUT_BYTES = 16_384;
+    private static final long MAX_ZIP_BYTES = 50L * 1024L * 1024L;
+    private static final int DOWNLOAD_TIMEOUT_MILLIS = 120_000;
 
     private final Path cloneLocation = Paths.get("storage/extracted-projects");
+    private final Path downloadLocation = Paths.get("storage/uploads");
 
     public GitHubCloneService() throws IOException {
         Files.createDirectories(cloneLocation);
+        Files.createDirectories(downloadLocation);
+    }
+
+    public boolean isZipFileUrl(String gitUrl) {
+        try {
+            validateAndBuildRawZipUrl(gitUrl);
+            return true;
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
+    }
+
+    public Path downloadZipFile(String gitUrl) throws IOException {
+        URL rawUrl = validateAndBuildRawZipUrl(gitUrl);
+        Path targetPath = downloadLocation.resolve("github_" + UUID.randomUUID() + ".zip")
+                .toAbsolutePath().normalize();
+        HttpURLConnection connection = (HttpURLConnection) rawUrl.openConnection();
+        connection.setConnectTimeout(20_000);
+        connection.setReadTimeout(DOWNLOAD_TIMEOUT_MILLIS);
+        connection.setRequestProperty("User-Agent", "defect-prediction-system");
+
+        try {
+            int status = connection.getResponseCode();
+            if (status < 200 || status >= 300) {
+                throw new IOException("Unable to download the GitHub ZIP file (HTTP " + status + ").");
+            }
+            long contentLength = connection.getContentLengthLong();
+            if (contentLength > MAX_ZIP_BYTES) {
+                throw new IOException("The GitHub ZIP file must be 50 MB or smaller.");
+            }
+
+            byte[] buffer = new byte[8192];
+            long totalBytes = 0;
+            try (InputStream input = connection.getInputStream();
+                 OutputStream output = Files.newOutputStream(targetPath,
+                         StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    totalBytes += read;
+                    if (totalBytes > MAX_ZIP_BYTES) {
+                        throw new IOException("The GitHub ZIP file must be 50 MB or smaller.");
+                    }
+                    output.write(buffer, 0, read);
+                }
+            }
+            return targetPath;
+        } catch (IOException exception) {
+            Files.deleteIfExists(targetPath);
+            throw exception;
+        } finally {
+            connection.disconnect();
+        }
     }
 
     public Path cloneRepository(String gitUrl) throws IOException {
@@ -78,14 +137,40 @@ public class GitHubCloneService {
             String host = uri.getHost();
             String path = uri.getPath();
             boolean githubHost = "github.com".equalsIgnoreCase(host) || "www.github.com".equalsIgnoreCase(host);
+            boolean repositoryUrl = path != null
+                    && path.matches("/[^/]+/[^/]+(?:/tree/[^/]+(?:/.*)?)?/?");
             if (!"https".equalsIgnoreCase(uri.getScheme()) || !githubHost || uri.getUserInfo() != null
-                    || path == null || !path.matches("/[^/]+/[^/]+/?")) {
-                throw new IllegalArgumentException("Use an HTTPS GitHub repository URL such as https://github.com/owner/repository.");
+                    || uri.getQuery() != null || uri.getFragment() != null || !repositoryUrl) {
+                throw new IllegalArgumentException("Use an HTTPS GitHub repository URL or folder URL such as https://github.com/owner/repository/tree/main/src.");
             }
-            String normalizedPath = path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
-            return "https://github.com" + normalizedPath;
+            String[] pathParts = path.split("/");
+            return "https://github.com/" + pathParts[1] + "/" + pathParts[2];
         } catch (URISyntaxException exception) {
             throw new IllegalArgumentException("Enter a valid GitHub repository URL.");
+        }
+    }
+
+    URL validateAndBuildRawZipUrl(String gitUrl) {
+        if (gitUrl == null || gitUrl.trim().isEmpty()) {
+            throw new IllegalArgumentException("Enter a GitHub ZIP file URL.");
+        }
+        try {
+            URI uri = new URI(gitUrl.trim());
+            String host = uri.getHost();
+            String path = uri.getPath();
+            boolean githubHost = "github.com".equalsIgnoreCase(host) || "www.github.com".equalsIgnoreCase(host);
+            boolean zipBlobUrl = path != null
+                    && path.toLowerCase().matches("/[^/]+/[^/]+/blob/[^/]+/.+\\.zip");
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || !githubHost || uri.getUserInfo() != null
+                    || uri.getQuery() != null || uri.getFragment() != null || !zipBlobUrl) {
+                throw new IllegalArgumentException("Use a public GitHub ZIP file URL ending in .zip.");
+            }
+            String rawPath = uri.getRawPath();
+            String[] pathParts = rawPath.split("/", 6);
+            return new URL("https://raw.githubusercontent.com/" + pathParts[1] + "/" + pathParts[2]
+                    + "/" + pathParts[4] + "/" + pathParts[5]);
+        } catch (URISyntaxException | IOException exception) {
+            throw new IllegalArgumentException("Enter a valid GitHub ZIP file URL.");
         }
     }
 

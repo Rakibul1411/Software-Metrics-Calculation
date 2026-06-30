@@ -13,8 +13,8 @@
     <span>2</span><div><strong>Metrics dataset</strong><small>Review & download</small></div>
   </div>
   <i></i>
-  <div class="workflow-item disabled">
-    <span>3</span><div><strong>Defect prediction</strong><small>Available in the next module</small></div>
+  <div class="workflow-item" [class.complete]="predictionResult" [class.active]="result && !predictionResult">
+    <span>3</span><div><strong>Defect prediction</strong><small>{{ predictionResult ? 'Prediction complete' : 'Run CORAL + KNN' }}</small></div>
   </div>
 </nav>
 
@@ -79,12 +79,13 @@
       </label>
 
       <div *ngIf="sourceMode === 'github'" class="github-field">
-        <label for="github-url">Public GitHub repository URL</label>
+        <label for="github-url">Public GitHub repository, folder, or ZIP URL</label>
         <div class="input-shell">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.2 13.8a4 4 0 0 0 5.7 0l2-2a4 4 0 0 0-5.7-5.7l-1.1 1.1M13.8 10.2a4 4 0 0 0-5.7 0l-2 2a4 4 0 0 0 5.7 5.7l1.1-1.1"/></svg>
           <input id="github-url" type="url" name="githubUrl" [(ngModel)]="githubUrl" (ngModelChange)="clearResult()"
                  placeholder="https://github.com/owner/repository" autocomplete="url">
         </div>
+        <small *ngIf="githubUrlError" class="field-error" role="alert">{{ githubUrlError }}</small>
         <small>Private repositories are not supported in this version.</small>
       </div>
     </div>
@@ -139,4 +140,29 @@
       <tbody><tr *ngFor="let row of previewRows; trackBy: trackByIndex"><td *ngFor="let value of row; trackBy: trackByIndex">{{ value }}</td></tr></tbody>
     </table>
   </div>
+
+  <section class="prediction-section">
+    <div class="prediction-heading">
+      <span class="result-kicker">Defect prediction</span><h2>Run the prediction model</h2>
+      <p>Upload labelled source datasets whose metric columns match the extracted target dataset.</p>
+    </div>
+    <div class="prediction-form">
+      <label class="source-file-field"><span>Labelled source CSV files</span><input type="file" accept=".csv,text/csv" multiple (change)="onSourceFilesChange($event)"><strong>{{ sourceFiles.length ? sourceFiles.length + (sourceFiles.length === 1 ? ' file selected' : ' files selected') : 'Choose CSV files' }}</strong></label>
+      <label><span>Label column</span><input type="text" [(ngModel)]="labelColumn" placeholder="bug"></label>
+      <label><span>K neighbors</span><input type="number" [(ngModel)]="knnValue" min="1" step="1"></label>
+      <label class="coral-toggle"><input type="checkbox" [(ngModel)]="coralOption"><span>Apply CORAL</span></label>
+      <button type="button" class="run-prediction-button" [disabled]="!sourceFiles.length || predictionLoading || knnValue < 1" (click)="runPrediction()"><span *ngIf="predictionLoading" class="spinner" aria-hidden="true"></span>{{ predictionLoading ? 'Running prediction…' : 'Run prediction model' }}</button>
+    </div>
+    <div *ngIf="predictionError" class="alert error prediction-alert" role="alert"><span aria-hidden="true">!</span><p>{{ predictionError }}</p></div>
+    <div *ngIf="predictionResult" class="prediction-results" aria-live="polite">
+      <div class="preview-title"><div><h3>Prediction results</h3><p>CORAL-aligned KNN defect classifications.</p></div><span>{{ predictionResult.predictions.length }} classes</span></div>
+      <div class="prediction-overview" aria-label="Prediction overview">
+        <div><small>Total classes</small><strong>{{ predictionSummary.total }}</strong></div>
+        <div class="buggy"><small>Buggy</small><strong>{{ predictionSummary.buggy }}</strong></div>
+        <div class="clean"><small>Clean</small><strong>{{ predictionSummary.clean }}</strong></div>
+        <div><small>Buggy rate</small><strong>{{ buggyRate | number:'1.1-1' }}%</strong></div>
+      </div>
+      <div class="table-shell" tabindex="0" aria-label="Defect prediction results"><table><thead><tr><th>Class</th><th>Status</th></tr></thead><tbody><tr *ngFor="let item of predictionResult.predictions"><td>{{ item.class }}</td><td><span class="prediction-value" [class.buggy]="isBuggyPrediction(item)" [class.clean]="!isBuggyPrediction(item)">{{ predictionLabel(item) }}</span></td></tr></tbody></table></div>
+    </div>
+  </section>
 </section>
