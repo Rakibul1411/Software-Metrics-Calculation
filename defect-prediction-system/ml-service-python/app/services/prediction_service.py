@@ -97,6 +97,113 @@ class PredictionService:
             }
         }
 
+    async def evaluate(self, target_file: UploadFile, source_files: List[UploadFile],
+                       label_column: str, knn_value: int, coral_option: bool):
+        """Train on labelled source data and score against labelled target data."""
+        if knn_value < 1:
+            raise ValueError("K neighbors must be at least 1.")
+
+        target_df = pd.read_csv(target_file.file)
+        target_df.columns = self._normalize_columns(target_df.columns)
+        label_column = label_column.strip().lower()
+
+        source_dfs = []
+        for source_file in source_files:
+            source_df_part = pd.read_csv(source_file.file)
+            source_df_part.columns = self._normalize_columns(source_df_part.columns)
+            source_dfs.append(source_df_part)
+        source_df = pd.concat(source_dfs, ignore_index=True)
+
+        for dataset_name, dataframe in (("source", source_df), ("target", target_df)):
+            if label_column not in dataframe.columns:
+                raise ValueError(
+                    f"Label column '{label_column}' was not found in the {dataset_name} CSV. "
+                    f"Available columns: {', '.join(dataframe.columns)}"
+                )
+
+        name_col = "name"
+        feature_cols = [
+            column for column in target_df.columns
+            if column not in (name_col, label_column)
+        ]
+        if not feature_cols:
+            raise ValueError("The target CSV does not contain any metric columns.")
+        missing_features = [column for column in feature_cols if column not in source_df.columns]
+        if missing_features:
+            raise ValueError(
+                "Source CSV schema does not match the target dataset. "
+                f"Missing metric columns: {', '.join(missing_features)}"
+            )
+
+        source_labelled = source_df[label_column].notna()
+        target_labelled = target_df[label_column].notna()
+        if not target_labelled.all():
+            raise ValueError("Every target row must have a label for accuracy evaluation.")
+
+        X_source = self._numeric_features(
+            source_df.loc[source_labelled], feature_cols, "source")
+        X_target = self._numeric_features(target_df, feature_cols, "target")
+        y_source = self._binary_labels(
+            source_df.loc[source_labelled, label_column], label_column)
+        y_target = self._binary_labels(target_df[label_column], label_column)
+        if len(y_source) == 0:
+            raise ValueError(f"Source CSV has no labelled rows in column '{label_column}'.")
+        if knn_value > len(y_source):
+            raise ValueError(
+                f"K neighbors ({knn_value}) cannot exceed the number of labelled source rows ({len(y_source)})."
+            )
+
+        X_source_scaled, X_target_scaled = self.preprocessor.normalize(X_source, X_target)
+        X_source_model = (
+            self.coral.align(X_source_scaled, X_target_scaled)
+            if coral_option else X_source_scaled
+        )
+        predictions = self.knn.predict(
+            X_source_model, y_source, X_target_scaled, k=knn_value).astype(int)
+
+        true_positive = int(np.sum((predictions == 1) & (y_target == 1)))
+        true_negative = int(np.sum((predictions == 0) & (y_target == 0)))
+        false_positive = int(np.sum((predictions == 1) & (y_target == 0)))
+        false_negative = int(np.sum((predictions == 0) & (y_target == 1)))
+        total = len(y_target)
+        accuracy = (true_positive + true_negative) / total if total else 0.0
+        precision = true_positive / (true_positive + false_positive) \
+            if true_positive + false_positive else 0.0
+        recall = true_positive / (true_positive + false_negative) \
+            if true_positive + false_negative else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+
+        results = []
+        for index, (_, row) in enumerate(target_df.iterrows()):
+            predicted_buggy = bool(predictions[index])
+            actual_buggy = bool(y_target[index])
+            results.append({
+                "class": row.get(name_col, str(index)),
+                "prediction": "1" if predicted_buggy else "0",
+                "label": "Buggy" if predicted_buggy else "Clean",
+                "isBuggy": predicted_buggy,
+                "actualLabel": "Buggy" if actual_buggy else "Clean",
+                "actualIsBuggy": actual_buggy,
+                "correct": predicted_buggy == actual_buggy
+            })
+
+        return {
+            "status": "success",
+            "metrics": {
+                "accuracy": accuracy,
+                "precision": precision,
+                "recall": recall,
+                "f1": f1
+            },
+            "confusionMatrix": {
+                "truePositive": true_positive,
+                "trueNegative": true_negative,
+                "falsePositive": false_positive,
+                "falseNegative": false_negative
+            },
+            "predictions": results
+        }
+
     @staticmethod
     def _normalize_columns(columns) -> List[str]:
         normalized = [str(column).strip().lower() for column in columns]
