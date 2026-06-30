@@ -1,0 +1,11 @@
+{
+  "schema": "promise",
+  "version": "1.0",
+  "description": "PROMISE dataset feature schema - 21 numeric metrics",
+  "columns": [
+    "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce", "npm",
+    "lcom3", "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc",
+    "max_cc", "avg_cc"
+  ],
+  "labelColumn": "bug"
+}
