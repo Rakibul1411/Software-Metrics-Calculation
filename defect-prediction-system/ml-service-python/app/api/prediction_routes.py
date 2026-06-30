@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from pandas.errors import EmptyDataError, ParserError
 from typing import List
 
 from app.services.prediction_service import PredictionService
@@ -23,11 +24,13 @@ async def run_prediction(
     - knn_value: Number of neighbors for KNN classifier
     - coral_option: Whether to apply CORAL domain adaptation
     """
-    result = await prediction_service.run(
-        target_file=target_file,
-        source_files=source_files,
-        label_column=label_column,
-        knn_value=knn_value,
-        coral_option=coral_option
-    )
-    return result
+    try:
+        return await prediction_service.run(
+            target_file=target_file,
+            source_files=source_files,
+            label_column=label_column,
+            knn_value=knn_value,
+            coral_option=coral_option
+        )
+    except (ValueError, KeyError, EmptyDataError, ParserError) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error

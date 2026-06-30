@@ -56,10 +56,16 @@ The current UI covers metrics extraction and CSV preview/download. Prediction re
 ### 3. Start the Python ML Service (prediction API only)
 ```bash
 cd ml-service-python
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python3 -m venv venv
+source venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 # Runs at http://localhost:8000
 ```
+
+Python 3.11 through 3.14 is supported. Keep the ML service running while using
+the prediction UI; `http://localhost:8000/health` can be used as a health check.
 
 ### 4. Extract Metrics (example)
 ```bash

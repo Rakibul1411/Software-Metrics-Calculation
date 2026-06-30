@@ -9,7 +9,7 @@ Extract object-oriented metrics from a Java project ZIP or a public GitHub repos
 | Param | Type | Required | Description |
 |---|---|---|---|
 | `projectZip` | file | one source required | Java project ZIP, maximum 50 MB |
-| `githubUrl` | string | one source required | Public HTTPS `github.com/owner/repository` URL |
+| `githubUrl` | string | one source required | Public GitHub repository, `tree/branch/folder`, or `blob/branch/file.zip` URL |
 | `datasetFormat` | string | ❌ | `promise` or `aeeem` (default: `promise`) |
 
 Supply exactly one of `projectZip` or `githubUrl`. A form-urlencoded `sourceDirectory` endpoint remains available for trusted local development clients.

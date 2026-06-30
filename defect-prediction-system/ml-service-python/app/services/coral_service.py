@@ -10,29 +10,26 @@ class CoralService:
 
     def align(self, X_source: np.ndarray, X_target: np.ndarray) -> np.ndarray:
         """
-        Apply CORAL transformation to align target features to source distribution.
+        Map source features to the target covariance, matching CORAL_map.m:
+
+            cov_src = cov(Xs) + I
+            cov_tar = cov(Xt) + I
+            A_coral = cov_src^(-1/2) * cov_tar^(1/2)
+            Xs_new = Xs * A_coral
+
         Reference: Sun et al., "Return of Frustratingly Easy Domain Adaptation" (2016).
         """
-        # Compute covariance of source
-        Cs = np.cov(X_source, rowvar=False) + np.eye(X_source.shape[1])
+        covariance_source = np.cov(X_source, rowvar=False) + np.eye(X_source.shape[1])
+        covariance_target = np.cov(X_target, rowvar=False) + np.eye(X_target.shape[1])
 
-        # Compute covariance of target
-        Ct = np.cov(X_target, rowvar=False) + np.eye(X_target.shape[1])
+        source_inverse_sqrt = self._matrix_power(covariance_source, -0.5)
+        target_sqrt = self._matrix_power(covariance_target, 0.5)
+        coral_transform = source_inverse_sqrt @ target_sqrt
 
-        # Whitening: transform target to decorrelated space
-        # X_target_whitened = X_target * Ct^{-1/2}
-        Ct_inv_sqrt = np.linalg.inv(self._matrix_sqrt(Ct))
+        return X_source @ coral_transform
 
-        # Re-color: apply source covariance
-        Cs_sqrt = self._matrix_sqrt(Cs)
-
-        # Aligned target = X_target * Ct^{-1/2} * Cs^{1/2}
-        X_target_aligned = X_target @ Ct_inv_sqrt @ Cs_sqrt
-
-        return X_target_aligned
-
-    def _matrix_sqrt(self, M: np.ndarray) -> np.ndarray:
-        """Compute the matrix square root using eigendecomposition."""
-        eigenvalues, eigenvectors = np.linalg.eigh(M)
-        eigenvalues = np.maximum(eigenvalues, 0)
-        return eigenvectors @ np.diag(np.sqrt(eigenvalues)) @ eigenvectors.T
+    def _matrix_power(self, matrix: np.ndarray, power: float) -> np.ndarray:
+        """Equivalent to MATLAB's symmetric matrix power for covariance matrices."""
+        eigenvalues, eigenvectors = np.linalg.eigh(matrix)
+        powered_eigenvalues = np.power(eigenvalues, power)
+        return eigenvectors @ np.diag(powered_eigenvalues) @ eigenvectors.T

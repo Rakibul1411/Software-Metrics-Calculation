@@ -2,7 +2,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { MetricsPreview } from '../../core/models/metrics-preview.model';
+import { PredictionResult, PredictionResultItem, PredictionSummary } from '../../core/models/prediction-result.model';
 import { MetricsApiService } from '../../core/services/metrics-api.service';
+import { PredictionApiService } from '../../core/services/prediction-api.service';
 
 type DatasetFormat = 'promise' | 'aeeem';
 type SourceMode = 'zip' | 'github';
@@ -22,8 +24,18 @@ export class MetricsExtractionComponent {
   loading = false;
   error: string | null = null;
   result: MetricsPreview | null = null;
+  sourceFiles: File[] = [];
+  labelColumn = 'bug';
+  knnValue = 5;
+  coralOption = true;
+  predictionLoading = false;
+  predictionError: string | null = null;
+  predictionResult: PredictionResult | null = null;
 
-  constructor(private readonly metricsApi: MetricsApiService) {}
+  constructor(
+    private readonly metricsApi: MetricsApiService,
+    private readonly predictionApi: PredictionApiService
+  ) {}
 
   setDatasetFormat(format: DatasetFormat): void {
     this.datasetFormat = format;
@@ -82,7 +94,12 @@ export class MetricsExtractionComponent {
 
   get canExtract(): boolean {
     if (this.sourceMode === 'zip') return this.selectedZip !== null;
-    return /^https:\/\/(www\.)?github\.com\/[^/]+\/[^/]+\/?$/i.test(this.githubUrl.trim());
+    return this.isSupportedGitHubUrl(this.githubUrl);
+  }
+
+  get githubUrlError(): string | null {
+    if (this.sourceMode !== 'github' || !this.githubUrl.trim() || this.canExtract) return null;
+    return 'Enter a public GitHub repository, folder, or ZIP file URL.';
   }
 
   get previewHeaders(): string[] {
@@ -95,6 +112,62 @@ export class MetricsExtractionComponent {
 
   get downloadUrl(): string {
     return this.result ? this.metricsApi.downloadDataset(this.result.targetDatasetId) : '';
+  }
+
+  get predictionSummary(): PredictionSummary {
+    if (this.predictionResult?.summary) return this.predictionResult.summary;
+    const predictions = this.predictionResult?.predictions ?? [];
+    const buggy = predictions.filter(item => this.isBuggyPrediction(item)).length;
+    return { total: predictions.length, buggy, clean: predictions.length - buggy };
+  }
+
+  get buggyRate(): number {
+    const summary = this.predictionSummary;
+    return summary.total ? (summary.buggy / summary.total) * 100 : 0;
+  }
+
+  isBuggyPrediction(item: PredictionResultItem): boolean {
+    if (typeof item.isBuggy === 'boolean') return item.isBuggy;
+    if (item.label) return item.label.toLowerCase() === 'buggy';
+    const numericPrediction = Number(item.prediction);
+    return Number.isFinite(numericPrediction)
+      ? numericPrediction > 0
+      : ['buggy', 'defective', 'true', 'yes'].includes(item.prediction.trim().toLowerCase());
+  }
+
+  predictionLabel(item: PredictionResultItem): string {
+    return this.isBuggyPrediction(item) ? 'Buggy' : 'Clean';
+  }
+
+  onSourceFilesChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.sourceFiles = Array.from(input.files ?? []);
+    this.predictionError = null;
+    this.predictionResult = null;
+  }
+
+  runPrediction(): void {
+    if (!this.result || !this.sourceFiles.length || this.predictionLoading) return;
+    this.predictionLoading = true;
+    this.predictionError = null;
+    this.predictionResult = null;
+
+    this.predictionApi.runPrediction(
+      this.result.targetDatasetId,
+      this.sourceFiles,
+      this.labelColumn.trim() || 'bug',
+      this.knnValue,
+      this.coralOption
+    ).pipe(finalize(() => this.predictionLoading = false)).subscribe({
+      next: data => {
+        if (data.status === 'error') {
+          this.predictionError = data.message || 'Prediction failed.';
+          return;
+        }
+        this.predictionResult = data;
+      },
+      error: (error: HttpErrorResponse) => this.predictionError = this.describePredictionError(error)
+    });
   }
 
   trackByIndex(index: number): number { return index; }
@@ -116,13 +189,41 @@ export class MetricsExtractionComponent {
     this.selectedZip = file;
   }
 
-  clearResult(): void { this.result = null; }
+  private isSupportedGitHubUrl(value: string): boolean {
+    try {
+      const url = new URL(value.trim());
+      const githubHost = url.hostname.toLowerCase() === 'github.com'
+        || url.hostname.toLowerCase() === 'www.github.com';
+      const parts = url.pathname.split('/').filter(Boolean);
+      const repositoryRoot = parts.length === 2;
+      const repositoryFolder = parts.length >= 4 && parts[2].toLowerCase() === 'tree';
+      const repositoryZip = parts.length >= 6 && parts[2].toLowerCase() === 'blob'
+        && parts[parts.length - 1].toLowerCase().endsWith('.zip');
+      return url.protocol === 'https:' && githubHost && !url.username && !url.password
+        && !url.search && !url.hash && (repositoryRoot || repositoryFolder || repositoryZip);
+    } catch {
+      return false;
+    }
+  }
+
+  clearResult(): void {
+    this.result = null;
+    this.predictionResult = null;
+    this.predictionError = null;
+  }
 
   private describeError(error: HttpErrorResponse): string {
     if (error.status === 0) return 'Cannot reach the metrics service. Make sure the Java backend is running on port 8080.';
     if (typeof error.error === 'object' && error.error?.error) return String(error.error.error);
     if (typeof error.error === 'string' && error.error.trim()) return error.error;
     return 'Metrics extraction failed. Please check the project and try again.';
+  }
+
+  private describePredictionError(error: HttpErrorResponse): string {
+    if (error.status === 0) return 'Cannot reach the prediction service. Make sure the Java and Python services are running.';
+    if (typeof error.error === 'object' && error.error?.error) return String(error.error.error);
+    if (typeof error.error === 'object' && error.error?.message) return String(error.error.message);
+    return 'Prediction failed. Check the source CSV schema and try again.';
   }
 
   private parseCsvLine(line: string): string[] {

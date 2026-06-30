@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -65,11 +66,29 @@ public class PredictionService {
         try {
             ResponseEntity<Object> response = restTemplate.postForEntity(mlServiceUrl, requestEntity, Object.class);
             return response.getBody();
+        } catch (HttpStatusCodeException e) {
+            Map<String, Object> errorMap = new HashMap<>();
+            errorMap.put("status", "error");
+            errorMap.put("message", extractServiceError(e.getResponseBodyAsString()));
+            return errorMap;
         } catch (Exception e) {
             Map<String, Object> errorMap = new HashMap<>();
             errorMap.put("status", "error");
             errorMap.put("message", "Failed to communicate with Python FastAPI ML Service: " + e.getMessage());
             return errorMap;
         }
+    }
+
+    private String extractServiceError(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "The Python prediction service rejected the request.";
+        }
+
+        String detailPrefix = "{\"detail\":\"";
+        if (responseBody.startsWith(detailPrefix) && responseBody.endsWith("\"}")) {
+            return responseBody.substring(detailPrefix.length(), responseBody.length() - 2)
+                    .replace("\\\"", "\"");
+        }
+        return "Python prediction service error: " + responseBody;
     }
 }

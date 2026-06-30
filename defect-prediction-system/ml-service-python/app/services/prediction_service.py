@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from typing import List
 from fastapi import UploadFile
 
@@ -15,42 +16,131 @@ class PredictionService:
 
     async def run(self, target_file: UploadFile, source_files: List[UploadFile],
                   label_column: str, knn_value: int, coral_option: bool):
+        if knn_value < 1:
+            raise ValueError("K neighbors must be at least 1.")
+
         # 1. Load target CSV
         target_df = pd.read_csv(target_file.file)
+        target_df.columns = self._normalize_columns(target_df.columns)
+        label_column = label_column.strip().lower()
 
         # 2. Load and merge source CSVs
         source_dfs = []
         for f in source_files:
-            source_dfs.append(pd.read_csv(f.file))
+            source_df_part = pd.read_csv(f.file)
+            source_df_part.columns = self._normalize_columns(source_df_part.columns)
+            source_dfs.append(source_df_part)
         source_df = pd.concat(source_dfs, ignore_index=True)
 
-        # 3. Get common feature columns
+        # 3. Validate and select the target feature schema
         name_col = "name"
         feature_cols = [c for c in target_df.columns if c != name_col]
-        source_feature_cols = [c for c in feature_cols if c in source_df.columns]
+        if not feature_cols:
+            raise ValueError("The target CSV does not contain any metric columns.")
+        if label_column not in source_df.columns:
+            raise ValueError(
+                f"Label column '{label_column}' was not found in the source CSV. "
+                f"Available columns: {', '.join(source_df.columns)}"
+            )
 
-        X_target = target_df[source_feature_cols].fillna(0).values
-        X_source = source_df[source_feature_cols].fillna(0).values
-        y_source = source_df[label_column].values
+        missing_features = [column for column in feature_cols if column not in source_df.columns]
+        if missing_features:
+            raise ValueError(
+                "Source CSV schema does not match the extracted target dataset. "
+                f"Missing metric columns: {', '.join(missing_features)}"
+            )
+
+        X_target = self._numeric_features(target_df, feature_cols, "target")
+        X_source = self._numeric_features(source_df, feature_cols, "source")
+
+        labelled_rows = source_df[label_column].notna()
+        X_source = X_source[labelled_rows.to_numpy()]
+        y_source = self._binary_labels(source_df.loc[labelled_rows, label_column], label_column)
+        if len(y_source) == 0:
+            raise ValueError(f"Source CSV has no labelled rows in column '{label_column}'.")
+        if knn_value > len(y_source):
+            raise ValueError(
+                f"K neighbors ({knn_value}) cannot exceed the number of labelled source rows ({len(y_source)})."
+            )
 
         # 4. Preprocess
         X_source_scaled, X_target_scaled = self.preprocessor.normalize(X_source, X_target)
 
         # 5. Apply CORAL domain adaptation
         if coral_option:
-            X_target_adapted = self.coral.align(X_source_scaled, X_target_scaled)
+            X_source_adapted = self.coral.align(X_source_scaled, X_target_scaled)
         else:
-            X_target_adapted = X_target_scaled
+            X_source_adapted = X_source_scaled
 
         # 6. KNN prediction
-        predictions = self.knn.predict(X_source_scaled, y_source, X_target_adapted, k=knn_value)
+        predictions = self.knn.predict(X_source_adapted, y_source, X_target_scaled, k=knn_value)
 
         # 7. Build result
         result = []
         for i, (_, row) in enumerate(target_df.iterrows()):
+            is_buggy = bool(int(predictions[i]))
             result.append({
                 "class": row.get(name_col, str(i)),
-                "prediction": str(predictions[i])
+                "prediction": "1" if is_buggy else "0",
+                "label": "Buggy" if is_buggy else "Clean",
+                "isBuggy": is_buggy
             })
 
-        return {"status": "success", "predictions": result}
+        buggy_count = sum(1 for item in result if item["isBuggy"])
+        return {
+            "status": "success",
+            "predictions": result,
+            "summary": {
+                "total": len(result),
+                "buggy": buggy_count,
+                "clean": len(result) - buggy_count
+            }
+        }
+
+    @staticmethod
+    def _normalize_columns(columns) -> List[str]:
+        normalized = [str(column).strip().lower() for column in columns]
+        duplicates = sorted({column for column in normalized if normalized.count(column) > 1})
+        if duplicates:
+            raise ValueError(f"CSV contains duplicate columns: {', '.join(duplicates)}")
+        return normalized
+
+    @staticmethod
+    def _binary_labels(labels: pd.Series, label_column: str) -> np.ndarray:
+        """Convert defect counts or common boolean labels to clean=0 / buggy=1."""
+        numeric = pd.to_numeric(labels, errors="coerce")
+        if numeric.notna().all():
+            if (numeric < 0).any():
+                raise ValueError(f"Label column '{label_column}' cannot contain negative defect counts.")
+            return (numeric > 0).astype(int).to_numpy()
+
+        normalized = labels.astype(str).str.strip().str.lower()
+        mapping = {
+            "clean": 0, "false": 0, "no": 0, "n": 0,
+            "buggy": 1, "defective": 1, "true": 1, "yes": 1, "y": 1
+        }
+        unknown = sorted(set(normalized) - set(mapping))
+        if unknown:
+            raise ValueError(
+                f"Label column '{label_column}' must contain defect counts or clean/buggy values. "
+                f"Unsupported values: {', '.join(unknown[:5])}"
+            )
+        return normalized.map(mapping).to_numpy(dtype=int)
+
+    @staticmethod
+    def _numeric_features(dataframe: pd.DataFrame, columns: List[str], dataset_name: str) -> np.ndarray:
+        numeric = dataframe[columns].apply(pd.to_numeric, errors="coerce")
+        invalid_columns = [
+            column for column in columns
+            if numeric[column].isna().any() and dataframe[column].notna().any()
+        ]
+        if invalid_columns:
+            raise ValueError(
+                f"The {dataset_name} CSV contains nonnumeric or missing metric values in: "
+                f"{', '.join(invalid_columns)}"
+            )
+
+        values = numeric.fillna(0).to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError(f"The {dataset_name} CSV contains infinite metric values.")
+        return values
