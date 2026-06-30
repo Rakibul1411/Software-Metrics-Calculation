@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { MetricsPreview } from '../../core/models/metrics-preview.model';
-import { PredictionResult, PredictionResultItem, PredictionSummary } from '../../core/models/prediction-result.model';
+import { EvaluationResult, PredictionResult, PredictionResultItem, PredictionSummary } from '../../core/models/prediction-result.model';
 import { MetricsApiService } from '../../core/services/metrics-api.service';
 import { PredictionApiService } from '../../core/services/prediction-api.service';
 
@@ -31,6 +31,14 @@ export class MetricsExtractionComponent {
   predictionLoading = false;
   predictionError: string | null = null;
   predictionResult: PredictionResult | null = null;
+  evaluationSourceFiles: File[] = [];
+  evaluationTargetFile: File | null = null;
+  evaluationLabelColumn = 'bug';
+  evaluationKnnValue = 5;
+  evaluationCoralOption = true;
+  evaluationLoading = false;
+  evaluationError: string | null = null;
+  evaluationResult: EvaluationResult | null = null;
 
   constructor(
     private readonly metricsApi: MetricsApiService,
@@ -139,6 +147,25 @@ export class MetricsExtractionComponent {
     return this.isBuggyPrediction(item) ? 'Buggy' : 'Clean';
   }
 
+  downloadPredictionCsv(): void {
+    if (!this.predictionResult) return;
+    const rows = [
+      ['class', 'prediction', 'status'],
+      ...this.predictionResult.predictions.map(item => [
+        item.class,
+        this.isBuggyPrediction(item) ? '1' : '0',
+        this.predictionLabel(item)
+      ])
+    ];
+    const csv = rows.map(row => row.map(value => this.escapeCsv(value)).join(',')).join('\n');
+    const objectUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = 'model-predictions.csv';
+    link.click();
+    URL.revokeObjectURL(objectUrl);
+  }
+
   onSourceFilesChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.sourceFiles = Array.from(input.files ?? []);
@@ -167,6 +194,42 @@ export class MetricsExtractionComponent {
         this.predictionResult = data;
       },
       error: (error: HttpErrorResponse) => this.predictionError = this.describePredictionError(error)
+    });
+  }
+
+  onEvaluationSourceFilesChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.evaluationSourceFiles = Array.from(input.files ?? []);
+    this.clearEvaluation();
+  }
+
+  onEvaluationTargetFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.evaluationTargetFile = input.files?.item(0) ?? null;
+    this.clearEvaluation();
+  }
+
+  runEvaluation(): void {
+    if (!this.evaluationTargetFile || !this.evaluationSourceFiles.length
+        || this.evaluationLoading || this.evaluationKnnValue < 1) return;
+    this.evaluationLoading = true;
+    this.evaluationError = null;
+    this.evaluationResult = null;
+    this.predictionApi.evaluatePrediction(
+      this.evaluationTargetFile,
+      this.evaluationSourceFiles,
+      this.evaluationLabelColumn.trim() || 'bug',
+      this.evaluationKnnValue,
+      this.evaluationCoralOption
+    ).pipe(finalize(() => this.evaluationLoading = false)).subscribe({
+      next: data => {
+        if (data.status === 'error') {
+          this.evaluationError = data.message || 'Evaluation failed.';
+          return;
+        }
+        this.evaluationResult = data;
+      },
+      error: (error: HttpErrorResponse) => this.evaluationError = this.describePredictionError(error)
     });
   }
 
@@ -210,6 +273,15 @@ export class MetricsExtractionComponent {
     this.result = null;
     this.predictionResult = null;
     this.predictionError = null;
+  }
+
+  private clearEvaluation(): void {
+    this.evaluationError = null;
+    this.evaluationResult = null;
+  }
+
+  private escapeCsv(value: string): string {
+    return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
   }
 
   private describeError(error: HttpErrorResponse): string {

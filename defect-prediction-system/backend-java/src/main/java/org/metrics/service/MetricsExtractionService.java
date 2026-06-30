@@ -96,15 +96,13 @@ public class MetricsExtractionService {
             throw new IllegalArgumentException("No Java classes were found in the supplied project.");
         }
 
-        // Generate CSV preview (header + first 5 data rows)
+        // Include every extracted class; the UI keeps this bounded with scrollbars.
         List<String> csvPreview = new ArrayList<>();
         if (Files.exists(outputFile)) {
             try (BufferedReader reader = new BufferedReader(new FileReader(outputFile.toFile()))) {
                 String line;
-                int count = 0;
-                while ((line = reader.readLine()) != null && count < 6) {
+                while ((line = reader.readLine()) != null) {
                     csvPreview.add(line);
-                    count++;
                 }
             }
         }
