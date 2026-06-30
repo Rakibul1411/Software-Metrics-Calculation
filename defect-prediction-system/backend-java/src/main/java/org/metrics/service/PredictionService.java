@@ -3,9 +3,7 @@ package org.metrics.service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -27,25 +25,39 @@ public class PredictionService {
     @Value("${fastapi.ml.service.url:http://localhost:8000/ml/predict}")
     private String mlServiceUrl;
 
-    public Object runPrediction(Path targetCsvPath, MultipartFile[] sourceFiles, String labelColumnName, int knnValue, boolean coralOption) throws IOException {
-        RestTemplate restTemplate = new RestTemplate();
+    @Value("${fastapi.ml.service.evaluate.url:http://localhost:8000/ml/evaluate}")
+    private String mlEvaluationUrl;
 
+    public Object runPrediction(Path targetCsvPath, MultipartFile[] sourceFiles, String labelColumnName, int knnValue, boolean coralOption) throws IOException {
+        return sendRequest(Files.readAllBytes(targetCsvPath), targetCsvPath.getFileName().toString(),
+                sourceFiles, labelColumnName, knnValue, coralOption, mlServiceUrl);
+    }
+
+    public Object evaluatePrediction(MultipartFile targetFile, MultipartFile[] sourceFiles,
+                                     String labelColumnName, int knnValue,
+                                     boolean coralOption) throws IOException {
+        String targetFilename = targetFile.getOriginalFilename() == null
+                ? "target.csv" : targetFile.getOriginalFilename();
+        return sendRequest(targetFile.getBytes(), targetFilename, sourceFiles,
+                labelColumnName, knnValue, coralOption, mlEvaluationUrl);
+    }
+
+    private Object sendRequest(byte[] targetBytes, String targetFilename,
+                               MultipartFile[] sourceFiles, String labelColumnName,
+                               int knnValue, boolean coralOption, String serviceUrl) throws IOException {
+        RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-
-        // Add Target CSV File
-        byte[] targetBytes = Files.readAllBytes(targetCsvPath);
         ByteArrayResource targetResource = new ByteArrayResource(targetBytes) {
             @Override
             public String getFilename() {
-                return targetCsvPath.getFileName().toString();
+                return targetFilename;
             }
         };
         body.add("target_file", targetResource);
 
-        // Add Source Labelled CSV Files
         for (MultipartFile file : sourceFiles) {
             ByteArrayResource sourceResource = new ByteArrayResource(file.getBytes()) {
                 @Override
@@ -56,7 +68,6 @@ public class PredictionService {
             body.add("source_files", sourceResource);
         }
 
-        // Add options
         body.add("label_column", labelColumnName);
         body.add("knn_value", String.valueOf(knnValue));
         body.add("coral_option", String.valueOf(coralOption));
@@ -64,7 +75,7 @@ public class PredictionService {
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
         try {
-            ResponseEntity<Object> response = restTemplate.postForEntity(mlServiceUrl, requestEntity, Object.class);
+            ResponseEntity<Object> response = restTemplate.postForEntity(serviceUrl, requestEntity, Object.class);
             return response.getBody();
         } catch (HttpStatusCodeException e) {
             Map<String, Object> errorMap = new HashMap<>();

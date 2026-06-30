@@ -133,8 +133,8 @@
     <div><small>Format</small><strong>{{ result.datasetFormat | uppercase }}</strong></div>
     <div class="dataset-id"><small>Target dataset ID</small><strong>{{ result.targetDatasetId }}</strong></div>
   </div>
-  <div class="preview-title"><div><h3>CSV preview</h3><p>Identifier and the first five extracted rows.</p></div><span>{{ result.extractedColumns.length }} columns</span></div>
-  <div class="table-shell" tabindex="0" aria-label="Extracted metrics CSV preview">
+  <div class="preview-title"><div><h3>CSV preview</h3><p>Scroll to review all {{ result.rowCount }} extracted classes.</p></div><span>{{ result.extractedColumns.length }} columns</span></div>
+  <div class="table-shell csv-preview-shell" tabindex="0" aria-label="Extracted metrics CSV preview">
     <table>
       <thead><tr><th *ngFor="let header of previewHeaders; trackBy: trackByIndex">{{ header }}</th></tr></thead>
       <tbody><tr *ngFor="let row of previewRows; trackBy: trackByIndex"><td *ngFor="let value of row; trackBy: trackByIndex">{{ value }}</td></tr></tbody>
@@ -155,7 +155,7 @@
     </div>
     <div *ngIf="predictionError" class="alert error prediction-alert" role="alert"><span aria-hidden="true">!</span><p>{{ predictionError }}</p></div>
     <div *ngIf="predictionResult" class="prediction-results" aria-live="polite">
-      <div class="preview-title"><div><h3>Prediction results</h3><p>CORAL-aligned KNN defect classifications.</p></div><span>{{ predictionResult.predictions.length }} classes</span></div>
+      <div class="preview-title"><div><h3>Prediction results</h3><p>CORAL-aligned KNN defect classifications.</p></div><div class="prediction-actions"><span>{{ predictionResult.predictions.length }} classes</span><button type="button" (click)="downloadPredictionCsv()">Download prediction CSV</button></div></div>
       <div class="prediction-overview" aria-label="Prediction overview">
         <div><small>Total classes</small><strong>{{ predictionSummary.total }}</strong></div>
         <div class="buggy"><small>Buggy</small><strong>{{ predictionSummary.buggy }}</strong></div>
@@ -165,4 +165,38 @@
       <div class="table-shell" tabindex="0" aria-label="Defect prediction results"><table><thead><tr><th>Class</th><th>Status</th></tr></thead><tbody><tr *ngFor="let item of predictionResult.predictions"><td>{{ item.class }}</td><td><span class="prediction-value" [class.buggy]="isBuggyPrediction(item)" [class.clean]="!isBuggyPrediction(item)">{{ predictionLabel(item) }}</span></td></tr></tbody></table></div>
     </div>
   </section>
+</section>
+
+<section class="panel evaluation-panel">
+  <div class="evaluation-heading">
+    <span class="result-kicker">Model evaluation</span>
+    <h2>Measure accuracy with labelled datasets</h2>
+    <p>Upload ready-made labelled source and target CSV files. No metric extraction is performed.</p>
+  </div>
+  <div class="evaluation-files">
+    <label class="source-file-field"><span>Labelled source CSV files</span><input type="file" accept=".csv,text/csv" multiple (change)="onEvaluationSourceFilesChange($event)"><strong>{{ evaluationSourceFiles.length ? evaluationSourceFiles.length + (evaluationSourceFiles.length === 1 ? ' source file selected' : ' source files selected') : 'Choose source CSV files' }}</strong></label>
+    <label class="source-file-field"><span>Labelled target CSV file</span><input type="file" accept=".csv,text/csv" (change)="onEvaluationTargetFileChange($event)"><strong>{{ evaluationTargetFile?.name || 'Choose target CSV file' }}</strong></label>
+  </div>
+  <div class="evaluation-options">
+    <label><span>Label column</span><input type="text" [(ngModel)]="evaluationLabelColumn" placeholder="bug"></label>
+    <label><span>K neighbors</span><input type="number" [(ngModel)]="evaluationKnnValue" min="1" step="1"></label>
+    <label class="coral-toggle"><input type="checkbox" [(ngModel)]="evaluationCoralOption"><span>Apply CORAL</span></label>
+    <button type="button" class="run-prediction-button" [disabled]="!evaluationTargetFile || !evaluationSourceFiles.length || evaluationLoading || evaluationKnnValue < 1" (click)="runEvaluation()"><span *ngIf="evaluationLoading" class="spinner" aria-hidden="true"></span>{{ evaluationLoading ? 'Evaluating model…' : 'Evaluate model accuracy' }}</button>
+  </div>
+  <div *ngIf="evaluationError" class="alert error prediction-alert" role="alert"><span aria-hidden="true">!</span><p>{{ evaluationError }}</p></div>
+  <div *ngIf="evaluationResult" class="evaluation-results" aria-live="polite">
+    <div class="evaluation-metrics">
+      <div class="primary"><small>Accuracy</small><strong>{{ evaluationResult.metrics.accuracy | percent:'1.1-1' }}</strong></div>
+      <div><small>Precision</small><strong>{{ evaluationResult.metrics.precision | percent:'1.1-1' }}</strong></div>
+      <div><small>Recall</small><strong>{{ evaluationResult.metrics.recall | percent:'1.1-1' }}</strong></div>
+      <div><small>F1 score</small><strong>{{ evaluationResult.metrics.f1 | percent:'1.1-1' }}</strong></div>
+    </div>
+    <div class="confusion-summary">
+      <span>True buggy <strong>{{ evaluationResult.confusionMatrix.truePositive }}</strong></span>
+      <span>True clean <strong>{{ evaluationResult.confusionMatrix.trueNegative }}</strong></span>
+      <span>False alarm <strong>{{ evaluationResult.confusionMatrix.falsePositive }}</strong></span>
+      <span>Missed buggy <strong>{{ evaluationResult.confusionMatrix.falseNegative }}</strong></span>
+    </div>
+    <div class="table-shell" tabindex="0" aria-label="Evaluation predictions"><table><thead><tr><th>Class</th><th>Actual</th><th>Predicted</th><th>Result</th></tr></thead><tbody><tr *ngFor="let item of evaluationResult.predictions"><td>{{ item.class }}</td><td>{{ item.actualLabel }}</td><td>{{ item.label }}</td><td><span class="evaluation-outcome" [class.correct]="item.correct">{{ item.correct ? 'Correct' : 'Wrong' }}</span></td></tr></tbody></table></div>
+  </div>
 </section>

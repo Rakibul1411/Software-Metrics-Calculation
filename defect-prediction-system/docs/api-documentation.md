@@ -21,7 +21,7 @@ Supply exactly one of `projectZip` or `githubUrl`. A form-urlencoded `sourceDire
   "datasetFormat": "promise",
   "rowCount": 42,
   "extractedColumns": ["wmc", "dit", "noc", ...],
-  "csvPreview": ["name,wmc,dit,...", "org.example.Foo,3,2,..."],
+  "csvPreview": ["name,wmc,dit,...", "org.example.Foo,3,2,...", "...all extracted classes..."],
   "downloadUrl": "/api/metrics/download/abc-123-uuid"
 }
 ```
@@ -62,6 +62,22 @@ Run defect prediction using a target dataset and labelled historical datasets.
 
 ---
 
+### POST /api/prediction/evaluate
+Evaluate the model without metric extraction by training on labelled source CSVs and scoring a labelled target CSV.
+
+**Parameters (multipart/form-data):**
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `targetFile` | file | ✅ | Labelled target metrics CSV |
+| `sourceFiles` | file[] | ✅ | One or more labelled source metrics CSVs |
+| `labelColumn` | string | ❌ | Label column present in both source and target (default: `bug`) |
+| `knnValue` | int | ❌ | KNN neighbors (default: `5`) |
+| `coralOption` | boolean | ❌ | Apply CORAL domain adaptation (default: `true`) |
+
+The response includes accuracy, precision, recall, F1, confusion-matrix counts, and per-class actual/predicted labels.
+
+---
+
 ## Python ML Service (FastAPI — Port 8000)
 
 ### POST /ml/predict
@@ -77,3 +93,6 @@ Direct ML endpoint called internally by the Java backend.
 | `coral_option` | bool | Whether to apply CORAL |
 
 **Response:** Same as `/api/prediction/run` above.
+
+### POST /ml/evaluate
+Internal evaluation endpoint used by `/api/prediction/evaluate`.
