@@ -38,6 +38,8 @@ class MetricsExtractionServiceTest {
             assertTrue(aeeem.getExtractedColumns().contains("ck_oo_wmc"));
             assertFalse(aeeem.getExtractedColumns().contains("class"));
             assertFalse(aeeem.getExtractedColumns().stream().anyMatch(column -> column.startsWith("Cvs")));
+            assertEquals(promise.getRowCount() + 1, promise.getCsvPreview().size());
+            assertEquals(aeeem.getRowCount() + 1, aeeem.getCsvPreview().size());
             assertTrue(aeeem.getCsvPreview().get(1).startsWith("demo.PaymentService,"));
         } finally {
             Files.deleteIfExists(service.getDatasetPath(promise.getTargetDatasetId()));

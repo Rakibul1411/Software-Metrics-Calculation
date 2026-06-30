@@ -61,4 +61,34 @@ public class PredictionController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
+
+    /** Evaluate against a labelled target CSV without running metric extraction. */
+    @PostMapping("/evaluate")
+    public ResponseEntity<?> evaluatePrediction(
+            @RequestParam("targetFile") MultipartFile targetFile,
+            @RequestParam("sourceFiles") MultipartFile[] sourceFiles,
+            @RequestParam(value = "labelColumn", defaultValue = "bug") String labelColumn,
+            @RequestParam(value = "knnValue", defaultValue = "5") int knnValue,
+            @RequestParam(value = "coralOption", defaultValue = "true") boolean coralOption) {
+        if (targetFile == null || targetFile.isEmpty()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "A labelled target CSV file must be provided.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+        if (sourceFiles == null || sourceFiles.length == 0) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "At least one labelled source CSV file must be provided.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        try {
+            Object result = predictionService.evaluatePrediction(
+                    targetFile, sourceFiles, labelColumn, knnValue, coralOption);
+            return ResponseEntity.ok(result);
+        } catch (Exception exception) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Evaluation failed: " + exception.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
 }

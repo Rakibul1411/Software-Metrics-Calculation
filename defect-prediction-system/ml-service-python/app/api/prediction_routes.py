@@ -34,3 +34,24 @@ async def run_prediction(
         )
     except (ValueError, KeyError, EmptyDataError, ParserError) as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/evaluate")
+async def evaluate_prediction(
+    target_file: UploadFile = File(...),
+    source_files: List[UploadFile] = File(...),
+    label_column: str = Form(default="bug"),
+    knn_value: int = Form(default=5),
+    coral_option: bool = Form(default=True)
+):
+    """Evaluate the model using labelled source and labelled target CSV files."""
+    try:
+        return await prediction_service.evaluate(
+            target_file=target_file,
+            source_files=source_files,
+            label_column=label_column,
+            knn_value=knn_value,
+            coral_option=coral_option
+        )
+    except (ValueError, KeyError, EmptyDataError, ParserError) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
