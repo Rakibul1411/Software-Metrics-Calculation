@@ -36,6 +36,10 @@ class MetricsExtractionServiceTest {
             assertEquals(1, aeeem.getRowCount());
             assertTrue(promise.getExtractedColumns().contains("wmc"));
             assertTrue(aeeem.getExtractedColumns().contains("ck_oo_wmc"));
+            assertEquals("name,wmc,dit,noc,cbo,rfc,lcom,ca,ce,npm,lcom3,loc,dam,moa,mfa,cam,ic,cbm,amc,max_cc,avg_cc",
+                    promise.getCsvPreview().get(0));
+            assertFalse(promise.getExtractedColumns().contains("bug"));
+            assertFalse(promise.getCsvPreview().get(0).contains("bug"));
             assertFalse(aeeem.getExtractedColumns().contains("class"));
             assertFalse(aeeem.getExtractedColumns().stream().anyMatch(column -> column.startsWith("Cvs")));
             assertEquals(promise.getRowCount() + 1, promise.getCsvPreview().size());

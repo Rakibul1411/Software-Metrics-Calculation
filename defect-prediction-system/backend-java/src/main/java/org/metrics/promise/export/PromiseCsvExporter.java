@@ -9,76 +9,41 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.metrics.promise.model.PromiseMetricResult;
 
-/**
- * Exporter to write calculated PROMISE metrics to a CSV file.
- */
 public class PromiseCsvExporter {
 
-    public static void exportPromiseToCSV(List<PromiseMetricResult> metricsList, Path outputPath, boolean fullFormat) throws IOException {
+    public static void exportPromiseToCSV(List<PromiseMetricResult> metricsList, Path outputPath) throws IOException {
         metricsList.sort((m1, m2) -> m1.getFullyQualifiedName().compareTo(m2.getFullyQualifiedName()));
 
         try (FileWriter writer = new FileWriter(outputPath.toFile());
              CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
 
-            if (fullFormat) {
-                csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce", "npm",
-                        "lcom3", "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc", "max_cc", "avg_cc", "bug");
-            } else {
-                csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce", "npm",
-                        "lcom3", "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc", "max_cc", "avg_cc");
-            }
+            csvPrinter.printRecord("name", "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce", "npm",
+                    "lcom3", "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc", "max_cc", "avg_cc");
 
             for (PromiseMetricResult metrics : metricsList) {
-                if (fullFormat) {
-                    csvPrinter.printRecord(
-                            metrics.getFullyQualifiedName(),
-                            metrics.getWmc(),
-                            metrics.getDit(),
-                            metrics.getNoc(),
-                            metrics.getCbo(),
-                            metrics.getRfc(),
-                            metrics.getLcom(),
-                            metrics.getCa(),
-                            metrics.getCe(),
-                            metrics.getNpm(),
-                            String.format("%.2f", metrics.getLcom3()),
-                            metrics.getLoc(),
-                            String.format("%.2f", metrics.getDam()),
-                            metrics.getMoa(),
-                            String.format("%.2f", metrics.getMfa()),
-                            String.format("%.2f", metrics.getCam()),
-                            metrics.getIc(),
-                            metrics.getCbm(),
-                            String.format("%.2f", metrics.getAmc()),
-                            metrics.getMaxCc(),
-                            String.format("%.2f", metrics.getAvgCc()),
-                            0
-                    );
-                } else {
-                    csvPrinter.printRecord(
-                            metrics.getFullyQualifiedName(),
-                            metrics.getWmc(),
-                            metrics.getDit(),
-                            metrics.getNoc(),
-                            metrics.getCbo(),
-                            metrics.getRfc(),
-                            metrics.getLcom(),
-                            metrics.getCa(),
-                            metrics.getCe(),
-                            metrics.getNpm(),
-                            String.format("%.2f", metrics.getLcom3()),
-                            metrics.getLoc(),
-                            String.format("%.2f", metrics.getDam()),
-                            metrics.getMoa(),
-                            String.format("%.2f", metrics.getMfa()),
-                            String.format("%.2f", metrics.getCam()),
-                            metrics.getIc(),
-                            metrics.getCbm(),
-                            String.format("%.2f", metrics.getAmc()),
-                            metrics.getMaxCc(),
-                            String.format("%.2f", metrics.getAvgCc())
-                    );
-                }
+                csvPrinter.printRecord(
+                        metrics.getFullyQualifiedName(),
+                        metrics.getWmc(),
+                        metrics.getDit(),
+                        metrics.getNoc(),
+                        metrics.getCbo(),
+                        metrics.getRfc(),
+                        metrics.getLcom(),
+                        metrics.getCa(),
+                        metrics.getCe(),
+                        metrics.getNpm(),
+                        String.format("%.2f", metrics.getLcom3()),
+                        metrics.getLoc(),
+                        String.format("%.2f", metrics.getDam()),
+                        metrics.getMoa(),
+                        String.format("%.2f", metrics.getMfa()),
+                        String.format("%.2f", metrics.getCam()),
+                        metrics.getIc(),
+                        metrics.getCbm(),
+                        String.format("%.2f", metrics.getAmc()),
+                        metrics.getMaxCc(),
+                        String.format("%.2f", metrics.getAvgCc())
+                );
             }
         }
         System.out.println("Exported " + metricsList.size() + " PROMISE class metrics to: " + outputPath);

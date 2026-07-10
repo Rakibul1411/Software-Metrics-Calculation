@@ -28,23 +28,24 @@ public class PredictionService {
     @Value("${fastapi.ml.service.evaluate.url:http://localhost:8000/ml/evaluate}")
     private String mlEvaluationUrl;
 
-    public Object runPrediction(Path targetCsvPath, MultipartFile[] sourceFiles, String labelColumnName, int knnValue, boolean coralOption) throws IOException {
+    public Object runPrediction(Path targetCsvPath, MultipartFile[] sourceFiles, String labelColumnName,
+                                int knnValue, boolean coralOption, int topK) throws IOException {
         return sendRequest(Files.readAllBytes(targetCsvPath), targetCsvPath.getFileName().toString(),
-                sourceFiles, labelColumnName, knnValue, coralOption, mlServiceUrl);
+                sourceFiles, labelColumnName, knnValue, coralOption, topK, mlServiceUrl);
     }
 
     public Object evaluatePrediction(MultipartFile targetFile, MultipartFile[] sourceFiles,
                                      String labelColumnName, int knnValue,
-                                     boolean coralOption) throws IOException {
+                                     boolean coralOption, int topK) throws IOException {
         String targetFilename = targetFile.getOriginalFilename() == null
                 ? "target.csv" : targetFile.getOriginalFilename();
         return sendRequest(targetFile.getBytes(), targetFilename, sourceFiles,
-                labelColumnName, knnValue, coralOption, mlEvaluationUrl);
+                labelColumnName, knnValue, coralOption, topK, mlEvaluationUrl);
     }
 
     private Object sendRequest(byte[] targetBytes, String targetFilename,
                                MultipartFile[] sourceFiles, String labelColumnName,
-                               int knnValue, boolean coralOption, String serviceUrl) throws IOException {
+                               int knnValue, boolean coralOption, int topK, String serviceUrl) throws IOException {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
@@ -71,6 +72,7 @@ public class PredictionService {
         body.add("label_column", labelColumnName);
         body.add("knn_value", String.valueOf(knnValue));
         body.add("coral_option", String.valueOf(coralOption));
+        body.add("top_k", String.valueOf(topK));
 
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 

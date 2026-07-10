@@ -31,6 +31,21 @@ class PredictionLabelTest(unittest.TestCase):
         self.assertEqual(1, result["confusionMatrix"]["truePositive"])
         self.assertEqual(1, result["confusionMatrix"]["trueNegative"])
 
+    def test_top_k_source_selection_uses_nearest_covariance_dataset(self):
+        near_source = UploadFile(filename="near.csv", file=BytesIO(
+            b"name,wmc,cbo,bug\nN1,0,0,0\nN2,1,1,0\nN3,2,2,1\n"))
+        far_source = UploadFile(filename="far.csv", file=BytesIO(
+            b"name,wmc,cbo,bug\nF1,0,2,0\nF2,100,-50,1\nF3,200,-100,1\n"))
+        target = UploadFile(filename="target.csv", file=BytesIO(
+            b"name,wmc,cbo,bug\nT1,0,0,0\nT2,1,1,0\nT3,2,2,1\n"))
+
+        result = __import__("asyncio").run(PredictionService().evaluate(
+            target, [far_source, near_source], "bug", 1, False, top_k=1))
+
+        self.assertEqual("near.csv", result["selectedSources"][0]["dataset"])
+        self.assertTrue(result["sourceRanking"][0]["selected"])
+        self.assertFalse(result["sourceRanking"][1]["selected"])
+
 
 if __name__ == "__main__":
     unittest.main()
