@@ -41,7 +41,7 @@ public class MetricsController {
         this.gitHubCloneService = gitHubCloneService;
     }
 
-    /** Extract metrics from either an uploaded Java project ZIP or a public GitHub repository. */
+    /** Extract metrics from either an uploaded Java project archive or a public GitHub repository. */
     @PostMapping(value = "/extract", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MetricsExtractionService.ExtractionResult> extractMetrics(
             @RequestParam(value = "projectZip", required = false) MultipartFile projectZip,
@@ -50,7 +50,7 @@ public class MetricsController {
         boolean hasZip = projectZip != null && !projectZip.isEmpty();
         boolean hasGitHubUrl = githubUrl != null && !githubUrl.trim().isEmpty();
         if (hasZip == hasGitHubUrl) {
-            throw new IllegalArgumentException("Provide either one project ZIP or one GitHub repository URL.");
+            throw new IllegalArgumentException("Provide either one project archive or one GitHub repository URL.");
         }
 
         Path uploadedFile = null;
@@ -58,10 +58,10 @@ public class MetricsController {
         try {
             if (hasZip) {
                 uploadedFile = fileStorageService.storeUploadedFile(projectZip);
-                sourceDirectory = zipExtractionService.extractZipFile(uploadedFile);
+                sourceDirectory = zipExtractionService.extractArchiveFile(uploadedFile);
             } else if (gitHubCloneService.isZipFileUrl(githubUrl)) {
                 uploadedFile = gitHubCloneService.downloadZipFile(githubUrl);
-                sourceDirectory = zipExtractionService.extractZipFile(uploadedFile);
+                sourceDirectory = zipExtractionService.extractArchiveFile(uploadedFile);
             } else {
                 sourceDirectory = gitHubCloneService.cloneRepository(githubUrl);
             }

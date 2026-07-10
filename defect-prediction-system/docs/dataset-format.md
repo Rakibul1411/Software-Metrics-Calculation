@@ -2,7 +2,7 @@
 
 ## PROMISE Dataset Format
 
-Extracted using Eclipse JDT AST parser. 20 object-oriented CK metrics + class identifier + optional bug label.
+Extracted using Eclipse JDT AST with semantic binding resolution. Generated target datasets contain the class identifier plus 20 object-oriented metrics. They do not include a `bug` label.
 
 ### CSV Schema
 | Column | Type | Description |
@@ -28,7 +28,8 @@ Extracted using Eclipse JDT AST parser. 20 object-oriented CK metrics + class id
 | `amc` | float | Average Method Complexity |
 | `max_cc` | int | Maximum Cyclomatic Complexity |
 | `avg_cc` | float | Average Cyclomatic Complexity |
-| `bug` | int | Bug label (0=clean, 1=buggy) — only in labelled datasets |
+
+Labelled PROMISE training datasets may contain a separate `bug` column, but the source-code metrics extractor never adds it to generated target CSV files.
 
 ---
 

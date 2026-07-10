@@ -23,17 +23,25 @@ public class FileStorageService {
 
     public Path storeUploadedFile(MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Choose a non-empty project ZIP file.");
+            throw new IllegalArgumentException("Choose a non-empty project archive file.");
         }
-        String originalName = file.getOriginalFilename() == null ? "project.zip" : file.getOriginalFilename();
+        String originalName = file.getOriginalFilename() == null ? "project-archive.zip" : file.getOriginalFilename();
         String safeName = Paths.get(originalName).getFileName().toString();
-        if (!safeName.toLowerCase().endsWith(".zip")) {
-            throw new IllegalArgumentException("The project upload must be a .zip file.");
+        if (!isSupportedArchive(safeName)) {
+            throw new IllegalArgumentException("The project upload must be a .zip, .tar.gz, or .tgz file.");
         }
         String filename = UUID.randomUUID().toString() + "_" + safeName;
         Path targetPath = uploadLocation.resolve(filename);
         Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
         return targetPath;
+    }
+
+    public static boolean isSupportedArchive(String filename) {
+        if (filename == null) {
+            return false;
+        }
+        String lower = filename.toLowerCase();
+        return lower.endsWith(".zip") || lower.endsWith(".tar.gz") || lower.endsWith(".tgz");
     }
 
     public static void deleteRecursively(Path path) {
