@@ -26,9 +26,9 @@ backend-java/
 │   │   ├── validation/                     ← Feature schema validator
 │   │   └── csv/                            ← CsvWriterService
 │   ├── promise/                            ← PROMISE metrics domain
-│   │   ├── calculator/                     ← 17 metric calculators
+│   │   ├── analyzer/PromiseProjectAnalyzer.java
+│   │   ├── calculator/                     ← Legacy calculators used by AEEEM adapters
 │   │   ├── model/PromiseMetricResult.java
-│   │   ├── parser/PromiseJavaSourceParser.java
 │   │   └── export/PromiseCsvExporter.java
 │   └── aeeem/                              ← AEEEM metrics domain
 │       ├── calculator/AeeemStaticMetricsCalculator.java
