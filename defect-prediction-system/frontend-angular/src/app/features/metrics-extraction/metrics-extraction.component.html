@@ -6,15 +6,27 @@
 
 <nav class="workflow" aria-label="Analysis workflow">
   <div class="workflow-item active">
-    <span>1</span><div><strong>Project source</strong><small>Choose format & code</small></div>
+    <span>1</span>
+    <div>
+      <strong>Project source</strong>
+      <small>Choose format & code</small>
+    </div>
   </div>
   <i></i>
   <div class="workflow-item" [class.complete]="result">
-    <span>2</span><div><strong>Metrics dataset</strong><small>Review & download</small></div>
+    <span>2</span>
+    <div>
+      <strong>Metrics dataset</strong>
+      <small>Review & download</small>
+    </div>
   </div>
   <i></i>
   <div class="workflow-item" [class.complete]="predictionResult" [class.active]="result && !predictionResult">
-    <span>3</span><div><strong>Defect prediction</strong><small>{{ predictionResult ? 'Prediction complete' : 'Run CORAL + KNN' }}</small></div>
+    <span>3</span>
+    <div>
+      <strong>Defect prediction</strong>
+      <small>{{ predictionResult ? 'Prediction complete' : 'Run CORAL + KNN' }}</small>
+    </div>
   </div>
 </nav>
 
@@ -22,7 +34,10 @@
   <section class="panel form-panel">
     <div class="section-heading">
       <span class="section-number">01</span>
-      <div><h2>Choose your dataset format</h2><p>Metrics will match the schema you plan to use for training.</p></div>
+      <div>
+        <h2>Choose your dataset format</h2>
+        <p>Metrics will match the schema you plan to use for training.</p>
+      </div>
     </div>
 
     <div class="format-grid" role="group" aria-label="Dataset format">
@@ -46,15 +61,20 @@
 
     <div class="section-heading">
       <span class="section-number">02</span>
-      <div><h2>Add your Java project</h2><p>Upload an archive or analyze a public GitHub repository.</p></div>
+      <div>
+        <h2>Add your Java project</h2>
+        <p>Upload an archive or analyze a public GitHub repository.</p>
+      </div>
     </div>
 
     <div class="source-tabs" role="tablist" aria-label="Project source type">
-      <button type="button" role="tab" [attr.aria-selected]="sourceMode === 'zip'" [class.active]="sourceMode === 'zip'" (click)="setSourceMode('zip')">
+      <button type="button" role="tab" [attr.aria-selected]="sourceMode === 'zip'"
+              [class.active]="sourceMode === 'zip'" (click)="setSourceMode('zip')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h5l1.7 2H20v8.8a1.7 1.7 0 0 1-1.7 1.7H5.7A1.7 1.7 0 0 1 4 18.3V7.5Z"/><path d="M4 7.5V5.7A1.7 1.7 0 0 1 5.7 4h3.2l1.8 2H18a2 2 0 0 1 2 2v1.5"/></svg>
         Project ZIP
       </button>
-      <button type="button" role="tab" [attr.aria-selected]="sourceMode === 'github'" [class.active]="sourceMode === 'github'" (click)="setSourceMode('github')">
+      <button type="button" role="tab" [attr.aria-selected]="sourceMode === 'github'"
+              [class.active]="sourceMode === 'github'" (click)="setSourceMode('github')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8a9.2 9.2 0 0 0-2.9 17.9c.5.1.6-.2.6-.5v-1.8c-2.8.6-3.4-1.2-3.4-1.2-.5-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 0 1.6 1 1.6 1 .9 1.6 2.4 1.1 2.9.9.1-.7.4-1.1.7-1.3-2.2-.3-4.6-1.1-4.6-5a3.9 3.9 0 0 1 1-2.7c-.1-.3-.4-1.3.1-2.7 0 0 .9-.3 2.8 1a9.6 9.6 0 0 1 5.1 0c2-1.3 2.8-1 2.8-1 .6 1.4.2 2.4.1 2.7a3.9 3.9 0 0 1 1.1 2.7c0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.8v2.6c0 .3.2.6.7.5A9.2 9.2 0 0 0 12 2.8Z"/></svg>
         GitHub URL
       </button>
@@ -105,27 +125,58 @@
   <aside class="panel insight-panel">
     <div class="insight-visual" aria-hidden="true">
       <div class="code-card">
-        <span class="code-dot"></span><span class="code-dot"></span><span class="code-dot"></span>
-        <p><b>class</b> PaymentService &#123;</p><p>&nbsp;&nbsp;<i>process</i>(order);</p><p>&nbsp;&nbsp;<i>validate</i>(card);</p><p>&#125;</p>
+        <span class="code-dot"></span>
+        <span class="code-dot"></span>
+        <span class="code-dot"></span>
+        <p><b>class</b> PaymentService &#123;</p>
+        <p>&nbsp;&nbsp;<i>process</i>(order);</p>
+        <p>&nbsp;&nbsp;<i>validate</i>(card);</p>
+        <p>&#125;</p>
       </div>
       <div class="scan-line"></div>
-      <div class="metric-bubbles"><span>WMC</span><span>CBO</span><span>LOC</span></div>
+      <div class="metric-bubbles">
+        <span>WMC</span>
+        <span>CBO</span>
+        <span>LOC</span>
+      </div>
     </div>
     <h3>What happens next?</h3>
     <ol>
-      <li><span>1</span><div><strong>Source discovery</strong><p>Java files are located throughout your project.</p></div></li>
-      <li><span>2</span><div><strong>JDT AST analysis</strong><p>Classes, methods, coupling and complexity are parsed.</p></div></li>
-      <li><span>3</span><div><strong>Dataset generation</strong><p>A model-ready CSV is built with class identifiers.</p></div></li>
+      <li>
+        <span>1</span>
+        <div><strong>Source discovery</strong><p>Java files are located throughout your project.</p></div>
+      </li>
+      <li>
+        <span>2</span>
+        <div><strong>JDT AST analysis</strong><p>Classes, methods, coupling and complexity are parsed.</p></div>
+      </li>
+      <li>
+        <span>3</span>
+        <div><strong>Dataset generation</strong><p>A model-ready CSV is built with class identifiers.</p></div>
+      </li>
     </ol>
-    <div class="safe-note"><span>◇</span><div><strong>Your code stays private</strong><p>Temporary project files are removed as soon as analysis finishes.</p></div></div>
+    <div class="safe-note">
+      <span>◇</span>
+      <div><strong>Your code stays private</strong><p>Temporary project files are removed as soon as analysis finishes.</p></div>
+    </div>
   </aside>
 </div>
 
 <section *ngIf="result" class="panel result-panel" aria-live="polite">
   <div class="result-header">
     <div class="success-icon" aria-hidden="true">✓</div>
-    <div><span class="result-kicker">Extraction complete</span><h2>Your metrics dataset is ready</h2><p>{{ result.rowCount }} Java {{ result.rowCount === 1 ? 'class' : 'classes' }} analyzed in {{ result.datasetFormat | uppercase }} format.</p></div>
-    <a class="download-button" [href]="downloadUrl"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg> Download CSV</a>
+    <div>
+      <span class="result-kicker">Extraction complete</span>
+      <h2>Your metrics dataset is ready</h2>
+      <p>
+        {{ result.rowCount }} Java {{ result.rowCount === 1 ? 'class' : 'classes' }}
+        analyzed in {{ result.datasetFormat | uppercase }} format.
+      </p>
+    </div>
+    <a class="download-button" [href]="downloadUrl">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+      Download CSV
+    </a>
   </div>
   <div class="result-stats">
     <div><small>Classes</small><strong>{{ result.rowCount }}</strong></div>
@@ -133,11 +184,25 @@
     <div><small>Format</small><strong>{{ result.datasetFormat | uppercase }}</strong></div>
     <div class="dataset-id"><small>Target dataset ID</small><strong>{{ result.targetDatasetId }}</strong></div>
   </div>
-  <div class="preview-title"><div><h3>CSV preview</h3><p>Scroll to review all {{ result.rowCount }} extracted classes.</p></div><span>{{ result.extractedColumns.length }} columns</span></div>
+  <div class="preview-title">
+    <div>
+      <h3>CSV preview</h3>
+      <p>Scroll to review all {{ result.rowCount }} extracted classes.</p>
+    </div>
+    <span>{{ result.extractedColumns.length }} columns</span>
+  </div>
   <div class="table-shell csv-preview-shell" tabindex="0" aria-label="Extracted metrics CSV preview">
     <table>
-      <thead><tr><th *ngFor="let header of previewHeaders; trackBy: trackByIndex">{{ header }}</th></tr></thead>
-      <tbody><tr *ngFor="let row of previewRows; trackBy: trackByIndex"><td *ngFor="let value of row; trackBy: trackByIndex">{{ value }}</td></tr></tbody>
+      <thead>
+        <tr>
+          <th *ngFor="let header of previewHeaders; trackBy: trackByIndex">{{ header }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of previewRows; trackBy: trackByIndex">
+          <td *ngFor="let value of row; trackBy: trackByIndex">{{ value }}</td>
+        </tr>
+      </tbody>
     </table>
   </div>
 
@@ -147,22 +212,70 @@
       <p>Upload labelled source datasets whose metric columns match the extracted target dataset.</p>
     </div>
     <div class="prediction-form">
-      <label class="source-file-field"><span>Labelled source CSV files</span><input type="file" accept=".csv,text/csv" multiple (change)="onSourceFilesChange($event)"><strong>{{ sourceFiles.length ? sourceFiles.length + (sourceFiles.length === 1 ? ' file selected' : ' files selected') : 'Choose CSV files' }}</strong></label>
-      <label><span>Label column</span><input type="text" [(ngModel)]="labelColumn" placeholder="bug"></label>
-      <label><span>K neighbors</span><input type="number" [(ngModel)]="knnValue" min="1" step="1"></label>
-      <label class="coral-toggle"><input type="checkbox" [(ngModel)]="coralOption"><span>Apply CORAL</span></label>
-      <button type="button" class="run-prediction-button" [disabled]="!sourceFiles.length || predictionLoading || knnValue < 1" (click)="runPrediction()"><span *ngIf="predictionLoading" class="spinner" aria-hidden="true"></span>{{ predictionLoading ? 'Running prediction…' : 'Run prediction model' }}</button>
+      <label class="source-file-field">
+        <span>Labelled source CSV files</span>
+        <input type="file" accept=".csv,text/csv" multiple (change)="onSourceFilesChange($event)">
+        <strong>{{ sourceFilesLabel }}</strong>
+      </label>
+      <label>
+        <span>Label column</span>
+        <input type="text" [(ngModel)]="labelColumn" placeholder="bug">
+      </label>
+      <label>
+        <span>K neighbors</span>
+        <input type="number" [(ngModel)]="knnValue" min="1" step="1">
+      </label>
+      <label class="coral-toggle">
+        <input type="checkbox" [(ngModel)]="coralOption">
+        <span>Apply CORAL</span>
+      </label>
+      <button type="button" class="run-prediction-button"
+              [disabled]="!sourceFiles.length || predictionLoading || knnValue < 1"
+              (click)="runPrediction()">
+        <span *ngIf="predictionLoading" class="spinner" aria-hidden="true"></span>
+        {{ predictionLoading ? 'Running prediction…' : 'Run prediction model' }}
+      </button>
     </div>
-    <div *ngIf="predictionError" class="alert error prediction-alert" role="alert"><span aria-hidden="true">!</span><p>{{ predictionError }}</p></div>
+    <div *ngIf="predictionError" class="alert error prediction-alert" role="alert">
+      <span aria-hidden="true">!</span>
+      <p>{{ predictionError }}</p>
+    </div>
     <div *ngIf="predictionResult" class="prediction-results" aria-live="polite">
-      <div class="preview-title"><div><h3>Prediction results</h3><p>CORAL-aligned KNN defect classifications.</p></div><div class="prediction-actions"><span>{{ predictionResult.predictions.length }} classes</span><button type="button" (click)="downloadPredictionCsv()">Download prediction CSV</button></div></div>
+      <div class="preview-title">
+        <div>
+          <h3>Prediction results</h3>
+          <p>CORAL-aligned KNN defect classifications.</p>
+        </div>
+        <div class="prediction-actions">
+          <span>{{ predictionResult.predictions.length }} classes</span>
+          <button type="button" (click)="downloadPredictionCsv()">Download prediction CSV</button>
+        </div>
+      </div>
       <div class="prediction-overview" aria-label="Prediction overview">
         <div><small>Total classes</small><strong>{{ predictionSummary.total }}</strong></div>
         <div class="buggy"><small>Buggy</small><strong>{{ predictionSummary.buggy }}</strong></div>
         <div class="clean"><small>Clean</small><strong>{{ predictionSummary.clean }}</strong></div>
         <div><small>Buggy rate</small><strong>{{ buggyRate | number:'1.1-1' }}%</strong></div>
       </div>
-      <div class="table-shell" tabindex="0" aria-label="Defect prediction results"><table><thead><tr><th>Class</th><th>Status</th></tr></thead><tbody><tr *ngFor="let item of predictionResult.predictions"><td>{{ item.class }}</td><td><span class="prediction-value" [class.buggy]="isBuggyPrediction(item)" [class.clean]="!isBuggyPrediction(item)">{{ predictionLabel(item) }}</span></td></tr></tbody></table></div>
+      <div class="table-shell" tabindex="0" aria-label="Defect prediction results">
+        <table>
+          <thead>
+            <tr><th>Class</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of predictionResult.predictions">
+              <td>{{ item.class }}</td>
+              <td>
+                <span class="prediction-value"
+                      [class.buggy]="isBuggyPrediction(item)"
+                      [class.clean]="!isBuggyPrediction(item)">
+                  {{ predictionLabel(item) }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 </section>
@@ -174,16 +287,41 @@
     <p>Upload ready-made labelled source and target CSV files. No metric extraction is performed.</p>
   </div>
   <div class="evaluation-files">
-    <label class="source-file-field"><span>Labelled source CSV files</span><input type="file" accept=".csv,text/csv" multiple (change)="onEvaluationSourceFilesChange($event)"><strong>{{ evaluationSourceFiles.length ? evaluationSourceFiles.length + (evaluationSourceFiles.length === 1 ? ' source file selected' : ' source files selected') : 'Choose source CSV files' }}</strong></label>
-    <label class="source-file-field"><span>Labelled target CSV file</span><input type="file" accept=".csv,text/csv" (change)="onEvaluationTargetFileChange($event)"><strong>{{ evaluationTargetFile?.name || 'Choose target CSV file' }}</strong></label>
+    <label class="source-file-field">
+      <span>Labelled source CSV files</span>
+      <input type="file" accept=".csv,text/csv" multiple (change)="onEvaluationSourceFilesChange($event)">
+      <strong>{{ evaluationSourceFilesLabel }}</strong>
+    </label>
+    <label class="source-file-field">
+      <span>Labelled target CSV file</span>
+      <input type="file" accept=".csv,text/csv" (change)="onEvaluationTargetFileChange($event)">
+      <strong>{{ evaluationTargetFileLabel }}</strong>
+    </label>
   </div>
   <div class="evaluation-options">
-    <label><span>Label column</span><input type="text" [(ngModel)]="evaluationLabelColumn" placeholder="bug"></label>
-    <label><span>K neighbors</span><input type="number" [(ngModel)]="evaluationKnnValue" min="1" step="1"></label>
-    <label class="coral-toggle"><input type="checkbox" [(ngModel)]="evaluationCoralOption"><span>Apply CORAL</span></label>
-    <button type="button" class="run-prediction-button" [disabled]="!evaluationTargetFile || !evaluationSourceFiles.length || evaluationLoading || evaluationKnnValue < 1" (click)="runEvaluation()"><span *ngIf="evaluationLoading" class="spinner" aria-hidden="true"></span>{{ evaluationLoading ? 'Evaluating model…' : 'Evaluate model accuracy' }}</button>
+    <label>
+      <span>Label column</span>
+      <input type="text" [(ngModel)]="evaluationLabelColumn" placeholder="bug">
+    </label>
+    <label>
+      <span>K neighbors</span>
+      <input type="number" [(ngModel)]="evaluationKnnValue" min="1" step="1">
+    </label>
+    <label class="coral-toggle">
+      <input type="checkbox" [(ngModel)]="evaluationCoralOption">
+      <span>Apply CORAL</span>
+    </label>
+    <button type="button" class="run-prediction-button"
+            [disabled]="!evaluationTargetFile || !evaluationSourceFiles.length || evaluationLoading || evaluationKnnValue < 1"
+            (click)="runEvaluation()">
+      <span *ngIf="evaluationLoading" class="spinner" aria-hidden="true"></span>
+      {{ evaluationLoading ? 'Evaluating model…' : 'Evaluate model accuracy' }}
+    </button>
   </div>
-  <div *ngIf="evaluationError" class="alert error prediction-alert" role="alert"><span aria-hidden="true">!</span><p>{{ evaluationError }}</p></div>
+  <div *ngIf="evaluationError" class="alert error prediction-alert" role="alert">
+    <span aria-hidden="true">!</span>
+    <p>{{ evaluationError }}</p>
+  </div>
   <div *ngIf="evaluationResult" class="evaluation-results" aria-live="polite">
     <div class="evaluation-metrics">
       <div class="primary"><small>Accuracy</small><strong>{{ evaluationResult.metrics.accuracy | percent:'1.1-1' }}</strong></div>
@@ -197,6 +335,24 @@
       <span>False alarm <strong>{{ evaluationResult.confusionMatrix.falsePositive }}</strong></span>
       <span>Missed buggy <strong>{{ evaluationResult.confusionMatrix.falseNegative }}</strong></span>
     </div>
-    <div class="table-shell" tabindex="0" aria-label="Evaluation predictions"><table><thead><tr><th>Class</th><th>Actual</th><th>Predicted</th><th>Result</th></tr></thead><tbody><tr *ngFor="let item of evaluationResult.predictions"><td>{{ item.class }}</td><td>{{ item.actualLabel }}</td><td>{{ item.label }}</td><td><span class="evaluation-outcome" [class.correct]="item.correct">{{ item.correct ? 'Correct' : 'Wrong' }}</span></td></tr></tbody></table></div>
+    <div class="table-shell" tabindex="0" aria-label="Evaluation predictions">
+      <table>
+        <thead>
+          <tr><th>Class</th><th>Actual</th><th>Predicted</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of evaluationResult.predictions">
+            <td>{{ item.class }}</td>
+            <td>{{ item.actualLabel }}</td>
+            <td>{{ item.label }}</td>
+            <td>
+              <span class="evaluation-outcome" [class.correct]="item.correct">
+                {{ item.correct ? 'Correct' : 'Wrong' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </section>

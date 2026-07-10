@@ -2,12 +2,22 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { MetricsPreview } from '../../core/models/metrics-preview.model';
-import { EvaluationResult, PredictionResult, PredictionResultItem, PredictionSummary } from '../../core/models/prediction-result.model';
+import {
+  EvaluationResult,
+  PredictionResult,
+  PredictionResultItem,
+  PredictionSummary
+} from '../../core/models/prediction-result.model';
 import { MetricsApiService } from '../../core/services/metrics-api.service';
 import { PredictionApiService } from '../../core/services/prediction-api.service';
 
 type DatasetFormat = 'promise' | 'aeeem';
 type SourceMode = 'zip' | 'github';
+
+const DEFAULT_LABEL_COLUMN = 'bug';
+const DEFAULT_KNN_VALUE = 5;
+const MAX_ZIP_BYTES = 50 * 1024 * 1024;
+const BUGGY_VALUES = new Set(['buggy', 'defective', 'true', 'yes']);
 
 @Component({
   selector: 'app-metrics-extraction',
@@ -25,16 +35,16 @@ export class MetricsExtractionComponent {
   error: string | null = null;
   result: MetricsPreview | null = null;
   sourceFiles: File[] = [];
-  labelColumn = 'bug';
-  knnValue = 5;
+  labelColumn = DEFAULT_LABEL_COLUMN;
+  knnValue = DEFAULT_KNN_VALUE;
   coralOption = true;
   predictionLoading = false;
   predictionError: string | null = null;
   predictionResult: PredictionResult | null = null;
   evaluationSourceFiles: File[] = [];
   evaluationTargetFile: File | null = null;
-  evaluationLabelColumn = 'bug';
-  evaluationKnnValue = 5;
+  evaluationLabelColumn = DEFAULT_LABEL_COLUMN;
+  evaluationKnnValue = DEFAULT_KNN_VALUE;
   evaluationCoralOption = true;
   evaluationLoading = false;
   evaluationError: string | null = null;
@@ -57,8 +67,7 @@ export class MetricsExtractionComponent {
   }
 
   onZipChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.acceptZip(input.files?.item(0) ?? null);
+    this.acceptZip(this.getFirstFile(event));
   }
 
   onDragOver(event: DragEvent): void {
@@ -86,6 +95,7 @@ export class MetricsExtractionComponent {
 
   extract(): void {
     if (!this.canExtract || this.loading) return;
+
     this.loading = true;
     this.error = null;
     this.result = null;
@@ -122,8 +132,26 @@ export class MetricsExtractionComponent {
     return this.result ? this.metricsApi.downloadDataset(this.result.targetDatasetId) : '';
   }
 
+  get sourceFilesLabel(): string {
+    return this.formatFileCount(this.sourceFiles.length, 'file selected', 'files selected', 'Choose CSV files');
+  }
+
+  get evaluationSourceFilesLabel(): string {
+    return this.formatFileCount(
+      this.evaluationSourceFiles.length,
+      'source file selected',
+      'source files selected',
+      'Choose source CSV files'
+    );
+  }
+
+  get evaluationTargetFileLabel(): string {
+    return this.evaluationTargetFile?.name || 'Choose target CSV file';
+  }
+
   get predictionSummary(): PredictionSummary {
     if (this.predictionResult?.summary) return this.predictionResult.summary;
+
     const predictions = this.predictionResult?.predictions ?? [];
     const buggy = predictions.filter(item => this.isBuggyPrediction(item)).length;
     return { total: predictions.length, buggy, clean: predictions.length - buggy };
@@ -137,10 +165,11 @@ export class MetricsExtractionComponent {
   isBuggyPrediction(item: PredictionResultItem): boolean {
     if (typeof item.isBuggy === 'boolean') return item.isBuggy;
     if (item.label) return item.label.toLowerCase() === 'buggy';
+
     const numericPrediction = Number(item.prediction);
     return Number.isFinite(numericPrediction)
       ? numericPrediction > 0
-      : ['buggy', 'defective', 'true', 'yes'].includes(item.prediction.trim().toLowerCase());
+      : BUGGY_VALUES.has(item.prediction.trim().toLowerCase());
   }
 
   predictionLabel(item: PredictionResultItem): string {
@@ -149,6 +178,7 @@ export class MetricsExtractionComponent {
 
   downloadPredictionCsv(): void {
     if (!this.predictionResult) return;
+
     const rows = [
       ['class', 'prediction', 'status'],
       ...this.predictionResult.predictions.map(item => [
@@ -157,24 +187,19 @@ export class MetricsExtractionComponent {
         this.predictionLabel(item)
       ])
     ];
-    const csv = rows.map(row => row.map(value => this.escapeCsv(value)).join(',')).join('\n');
-    const objectUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = 'model-predictions.csv';
-    link.click();
-    URL.revokeObjectURL(objectUrl);
+
+    this.downloadCsv('model-predictions.csv', rows);
   }
 
   onSourceFilesChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.sourceFiles = Array.from(input.files ?? []);
+    this.sourceFiles = this.getFiles(event);
     this.predictionError = null;
     this.predictionResult = null;
   }
 
   runPrediction(): void {
     if (!this.result || !this.sourceFiles.length || this.predictionLoading) return;
+
     this.predictionLoading = true;
     this.predictionError = null;
     this.predictionResult = null;
@@ -182,7 +207,7 @@ export class MetricsExtractionComponent {
     this.predictionApi.runPrediction(
       this.result.targetDatasetId,
       this.sourceFiles,
-      this.labelColumn.trim() || 'bug',
+      this.normalizedLabelColumn(this.labelColumn),
       this.knnValue,
       this.coralOption
     ).pipe(finalize(() => this.predictionLoading = false)).subscribe({
@@ -198,27 +223,26 @@ export class MetricsExtractionComponent {
   }
 
   onEvaluationSourceFilesChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.evaluationSourceFiles = Array.from(input.files ?? []);
+    this.evaluationSourceFiles = this.getFiles(event);
     this.clearEvaluation();
   }
 
   onEvaluationTargetFileChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.evaluationTargetFile = input.files?.item(0) ?? null;
+    this.evaluationTargetFile = this.getFirstFile(event);
     this.clearEvaluation();
   }
 
   runEvaluation(): void {
     if (!this.evaluationTargetFile || !this.evaluationSourceFiles.length
         || this.evaluationLoading || this.evaluationKnnValue < 1) return;
+
     this.evaluationLoading = true;
     this.evaluationError = null;
     this.evaluationResult = null;
     this.predictionApi.evaluatePrediction(
       this.evaluationTargetFile,
       this.evaluationSourceFiles,
-      this.evaluationLabelColumn.trim() || 'bug',
+      this.normalizedLabelColumn(this.evaluationLabelColumn),
       this.evaluationKnnValue,
       this.evaluationCoralOption
     ).pipe(finalize(() => this.evaluationLoading = false)).subscribe({
@@ -238,13 +262,16 @@ export class MetricsExtractionComponent {
   private acceptZip(file: File | null): void {
     this.error = null;
     this.clearResult();
+
     if (!file) return;
+
     if (!file.name.toLowerCase().endsWith('.zip')) {
       this.selectedZip = null;
       this.error = 'Choose a Java project packaged as a .zip file.';
       return;
     }
-    if (file.size > 50 * 1024 * 1024) {
+
+    if (file.size > MAX_ZIP_BYTES) {
       this.selectedZip = null;
       this.error = 'The project ZIP must be 50 MB or smaller.';
       return;
@@ -255,13 +282,14 @@ export class MetricsExtractionComponent {
   private isSupportedGitHubUrl(value: string): boolean {
     try {
       const url = new URL(value.trim());
-      const githubHost = url.hostname.toLowerCase() === 'github.com'
-        || url.hostname.toLowerCase() === 'www.github.com';
+      const hostname = url.hostname.toLowerCase();
+      const githubHost = hostname === 'github.com' || hostname === 'www.github.com';
       const parts = url.pathname.split('/').filter(Boolean);
       const repositoryRoot = parts.length === 2;
       const repositoryFolder = parts.length >= 4 && parts[2].toLowerCase() === 'tree';
       const repositoryZip = parts.length >= 6 && parts[2].toLowerCase() === 'blob'
         && parts[parts.length - 1].toLowerCase().endsWith('.zip');
+
       return url.protocol === 'https:' && githubHost && !url.username && !url.password
         && !url.search && !url.hash && (repositoryRoot || repositoryFolder || repositoryZip);
     } catch {
@@ -280,8 +308,38 @@ export class MetricsExtractionComponent {
     this.evaluationResult = null;
   }
 
+  private downloadCsv(fileName: string, rows: string[][]): void {
+    const csv = rows.map(row => row.map(value => this.escapeCsv(value)).join(',')).join('\n');
+    const objectUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+
+    link.href = objectUrl;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(objectUrl);
+  }
+
   private escapeCsv(value: string): string {
     return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  }
+
+  private formatFileCount(count: number, singular: string, plural: string, empty: string): string {
+    if (!count) return empty;
+    return `${count} ${count === 1 ? singular : plural}`;
+  }
+
+  private getFiles(event: Event): File[] {
+    const input = event.target as HTMLInputElement;
+    return Array.from(input.files ?? []);
+  }
+
+  private getFirstFile(event: Event): File | null {
+    const input = event.target as HTMLInputElement;
+    return input.files?.item(0) ?? null;
+  }
+
+  private normalizedLabelColumn(value: string): string {
+    return value.trim() || DEFAULT_LABEL_COLUMN;
   }
 
   private describeError(error: HttpErrorResponse): string {
