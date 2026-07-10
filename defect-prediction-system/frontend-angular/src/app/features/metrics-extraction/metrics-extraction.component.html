@@ -267,50 +267,55 @@
           <button type="button" (click)="downloadPredictionCsv()">Download prediction CSV</button>
         </div>
       </div>
-      <div class="prediction-overview" aria-label="Prediction overview">
-        <div><small>Total classes</small><strong>{{ predictionSummary.total }}</strong></div>
-        <div class="buggy"><small>Buggy</small><strong>{{ predictionSummary.buggy }}</strong></div>
-        <div class="clean"><small>Clean</small><strong>{{ predictionSummary.clean }}</strong></div>
-        <div><small>Buggy rate</small><strong>{{ buggyRate | number:'1.1-1' }}%</strong></div>
-      </div>
-      <div *ngIf="predictionResult.selectedSources?.length" class="source-ranking">
-        <h4>Selected nearest source datasets</h4>
-        <div>
-          <span *ngFor="let source of predictionResult.selectedSources">
-            #{{ source.rank }} {{ source.dataset }}
-            <small>distance {{ source.distance | number:'1.3-3' }}</small>
-          </span>
+      <div class="prediction-dashboard">
+        <div class="prediction-summary-column">
+          <div class="prediction-overview" aria-label="Prediction overview">
+            <div><small>Total classes</small><strong>{{ predictionSummary.total }}</strong></div>
+            <div class="buggy"><small>Buggy</small><strong>{{ predictionSummary.buggy }}</strong></div>
+            <div class="clean"><small>Clean</small><strong>{{ predictionSummary.clean }}</strong></div>
+            <div><small>Buggy rate</small><strong>{{ buggyRate | number:'1.1-1' }}%</strong></div>
+          </div>
+          <div *ngIf="predictionResult.selectedSources?.length" class="source-ranking">
+            <h4>Selected nearest source datasets</h4>
+            <div>
+              <span *ngFor="let source of predictionResult.selectedSources">
+                #{{ source.rank }} {{ source.dataset }}
+                <small>distance {{ source.distance | number:'1.3-3' }}</small>
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="table-shell" tabindex="0" aria-label="Defect prediction results">
-        <table>
-          <thead>
-            <tr>
-              <th>Class</th>
-              <th>Risk</th>
-              <th>Confidence</th>
-              <th>Status</th>
-              <th>Top risky metrics</th>
-              <th>Nearest buggy classes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of predictionResult.predictions">
-              <td>{{ item.class }}</td>
-              <td>{{ riskPercent(item) | number:'1.1-1' }}%</td>
-              <td>{{ item.confidence || '—' }}</td>
-              <td>
-                <span class="prediction-value"
-                      [class.buggy]="isBuggyPrediction(item)"
-                      [class.clean]="!isBuggyPrediction(item)">
-                  {{ predictionLabel(item) }}
-                </span>
-              </td>
-              <td>{{ topRiskyMetricsText(item) }}</td>
-              <td>{{ nearestBuggyText(item) }}</td>
-            </tr>
-          </tbody>
-        </table>
+
+        <div class="table-shell prediction-table-shell" tabindex="0" aria-label="Defect prediction results">
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>Risk</th>
+                <th>Confidence</th>
+                <th>Status</th>
+                <th>Top risky metrics</th>
+                <th>Nearest buggy classes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of predictionResult.predictions">
+                <td>{{ item.class }}</td>
+                <td>{{ riskPercent(item) | number:'1.1-1' }}%</td>
+                <td>{{ item.confidence || '—' }}</td>
+                <td>
+                  <span class="prediction-value"
+                        [class.buggy]="isBuggyPrediction(item)"
+                        [class.clean]="!isBuggyPrediction(item)">
+                    {{ predictionLabel(item) }}
+                  </span>
+                </td>
+                <td>{{ topRiskyMetricsText(item) }}</td>
+                <td>{{ nearestBuggyText(item) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <section class="model-test-card">
@@ -478,7 +483,7 @@
       <span>False alarm <strong>{{ evaluationResult.confusionMatrix.falsePositive }}</strong></span>
       <span>Missed buggy <strong>{{ evaluationResult.confusionMatrix.falseNegative }}</strong></span>
     </div>
-    <div class="table-shell" tabindex="0" aria-label="Evaluation predictions">
+    <div class="table-shell evaluation-table-shell" tabindex="0" aria-label="Evaluation predictions">
       <table>
         <thead>
           <tr><th>Class</th><th>Risk</th><th>Actual</th><th>Predicted</th><th>Result</th></tr>
