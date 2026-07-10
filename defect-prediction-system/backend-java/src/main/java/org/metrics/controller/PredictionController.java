@@ -36,7 +36,8 @@ public class PredictionController {
             @RequestParam("sourceFiles") MultipartFile[] sourceFiles,
             @RequestParam(value = "labelColumn", defaultValue = "bug") String labelColumn,
             @RequestParam(value = "knnValue", defaultValue = "5") int knnValue,
-            @RequestParam(value = "coralOption", defaultValue = "true") boolean coralOption) {
+            @RequestParam(value = "coralOption", defaultValue = "true") boolean coralOption,
+            @RequestParam(value = "topK", defaultValue = "3") int topK) {
 
         Path targetCsvPath = metricsExtractionService.getDatasetPath(targetDatasetId);
         if (!Files.exists(targetCsvPath)) {
@@ -53,7 +54,7 @@ public class PredictionController {
 
         try {
             Object result = predictionService.runPrediction(
-                    targetCsvPath, sourceFiles, labelColumn, knnValue, coralOption);
+                    targetCsvPath, sourceFiles, labelColumn, knnValue, coralOption, topK);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
@@ -69,7 +70,8 @@ public class PredictionController {
             @RequestParam("sourceFiles") MultipartFile[] sourceFiles,
             @RequestParam(value = "labelColumn", defaultValue = "bug") String labelColumn,
             @RequestParam(value = "knnValue", defaultValue = "5") int knnValue,
-            @RequestParam(value = "coralOption", defaultValue = "true") boolean coralOption) {
+            @RequestParam(value = "coralOption", defaultValue = "true") boolean coralOption,
+            @RequestParam(value = "topK", defaultValue = "3") int topK) {
         if (targetFile == null || targetFile.isEmpty()) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "A labelled target CSV file must be provided.");
@@ -83,7 +85,7 @@ public class PredictionController {
 
         try {
             Object result = predictionService.evaluatePrediction(
-                    targetFile, sourceFiles, labelColumn, knnValue, coralOption);
+                    targetFile, sourceFiles, labelColumn, knnValue, coralOption, topK);
             return ResponseEntity.ok(result);
         } catch (Exception exception) {
             Map<String, String> error = new HashMap<>();

@@ -10,14 +10,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.metrics.promise.calculator.CBMCalculator;
 import org.metrics.promise.calculator.CBOCalculator;
 import org.metrics.promise.calculator.DITCalculator;
-import org.metrics.promise.calculator.ICCalculator;
-import org.metrics.promise.calculator.MFACalculator;
 import org.metrics.promise.calculator.NOCCalculator;
+import org.metrics.promise.analyzer.PromiseProjectAnalyzer;
 import org.metrics.promise.model.PromiseMetricResult;
-import org.metrics.promise.parser.PromiseJavaSourceParser;
 import org.metrics.promise.export.PromiseCsvExporter;
 
 import org.metrics.aeeem.model.AeeemMetricResult;
@@ -86,7 +83,7 @@ public class MetricsExtractionService {
                 Set<String> predefinedClasses = loadClassNamesFromCSV(filterFile);
                 allMetrics.removeIf(m -> !predefinedClasses.contains(m.getFullyQualifiedName()));
             }
-            PromiseCsvExporter.exportPromiseToCSV(allMetrics, outputFile, false);
+            PromiseCsvExporter.exportPromiseToCSV(allMetrics, outputFile);
             columns = getPromiseColumns();
             rowCount = allMetrics.size();
         }
@@ -141,34 +138,14 @@ public class MetricsExtractionService {
     }
 
     private List<PromiseMetricResult> calculatePromiseMetricsForDirectories(String[] dirPaths) throws IOException {
-        List<PromiseMetricResult> allMetrics = new ArrayList<>();
+        List<Path> sourcePaths = new ArrayList<>();
         for (String dirPath : dirPaths) {
             Path sourcePath = Paths.get(dirPath.trim());
-            if (!Files.exists(sourcePath) || !Files.isDirectory(sourcePath)) continue;
-
-            try (Stream<Path> paths = Files.walk(sourcePath)) {
-                paths.filter(Files::isRegularFile)
-                        .filter(path -> path.toString().endsWith(".java"))
-                        .filter(path -> !path.toString().contains("/optional/") && !path.toString().contains("\\optional\\"))
-                        .filter(path -> !path.toString().contains("/test/") && !path.toString().contains("\\test\\"))
-                        .forEach(javaFile -> {
-                            try {
-                                List<PromiseMetricResult> metrics = PromiseJavaSourceParser.parsePromiseFile(javaFile);
-                                allMetrics.addAll(metrics);
-                            } catch (Exception ignored) {}
-                        });
+            if (Files.exists(sourcePath) && Files.isDirectory(sourcePath)) {
+                sourcePaths.add(sourcePath);
             }
         }
-
-        calculateNOCForAllClasses(allMetrics);
-        calculateDITForAllClasses(allMetrics);
-        calculateCBOForAllClasses(allMetrics);
-        calculateICForAllClasses(allMetrics);
-        calculateCBMForAllClasses(allMetrics);
-        calculateMFAForAllClasses(allMetrics);
-        calculateMOAForAllClasses(allMetrics);
-
-        return allMetrics;
+        return PromiseProjectAnalyzer.analyzeDirectories(sourcePaths);
     }
 
     private List<AeeemMetricResult> calculateAeeemMetricsForDirectories(String[] dirPaths) throws IOException {
@@ -245,139 +222,6 @@ public class MetricsExtractionService {
         metrics.setCkOoNumberOfMethodsInherited(methodsInherited);
         metrics.setLdhhNumberOfMethodsInherited(methodsInherited);
         metrics.setWchuNumberOfMethodsInherited(methodsInherited);
-    }
-
-    private void calculateMOAForAllClasses(List<PromiseMetricResult> allMetrics) {
-        Set<String> projectClassNames = new HashSet<>();
-        for (PromiseMetricResult metrics : allMetrics) {
-            projectClassNames.add(metrics.getFullyQualifiedName());
-            String simpleName = metrics.getFullyQualifiedName();
-            int lastDot = simpleName.lastIndexOf('.');
-            if (lastDot >= 0) {
-                simpleName = simpleName.substring(lastDot + 1);
-            }
-            projectClassNames.add(simpleName);
-        }
-
-        for (PromiseMetricResult metrics : allMetrics) {
-            int moa = 0;
-            for (String fieldType : metrics.getFieldTypes()) {
-                if (projectClassNames.contains(fieldType)) {
-                    moa++;
-                }
-            }
-            metrics.setMoa(moa);
-        }
-    }
-
-    private void calculateCBOForAllClasses(List<PromiseMetricResult> allMetrics) {
-        CBOCalculator cboCalculator = new CBOCalculator();
-        for (PromiseMetricResult metrics : allMetrics) {
-            cboCalculator.registerClass(
-                    metrics.getFullyQualifiedName(),
-                    metrics.getSuperclassName(),
-                    metrics.getDependencies()
-            );
-        }
-        cboCalculator.postProcessDependencies();
-
-        for (PromiseMetricResult metrics : allMetrics) {
-            int cbo = cboCalculator.calculateCBO(metrics.getFullyQualifiedName());
-            int ca = cboCalculator.calculateCA(metrics.getFullyQualifiedName());
-            int ce = cboCalculator.calculateCE(metrics.getFullyQualifiedName());
-            metrics.setCbo(cbo);
-            metrics.setCa(ca);
-            metrics.setCe(ce);
-        }
-    }
-
-    private void calculateNOCForAllClasses(List<PromiseMetricResult> allMetrics) {
-        NOCCalculator nocCalculator = new NOCCalculator();
-        for (PromiseMetricResult metrics : allMetrics) {
-            nocCalculator.registerClass(
-                    metrics.getFullyQualifiedName(),
-                    metrics.getSuperclassName()
-            );
-        }
-
-        for (PromiseMetricResult metrics : allMetrics) {
-            int noc = nocCalculator.calculateNOC(metrics.getFullyQualifiedName());
-            metrics.setNoc(noc);
-        }
-    }
-
-    private void calculateDITForAllClasses(List<PromiseMetricResult> allMetrics) {
-        DITCalculator ditCalculator = new DITCalculator();
-        for (PromiseMetricResult metrics : allMetrics) {
-            ditCalculator.registerClass(
-                    metrics.getFullyQualifiedName(),
-                    metrics.getSuperclassName(),
-                    metrics.isInterface()
-            );
-        }
-
-        for (PromiseMetricResult metrics : allMetrics) {
-            int dit = ditCalculator.calculateDIT(metrics.getFullyQualifiedName());
-            metrics.setDit(dit);
-        }
-    }
-
-    private void calculateICForAllClasses(List<PromiseMetricResult> allMetrics) {
-        ICCalculator icCalculator = new ICCalculator();
-        for (PromiseMetricResult metrics : allMetrics) {
-            icCalculator.registerClass(
-                    metrics.getFullyQualifiedName(),
-                    metrics.getSuperclassName(),
-                    metrics.getMethodNames()
-            );
-        }
-
-        for (PromiseMetricResult metrics : allMetrics) {
-            int ic = icCalculator.calculateIC(
-                    metrics.getFullyQualifiedName(),
-                    metrics.getInvokedMethods()
-            );
-            metrics.setIc(ic);
-        }
-    }
-
-    private void calculateCBMForAllClasses(List<PromiseMetricResult> allMetrics) {
-        CBMCalculator cbmCalculator = new CBMCalculator();
-        for (PromiseMetricResult metrics : allMetrics) {
-            cbmCalculator.registerClass(
-                    metrics.getFullyQualifiedName(),
-                    metrics.getSuperclassName(),
-                    metrics.getMethodNames()
-            );
-        }
-
-        for (PromiseMetricResult metrics : allMetrics) {
-            int cbm = cbmCalculator.calculateCBMSimple(
-                    metrics.getFullyQualifiedName(),
-                    metrics.getInheritedMethodInvocations()
-            );
-            metrics.setCbm(cbm);
-        }
-    }
-
-    private void calculateMFAForAllClasses(List<PromiseMetricResult> allMetrics) {
-        MFACalculator mfaCalculator = new MFACalculator();
-        for (PromiseMetricResult metrics : allMetrics) {
-            mfaCalculator.registerClass(
-                    metrics.getFullyQualifiedName(),
-                    metrics.getSuperclassName(),
-                    metrics.getMethodNames()
-            );
-        }
-
-        for (PromiseMetricResult metrics : allMetrics) {
-            if (metrics.isInterface()) {
-                metrics.setMfa(0.0);
-            } else {
-                double mfa = mfaCalculator.calculateMFA(metrics.getFullyQualifiedName());
-                metrics.setMfa(mfa);
-            }
-        }
     }
 
     private List<String> getPromiseColumns() {

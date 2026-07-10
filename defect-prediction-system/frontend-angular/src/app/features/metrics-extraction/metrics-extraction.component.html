@@ -71,7 +71,7 @@
       <button type="button" role="tab" [attr.aria-selected]="sourceMode === 'zip'"
               [class.active]="sourceMode === 'zip'" (click)="setSourceMode('zip')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h5l1.7 2H20v8.8a1.7 1.7 0 0 1-1.7 1.7H5.7A1.7 1.7 0 0 1 4 18.3V7.5Z"/><path d="M4 7.5V5.7A1.7 1.7 0 0 1 5.7 4h3.2l1.8 2H18a2 2 0 0 1 2 2v1.5"/></svg>
-        Project ZIP
+        Project Archive
       </button>
       <button type="button" role="tab" [attr.aria-selected]="sourceMode === 'github'"
               [class.active]="sourceMode === 'github'" (click)="setSourceMode('github')">
@@ -83,18 +83,18 @@
     <div class="source-content">
       <label *ngIf="sourceMode === 'zip'" class="dropzone" [class.dragging]="dragActive" [class.has-file]="selectedZip"
              (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
-        <input type="file" accept=".zip,application/zip" (change)="onZipChange($event)">
+        <input type="file" accept=".zip,.tar.gz,.tgz,application/zip,application/gzip,application/x-gzip,application/x-tar" (change)="onZipChange($event)">
         <ng-container *ngIf="!selectedZip; else chosenFile">
           <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15V4m0 0L8.5 7.5M12 4l3.5 3.5M5 14.5v3.8A1.7 1.7 0 0 0 6.7 20h10.6a1.7 1.7 0 0 0 1.7-1.7v-3.8"/></svg></span>
-          <strong>Drop your Java project ZIP here</strong>
+          <strong>Drop your Java project archive here</strong>
           <span>or <u>browse your computer</u></span>
-          <small>ZIP only · maximum 50 MB</small>
+          <small>ZIP, TAR.GZ, or TGZ · maximum 50 MB</small>
         </ng-container>
         <ng-template #chosenFile>
-          <span class="file-icon" aria-hidden="true">ZIP</span>
+          <span class="file-icon" aria-hidden="true">ARC</span>
           <strong>{{ selectedZip?.name }}</strong>
           <span>{{ ((selectedZip?.size || 0) / 1048576) | number:'1.1-1' }} MB · Ready to analyze</span>
-          <button type="button" class="remove-file" (click)="removeZip($event)" aria-label="Remove selected ZIP">Remove</button>
+          <button type="button" class="remove-file" (click)="removeZip($event)" aria-label="Remove selected archive">Remove</button>
         </ng-template>
       </label>
 
@@ -212,11 +212,23 @@
       <p>Upload labelled source datasets whose metric columns match the extracted target dataset.</p>
     </div>
     <div class="prediction-form">
-      <label class="source-file-field">
+      <div class="source-picker-group">
         <span>Labelled source CSV files</span>
-        <input type="file" accept=".csv,text/csv" multiple (change)="onSourceFilesChange($event)">
-        <strong>{{ sourceFilesLabel }}</strong>
-      </label>
+        <div class="source-picker-actions">
+          <label class="source-file-field">
+            <input type="file" accept=".csv,text/csv" multiple (change)="onSourceFilesChange($event)">
+            <strong>{{ sourceFilesLabel }}</strong>
+          </label>
+          <label class="source-file-field compact">
+            <input type="file" accept=".csv,text/csv" multiple webkitdirectory directory
+                   (change)="onSourceFolderChange($event)">
+            <strong>Add CSV folder</strong>
+          </label>
+          <button *ngIf="sourceFiles.length" type="button" class="clear-files-button" (click)="clearSourceFiles()">
+            Clear
+          </button>
+        </div>
+      </div>
       <label>
         <span>Label column</span>
         <input type="text" [(ngModel)]="labelColumn" placeholder="bug">
@@ -225,12 +237,16 @@
         <span>K neighbors</span>
         <input type="number" [(ngModel)]="knnValue" min="1" step="1">
       </label>
+      <label>
+        <span>Top-K sources</span>
+        <input type="number" [(ngModel)]="topKValue" min="1" [max]="sourceFiles.length || null" step="1">
+      </label>
       <label class="coral-toggle">
         <input type="checkbox" [(ngModel)]="coralOption">
         <span>Apply CORAL</span>
       </label>
       <button type="button" class="run-prediction-button"
-              [disabled]="!sourceFiles.length || predictionLoading || knnValue < 1"
+              [disabled]="!sourceFiles.length || predictionLoading || knnValue < 1 || topKValue < 1"
               (click)="runPrediction()">
         <span *ngIf="predictionLoading" class="spinner" aria-hidden="true"></span>
         {{ predictionLoading ? 'Running prediction…' : 'Run prediction model' }}
@@ -257,14 +273,32 @@
         <div class="clean"><small>Clean</small><strong>{{ predictionSummary.clean }}</strong></div>
         <div><small>Buggy rate</small><strong>{{ buggyRate | number:'1.1-1' }}%</strong></div>
       </div>
+      <div *ngIf="predictionResult.selectedSources?.length" class="source-ranking">
+        <h4>Selected nearest source datasets</h4>
+        <div>
+          <span *ngFor="let source of predictionResult.selectedSources">
+            #{{ source.rank }} {{ source.dataset }}
+            <small>distance {{ source.distance | number:'1.3-3' }}</small>
+          </span>
+        </div>
+      </div>
       <div class="table-shell" tabindex="0" aria-label="Defect prediction results">
         <table>
           <thead>
-            <tr><th>Class</th><th>Status</th></tr>
+            <tr>
+              <th>Class</th>
+              <th>Risk</th>
+              <th>Confidence</th>
+              <th>Status</th>
+              <th>Top risky metrics</th>
+              <th>Nearest buggy classes</th>
+            </tr>
           </thead>
           <tbody>
             <tr *ngFor="let item of predictionResult.predictions">
               <td>{{ item.class }}</td>
+              <td>{{ riskPercent(item) | number:'1.1-1' }}%</td>
+              <td>{{ item.confidence || '—' }}</td>
               <td>
                 <span class="prediction-value"
                       [class.buggy]="isBuggyPrediction(item)"
@@ -272,10 +306,90 @@
                   {{ predictionLabel(item) }}
                 </span>
               </td>
+              <td>{{ topRiskyMetricsText(item) }}</td>
+              <td>{{ nearestBuggyText(item) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <section class="model-test-card">
+        <div class="model-test-heading">
+          <div>
+            <span class="result-kicker">Model test</span>
+            <h3>Compare predictions with real labels</h3>
+            <p>Upload the predefined labelled dataset for this same target project to verify which classes are really buggy or clean.</p>
+          </div>
+          <button *ngIf="modelTestResult" type="button" (click)="downloadModelTestCsv()">
+            Download test CSV
+          </button>
+        </div>
+
+        <div class="model-test-form">
+          <label class="source-file-field">
+            <span>Predefined labelled target CSV</span>
+            <input type="file" accept=".csv,text/csv" (change)="onModelTestFileChange($event)">
+            <strong>{{ modelTestFileLabel }}</strong>
+          </label>
+          <label>
+            <span>Label column</span>
+            <input type="text" [(ngModel)]="modelTestLabelColumn" placeholder="bug">
+          </label>
+          <button type="button" class="run-prediction-button"
+                  [disabled]="!modelTestFile"
+                  (click)="runModelTest()">
+            Test previous prediction
+          </button>
+        </div>
+
+        <div *ngIf="modelTestError" class="alert error prediction-alert" role="alert">
+          <span aria-hidden="true">!</span>
+          <p>{{ modelTestError }}</p>
+        </div>
+
+        <ng-container *ngIf="modelTestResult">
+          <div class="model-test-overview" aria-label="Previous prediction test overview">
+            <div class="primary"><small>Accuracy</small><strong>{{ modelTestResult.accuracy | percent:'1.1-1' }}</strong></div>
+            <div><small>Matched classes</small><strong>{{ modelTestResult.matchedRows }}</strong></div>
+            <div><small>Correct</small><strong>{{ modelTestResult.correct }}</strong></div>
+            <div><small>Unmatched</small><strong>{{ modelTestResult.unmatchedPredictions }}</strong></div>
+          </div>
+
+          <div class="confusion-summary model-test-confusion">
+            <span>True buggy <strong>{{ modelTestResult.truePositive }}</strong></span>
+            <span>True clean <strong>{{ modelTestResult.trueNegative }}</strong></span>
+            <span>False alarm <strong>{{ modelTestResult.falsePositive }}</strong></span>
+            <span>Missed buggy <strong>{{ modelTestResult.falseNegative }}</strong></span>
+          </div>
+
+          <div class="table-shell model-test-table" tabindex="0" aria-label="Previous prediction label comparison">
+            <table>
+              <thead>
+                <tr><th>Class</th><th>Risk</th><th>Predicted</th><th>Real label</th><th>Result</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of modelTestResult.rows">
+                  <td>{{ row.className }}</td>
+                  <td>{{ row.riskPercent | number:'1.1-1' }}%</td>
+                  <td>
+                    <span class="prediction-value"
+                          [class.buggy]="row.predictedLabel === 'Buggy'"
+                          [class.clean]="row.predictedLabel === 'Clean'">
+                      {{ row.predictedLabel }}
+                    </span>
+                  </td>
+                  <td>{{ row.actualLabel }}</td>
+                  <td>
+                    <span class="evaluation-outcome" [class.correct]="row.correct">
+                      {{ row.correct ? 'Correct' : 'Wrong' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ng-container>
+      </section>
     </div>
   </section>
 </section>
@@ -287,11 +401,24 @@
     <p>Upload ready-made labelled source and target CSV files. No metric extraction is performed.</p>
   </div>
   <div class="evaluation-files">
-    <label class="source-file-field">
+    <div class="source-picker-group">
       <span>Labelled source CSV files</span>
-      <input type="file" accept=".csv,text/csv" multiple (change)="onEvaluationSourceFilesChange($event)">
-      <strong>{{ evaluationSourceFilesLabel }}</strong>
-    </label>
+      <div class="source-picker-actions">
+        <label class="source-file-field">
+          <input type="file" accept=".csv,text/csv" multiple (change)="onEvaluationSourceFilesChange($event)">
+          <strong>{{ evaluationSourceFilesLabel }}</strong>
+        </label>
+        <label class="source-file-field compact">
+          <input type="file" accept=".csv,text/csv" multiple webkitdirectory directory
+                 (change)="onEvaluationSourceFolderChange($event)">
+          <strong>Add CSV folder</strong>
+        </label>
+        <button *ngIf="evaluationSourceFiles.length" type="button" class="clear-files-button"
+                (click)="clearEvaluationSourceFiles()">
+          Clear
+        </button>
+      </div>
+    </div>
     <label class="source-file-field">
       <span>Labelled target CSV file</span>
       <input type="file" accept=".csv,text/csv" (change)="onEvaluationTargetFileChange($event)">
@@ -307,12 +434,16 @@
       <span>K neighbors</span>
       <input type="number" [(ngModel)]="evaluationKnnValue" min="1" step="1">
     </label>
+    <label>
+      <span>Top-K sources</span>
+      <input type="number" [(ngModel)]="evaluationTopKValue" min="1" [max]="evaluationSourceFiles.length || null" step="1">
+    </label>
     <label class="coral-toggle">
       <input type="checkbox" [(ngModel)]="evaluationCoralOption">
       <span>Apply CORAL</span>
     </label>
     <button type="button" class="run-prediction-button"
-            [disabled]="!evaluationTargetFile || !evaluationSourceFiles.length || evaluationLoading || evaluationKnnValue < 1"
+            [disabled]="!evaluationTargetFile || !evaluationSourceFiles.length || evaluationLoading || evaluationKnnValue < 1 || evaluationTopKValue < 1"
             (click)="runEvaluation()">
       <span *ngIf="evaluationLoading" class="spinner" aria-hidden="true"></span>
       {{ evaluationLoading ? 'Evaluating model…' : 'Evaluate model accuracy' }}
@@ -328,6 +459,18 @@
       <div><small>Precision</small><strong>{{ evaluationResult.metrics.precision | percent:'1.1-1' }}</strong></div>
       <div><small>Recall</small><strong>{{ evaluationResult.metrics.recall | percent:'1.1-1' }}</strong></div>
       <div><small>F1 score</small><strong>{{ evaluationResult.metrics.f1 | percent:'1.1-1' }}</strong></div>
+      <div><small>MCC</small><strong>{{ metricNumber(evaluationResult.metrics.mcc) | number:'1.3-3' }}</strong></div>
+      <div><small>ROC-AUC</small><strong>{{ metricScore(evaluationResult.metrics.rocAuc) }}</strong></div>
+      <div><small>PR-AUC</small><strong>{{ metricScore(evaluationResult.metrics.prAuc) }}</strong></div>
+    </div>
+    <div *ngIf="evaluationResult.selectedSources?.length" class="source-ranking evaluation-source-ranking">
+      <h4>Selected nearest source datasets</h4>
+      <div>
+        <span *ngFor="let source of evaluationResult.selectedSources">
+          #{{ source.rank }} {{ source.dataset }}
+          <small>distance {{ source.distance | number:'1.3-3' }}</small>
+        </span>
+      </div>
     </div>
     <div class="confusion-summary">
       <span>True buggy <strong>{{ evaluationResult.confusionMatrix.truePositive }}</strong></span>
@@ -338,11 +481,12 @@
     <div class="table-shell" tabindex="0" aria-label="Evaluation predictions">
       <table>
         <thead>
-          <tr><th>Class</th><th>Actual</th><th>Predicted</th><th>Result</th></tr>
+          <tr><th>Class</th><th>Risk</th><th>Actual</th><th>Predicted</th><th>Result</th></tr>
         </thead>
         <tbody>
           <tr *ngFor="let item of evaluationResult.predictions">
             <td>{{ item.class }}</td>
+            <td>{{ riskPercent(item) | number:'1.1-1' }}%</td>
             <td>{{ item.actualLabel }}</td>
             <td>{{ item.label }}</td>
             <td>

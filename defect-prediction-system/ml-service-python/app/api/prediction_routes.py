@@ -14,7 +14,8 @@ async def run_prediction(
     source_files: List[UploadFile] = File(...),
     label_column: str = Form(default="bug"),
     knn_value: int = Form(default=5),
-    coral_option: bool = Form(default=True)
+    coral_option: bool = Form(default=True),
+    top_k: int = Form(default=3)
 ):
     """
     Run defect prediction.
@@ -23,6 +24,7 @@ async def run_prediction(
     - label_column: Column name for defect labels
     - knn_value: Number of neighbors for KNN classifier
     - coral_option: Whether to apply CORAL domain adaptation
+    - top_k: Number of most similar source datasets to train on
     """
     try:
         return await prediction_service.run(
@@ -30,7 +32,8 @@ async def run_prediction(
             source_files=source_files,
             label_column=label_column,
             knn_value=knn_value,
-            coral_option=coral_option
+            coral_option=coral_option,
+            top_k=top_k
         )
     except (ValueError, KeyError, EmptyDataError, ParserError) as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
@@ -42,7 +45,8 @@ async def evaluate_prediction(
     source_files: List[UploadFile] = File(...),
     label_column: str = Form(default="bug"),
     knn_value: int = Form(default=5),
-    coral_option: bool = Form(default=True)
+    coral_option: bool = Form(default=True),
+    top_k: int = Form(default=3)
 ):
     """Evaluate the model using labelled source and labelled target CSV files."""
     try:
@@ -51,7 +55,8 @@ async def evaluate_prediction(
             source_files=source_files,
             label_column=label_column,
             knn_value=knn_value,
-            coral_option=coral_option
+            coral_option=coral_option,
+            top_k=top_k
         )
     except (ValueError, KeyError, EmptyDataError, ParserError) as error:
         raise HTTPException(status_code=400, detail=str(error)) from error

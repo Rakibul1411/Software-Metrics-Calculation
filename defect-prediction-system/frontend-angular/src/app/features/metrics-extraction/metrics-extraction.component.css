@@ -1021,12 +1021,12 @@ tbody tr:hover td {
 .prediction-form {
   margin-top: 18px;
   display: grid;
-  grid-template-columns: minmax(210px, 1.5fr) minmax(120px, .7fr) 100px auto minmax(170px, .9fr);
+  grid-template-columns: minmax(210px, 1.5fr) minmax(120px, .7fr) 100px 110px auto minmax(170px, .9fr);
   gap: 12px;
   align-items: end;
 }
 
-.prediction-form label {
+.prediction-form label, .source-picker-group {
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -1035,6 +1035,13 @@ tbody tr:hover td {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: .05em;
+}
+
+.source-picker-actions {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(120px, .6fr) auto;
+  gap: 8px;
+  align-items: center;
 }
 
 .prediction-form input[type="text"], .prediction-form input[type="number"] {
@@ -1080,6 +1087,24 @@ tbody tr:hover td {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.source-file-field.compact strong {
+  justify-content: center;
+  border-style: solid;
+  background: #eef0ff;
+}
+
+.clear-files-button {
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff0f2;
+  color: #c74759;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0 10px;
 }
 
 .coral-toggle {
@@ -1178,6 +1203,44 @@ tbody tr:hover td {
   color: #118e73;
 }
 
+.source-ranking {
+  margin: 0 25px 18px;
+  padding: 13px 15px;
+  border: 1px solid #dcebe8;
+  border-radius: 9px;
+  background: #f3fbfa;
+}
+
+.source-ranking h4 {
+  margin: 0 0 9px;
+  color: #293650;
+  font-size: 11px;
+}
+
+.source-ranking > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.source-ranking span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: white;
+  color: #31405c;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.source-ranking small {
+  color: #108d84;
+  font-size: 8px;
+  font-weight: 800;
+}
+
 .prediction-value {
   display: inline-block;
   min-width: 42px;
@@ -1223,6 +1286,122 @@ tbody tr:hover td {
   cursor: pointer;
 }
 
+.model-test-card {
+  margin: 0 25px 25px;
+  padding: 18px;
+  border: 1px solid #e1e7f1;
+  border-radius: 12px;
+  background: #fbfcff;
+}
+
+.model-test-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.model-test-heading h3 {
+  margin: 4px 0 5px;
+  font-size: 14px;
+}
+
+.model-test-heading p {
+  margin: 0;
+  color: #7f889c;
+  font-size: 10px;
+}
+
+.model-test-heading button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 7px;
+  background: #5267dc;
+  color: white;
+  padding: 8px 11px;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.model-test-form {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(140px, .45fr) minmax(190px, .55fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.model-test-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #5e6880;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.model-test-form input[type="text"] {
+  height: 40px;
+  box-sizing: border-box;
+  border: 1px solid #d9deea;
+  border-radius: 8px;
+  padding: 0 11px;
+  color: #35415c;
+  background: white;
+  outline: 0;
+}
+
+.model-test-overview {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.model-test-overview > div {
+  padding: 13px 15px;
+  border: 1px solid #e2e7ef;
+  border-radius: 9px;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.model-test-overview .primary {
+  background: #effaf7;
+  border-color: #cdebe4;
+}
+
+.model-test-overview small {
+  color: #7f899d;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  font-weight: 800;
+}
+
+.model-test-overview strong {
+  color: #35415c;
+  font-size: 18px;
+}
+
+.model-test-overview .primary strong {
+  color: #118e73;
+}
+
+.model-test-confusion {
+  margin: 12px 0 16px;
+}
+
+.model-test-table {
+  margin: 0;
+  max-height: 340px;
+}
+
 .evaluation-panel {
   margin-top: 22px;
   padding: 28px;
@@ -1246,7 +1425,7 @@ tbody tr:hover td {
   gap: 14px;
 }
 
-.evaluation-files label, .evaluation-options > label:not(.coral-toggle) {
+.evaluation-files label, .evaluation-files .source-picker-group, .evaluation-options > label:not(.coral-toggle) {
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -1264,7 +1443,7 @@ tbody tr:hover td {
 .evaluation-options {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 130px auto minmax(210px, 1.2fr);
+  grid-template-columns: minmax(150px, 1fr) 120px 120px auto minmax(210px, 1.2fr);
   gap: 12px;
   align-items: end;
 }
@@ -1293,7 +1472,7 @@ tbody tr:hover td {
 
 .evaluation-metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 10px;
 }
 
@@ -1350,6 +1529,10 @@ tbody tr:hover td {
   color: #35415c;
 }
 
+.evaluation-source-ranking {
+  margin: 14px 0 18px;
+}
+
 .evaluation-results .table-shell {
   margin: 0 0 22px;
 }
@@ -1400,8 +1583,12 @@ tbody tr:hover td {
     grid-template-columns: 1fr 1fr;
   }
 
-  .prediction-form .source-file-field, .prediction-form .run-prediction-button {
+  .prediction-form .source-picker-group, .prediction-form .run-prediction-button {
     grid-column: 1/-1;
+  }
+
+  .source-picker-actions {
+    grid-template-columns: 1fr 1fr auto;
   }
 
   .prediction-overview {
@@ -1409,6 +1596,18 @@ tbody tr:hover td {
   }
 
   .evaluation-options {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .model-test-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .model-test-form .source-file-field, .model-test-form .run-prediction-button {
+    grid-column: 1/-1;
+  }
+
+  .model-test-overview {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -1499,6 +1698,10 @@ tbody tr:hover td {
     grid-column: 1 !important;
   }
 
+  .source-picker-actions {
+    grid-template-columns: 1fr;
+  }
+
   .prediction-section {
     padding: 20px 16px;
   }
@@ -1512,6 +1715,19 @@ tbody tr:hover td {
   }
 
   .evaluation-files, .evaluation-options, .evaluation-metrics, .confusion-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .model-test-card {
+    margin-inline: 16px;
+    padding: 16px;
+  }
+
+  .model-test-heading {
+    flex-direction: column;
+  }
+
+  .model-test-form, .model-test-overview {
     grid-template-columns: 1fr;
   }
 

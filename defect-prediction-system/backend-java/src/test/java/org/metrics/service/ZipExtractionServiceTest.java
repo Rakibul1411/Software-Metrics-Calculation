@@ -11,6 +11,9 @@ import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -22,7 +25,7 @@ class ZipExtractionServiceTest {
     @Test
     void extractsAJavaProjectZip() throws Exception {
         Path zip = createZip("src/main/java/demo/Example.java", "package demo; class Example {}");
-        Path extracted = new ZipExtractionService().extractZipFile(zip);
+        Path extracted = new ZipExtractionService().extractArchiveFile(zip);
         try {
             assertTrue(Files.exists(extracted.resolve("src/main/java/demo/Example.java")));
         } finally {
@@ -31,9 +34,26 @@ class ZipExtractionServiceTest {
     }
 
     @Test
+    void extractsAJavaProjectTarGz() throws Exception {
+        Path tarGz = createTarGz("lucene/src/java/demo/Example.java", "package demo; class Example {}");
+        Path extracted = new ZipExtractionService().extractArchiveFile(tarGz);
+        try {
+            assertTrue(Files.exists(extracted.resolve("lucene/src/java/demo/Example.java")));
+        } finally {
+            FileStorageService.deleteRecursively(extracted);
+        }
+    }
+
+    @Test
     void rejectsZipSlipEntries() throws Exception {
         Path zip = createZip("../../outside.java", "class Outside {}");
-        assertThrows(IOException.class, () -> new ZipExtractionService().extractZipFile(zip));
+        assertThrows(IOException.class, () -> new ZipExtractionService().extractArchiveFile(zip));
+    }
+
+    @Test
+    void rejectsTarGzSlipEntries() throws Exception {
+        Path tarGz = createTarGz("../../outside.java", "class Outside {}");
+        assertThrows(IOException.class, () -> new ZipExtractionService().extractArchiveFile(tarGz));
     }
 
     private Path createZip(String entryName, String content) throws IOException {
@@ -45,5 +65,20 @@ class ZipExtractionServiceTest {
             zipOutput.closeEntry();
         }
         return zip;
+    }
+
+    private Path createTarGz(String entryName, String content) throws IOException {
+        Path tarGz = tempDirectory.resolve("project.tar.gz");
+        byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+        try (OutputStream output = Files.newOutputStream(tarGz);
+             GzipCompressorOutputStream gzipOutput = new GzipCompressorOutputStream(output);
+             TarArchiveOutputStream tarOutput = new TarArchiveOutputStream(gzipOutput)) {
+            TarArchiveEntry entry = new TarArchiveEntry(entryName);
+            entry.setSize(bytes.length);
+            tarOutput.putArchiveEntry(entry);
+            tarOutput.write(bytes);
+            tarOutput.closeArchiveEntry();
+        }
+        return tarGz;
     }
 }
