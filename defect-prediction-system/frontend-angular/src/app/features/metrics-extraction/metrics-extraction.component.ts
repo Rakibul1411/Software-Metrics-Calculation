@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component } from '@angular/core';
+import { Component, ElementRef, ViewChild } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { MetricsPreview } from '../../core/models/metrics-preview.model';
 import {
@@ -49,6 +49,8 @@ const BUGGY_VALUES = new Set(['buggy', 'defective', 'true', 'yes']);
   styleUrls: ['./metrics-extraction.component.css']
 })
 export class MetricsExtractionComponent {
+  @ViewChild('evaluationTableShell') private evaluationTableShell?: ElementRef<HTMLElement>;
+
   datasetFormat: DatasetFormat = 'promise';
   sourceMode: SourceMode = 'zip';
   selectedZip: File | null = null;
@@ -235,6 +237,10 @@ export class MetricsExtractionComponent {
     return typeof value === 'number' ? value.toFixed(3) : 'N/A';
   }
 
+  get evaluationRows(): PredictionResultItem[] {
+    return this.evaluationResult?.predictions ?? [];
+  }
+
   downloadPredictionCsv(): void {
     if (!this.predictionResult) return;
 
@@ -294,6 +300,23 @@ export class MetricsExtractionComponent {
     ];
 
     this.downloadCsv('model-test-comparison.csv', rows);
+  }
+
+  downloadEvaluationCsv(): void {
+    if (!this.evaluationResult) return;
+
+    const rows = [
+      ['class', 'actual', 'predicted', 'correct', 'risk_percent'],
+      ...this.evaluationRows.map(item => [
+        item.class,
+        item.actualLabel ?? '',
+        item.label ?? this.predictionLabel(item),
+        item.correct ? 'yes' : 'no',
+        this.riskPercent(item).toFixed(2)
+      ])
+    ];
+
+    this.downloadCsv('labelled-dataset-evaluation.csv', rows);
   }
 
   onSourceFilesChange(event: Event): void {
@@ -385,6 +408,7 @@ export class MetricsExtractionComponent {
           return;
         }
         this.evaluationResult = data;
+        this.resetEvaluationTableScroll();
       },
       error: (error: HttpErrorResponse) => this.evaluationError = this.describePredictionError(error)
     });
@@ -444,6 +468,15 @@ export class MetricsExtractionComponent {
   private clearEvaluation(): void {
     this.evaluationError = null;
     this.evaluationResult = null;
+  }
+
+  private resetEvaluationTableScroll(): void {
+    setTimeout(() => {
+      if (this.evaluationTableShell?.nativeElement) {
+        this.evaluationTableShell.nativeElement.scrollTop = 0;
+        this.evaluationTableShell.nativeElement.scrollLeft = 0;
+      }
+    });
   }
 
   private clearModelTest(): void {

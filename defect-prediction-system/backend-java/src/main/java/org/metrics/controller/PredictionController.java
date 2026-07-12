@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.metrics.service.MetricsExtractionService;
 import org.metrics.service.PredictionService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,16 +19,15 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/prediction")
 public class PredictionController {
 
-    @Autowired
-    private MetricsExtractionService metricsExtractionService;
+    private final MetricsExtractionService metricsExtractionService;
+    private final PredictionService predictionService;
 
-    @Autowired
-    private PredictionService predictionService;
+    public PredictionController(MetricsExtractionService metricsExtractionService,
+                                PredictionService predictionService) {
+        this.metricsExtractionService = metricsExtractionService;
+        this.predictionService = predictionService;
+    }
 
-    /**
-     * POST /api/prediction/run
-     * Runs defect prediction using a target dataset and labelled source files.
-     */
     @PostMapping("/run")
     public ResponseEntity<?> runPrediction(
             @RequestParam("targetDatasetId") String targetDatasetId,
@@ -41,29 +39,22 @@ public class PredictionController {
 
         Path targetCsvPath = metricsExtractionService.getDatasetPath(targetDatasetId);
         if (!Files.exists(targetCsvPath)) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Target dataset not found for ID: " + targetDatasetId);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            return error(HttpStatus.NOT_FOUND, "Target dataset not found for ID: " + targetDatasetId);
         }
 
         if (sourceFiles == null || sourceFiles.length == 0) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "At least one labelled source dataset file must be provided.");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+            return error(HttpStatus.BAD_REQUEST, "At least one labelled source dataset file must be provided.");
         }
 
         try {
             Object result = predictionService.runPrediction(
                     targetCsvPath, sourceFiles, labelColumn, knnValue, coralOption, topK);
             return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Prediction failed: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        } catch (Exception exception) {
+            return error(HttpStatus.INTERNAL_SERVER_ERROR, "Prediction failed: " + exception.getMessage());
         }
     }
 
-    /** Evaluate against a labelled target CSV without running metric extraction. */
     @PostMapping("/evaluate")
     public ResponseEntity<?> evaluatePrediction(
             @RequestParam("targetFile") MultipartFile targetFile,
@@ -73,14 +64,10 @@ public class PredictionController {
             @RequestParam(value = "coralOption", defaultValue = "true") boolean coralOption,
             @RequestParam(value = "topK", defaultValue = "3") int topK) {
         if (targetFile == null || targetFile.isEmpty()) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "A labelled target CSV file must be provided.");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+            return error(HttpStatus.BAD_REQUEST, "A labelled target CSV file must be provided.");
         }
         if (sourceFiles == null || sourceFiles.length == 0) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "At least one labelled source CSV file must be provided.");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+            return error(HttpStatus.BAD_REQUEST, "At least one labelled source CSV file must be provided.");
         }
 
         try {
@@ -88,9 +75,13 @@ public class PredictionController {
                     targetFile, sourceFiles, labelColumn, knnValue, coralOption, topK);
             return ResponseEntity.ok(result);
         } catch (Exception exception) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Evaluation failed: " + exception.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return error(HttpStatus.INTERNAL_SERVER_ERROR, "Evaluation failed: " + exception.getMessage());
         }
+    }
+
+    private ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {
+        Map<String, String> body = new HashMap<>();
+        body.put("error", message);
+        return ResponseEntity.status(status).body(body);
     }
 }

@@ -40,7 +40,7 @@ public class ZipExtractionService {
         throw new IOException("Unsupported project archive. Use .zip, .tar.gz, or .tgz.");
     }
 
-    public Path extractZipFile(Path zipFilePath) throws IOException {
+    private Path extractZipFile(Path zipFilePath) throws IOException {
         Path targetPath = extractLocation.resolve("zip_" + UUID.randomUUID()).toAbsolutePath().normalize();
         Files.createDirectories(targetPath);
 
@@ -92,7 +92,7 @@ public class ZipExtractionService {
         return targetPath;
     }
 
-    public Path extractTarGzFile(Path tarGzFilePath) throws IOException {
+    private Path extractTarGzFile(Path tarGzFilePath) throws IOException {
         Path targetPath = extractLocation.resolve("targz_" + UUID.randomUUID()).toAbsolutePath().normalize();
         Files.createDirectories(targetPath);
 

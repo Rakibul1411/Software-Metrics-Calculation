@@ -20,7 +20,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> handleUploadTooLarge(MaxUploadSizeExceededException exception) {
-        return error(HttpStatus.PAYLOAD_TOO_LARGE, "The uploaded ZIP exceeds the 50 MB limit.");
+        return error(HttpStatus.PAYLOAD_TOO_LARGE, "The uploaded project archive exceeds the configured size limit.");
     }
 
     @ExceptionHandler(java.io.IOException.class)
