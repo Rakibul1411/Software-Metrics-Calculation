@@ -1462,6 +1462,13 @@ tbody tr:hover td {
   padding: 22px;
 }
 
+.evaluation-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
 .evaluation-heading h2 {
   margin: 4px 0 6px;
   font-size: 19px;
@@ -1471,6 +1478,18 @@ tbody tr:hover td {
   margin: 0;
   color: #7f889c;
   font-size: 10px;
+}
+
+.evaluation-heading button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 7px;
+  background: #5267dc;
+  color: white;
+  padding: 8px 11px;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .evaluation-files {

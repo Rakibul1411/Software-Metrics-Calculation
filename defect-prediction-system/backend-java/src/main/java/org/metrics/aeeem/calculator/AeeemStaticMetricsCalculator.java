@@ -10,14 +10,14 @@ import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.metrics.aeeem.model.AeeemMetricResult;
-import org.metrics.promise.calculator.CBOCalculator;
-import org.metrics.promise.calculator.DITCalculator;
-import org.metrics.promise.calculator.ICCalculator;
-import org.metrics.promise.calculator.LCOMCalculator;
-import org.metrics.promise.calculator.LOCCalculator;
-import org.metrics.promise.calculator.NOCCalculator;
-import org.metrics.promise.calculator.RFCCalculator;
-import org.metrics.promise.calculator.WMCCalculator;
+import org.metrics.aeeem.calculator.legacy.CBOCalculator;
+import org.metrics.aeeem.calculator.legacy.DITCalculator;
+import org.metrics.aeeem.calculator.legacy.ICCalculator;
+import org.metrics.aeeem.calculator.legacy.LCOMCalculator;
+import org.metrics.aeeem.calculator.legacy.LOCCalculator;
+import org.metrics.aeeem.calculator.legacy.NOCCalculator;
+import org.metrics.aeeem.calculator.legacy.RFCCalculator;
+import org.metrics.aeeem.calculator.legacy.WMCCalculator;
 
 /** Calculates the AEEEM metrics that can be derived from a Java AST. */
 public final class AeeemStaticMetricsCalculator {
