@@ -2,6 +2,7 @@ package org.metrics.promise.analyzer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -75,7 +76,7 @@ class PromiseProjectAnalyzerTest {
                 .collect(Collectors.toMap(PromiseMetricResult::getFullyQualifiedName, Function.identity()));
 
         assertTrue(byName.containsKey("fixture.Outer.Nested"));
-        assertTrue(byName.containsKey("fixture.ChildTest"));
+        assertNull(byName.get("fixture.ChildTest"));
 
         PromiseMetricResult child = byName.get("fixture.Child");
         assertEquals(5, child.getWmc());
@@ -84,7 +85,7 @@ class PromiseProjectAnalyzerTest {
         assertEquals(3, child.getCbo());
         assertEquals(9, child.getRfc());
         assertEquals(6, child.getLcom());
-        assertEquals(1, child.getCa());
+        assertEquals(0, child.getCa());
         assertEquals(3, child.getCe());
         assertEquals(3, child.getNpm());
         assertEquals(0.94, child.getLcom3(), 0.01);

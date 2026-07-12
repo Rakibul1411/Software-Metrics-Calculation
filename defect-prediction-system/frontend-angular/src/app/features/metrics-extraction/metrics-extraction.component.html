@@ -401,9 +401,14 @@
 
 <section class="panel evaluation-panel">
   <div class="evaluation-heading">
-    <span class="result-kicker">Model evaluation</span>
-    <h2>Measure accuracy with labelled datasets</h2>
-    <p>Upload ready-made labelled source and target CSV files. No metric extraction is performed.</p>
+    <div>
+      <span class="result-kicker">Model evaluation</span>
+      <h2>Measure accuracy with labelled datasets</h2>
+      <p>Upload ready-made labelled source and target CSV files. No metric extraction is performed.</p>
+    </div>
+    <button *ngIf="evaluationResult" type="button" (click)="downloadEvaluationCsv()">
+      Download evaluation CSV
+    </button>
   </div>
   <div class="evaluation-files">
     <div class="source-picker-group">
@@ -483,13 +488,13 @@
       <span>False alarm <strong>{{ evaluationResult.confusionMatrix.falsePositive }}</strong></span>
       <span>Missed buggy <strong>{{ evaluationResult.confusionMatrix.falseNegative }}</strong></span>
     </div>
-    <div class="table-shell evaluation-table-shell" tabindex="0" aria-label="Evaluation predictions">
+    <div #evaluationTableShell class="table-shell evaluation-table-shell" tabindex="0" aria-label="Evaluation predictions">
       <table>
         <thead>
           <tr><th>Class</th><th>Risk</th><th>Actual</th><th>Predicted</th><th>Result</th></tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of evaluationResult.predictions">
+          <tr *ngFor="let item of evaluationRows">
             <td>{{ item.class }}</td>
             <td>{{ riskPercent(item) | number:'1.1-1' }}%</td>
             <td>{{ item.actualLabel }}</td>
