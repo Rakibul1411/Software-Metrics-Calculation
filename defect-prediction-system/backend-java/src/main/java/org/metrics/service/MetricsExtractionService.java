@@ -6,13 +6,20 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
 
-import org.metrics.promise.calculator.CBOCalculator;
-import org.metrics.promise.calculator.DITCalculator;
-import org.metrics.promise.calculator.NOCCalculator;
+import org.metrics.aeeem.calculator.legacy.CBOCalculator;
+import org.metrics.aeeem.calculator.legacy.DITCalculator;
+import org.metrics.aeeem.calculator.legacy.NOCCalculator;
 import org.metrics.promise.analyzer.PromiseProjectAnalyzer;
 import org.metrics.promise.model.PromiseMetricResult;
 import org.metrics.promise.export.PromiseCsvExporter;
@@ -29,12 +36,12 @@ public class MetricsExtractionService {
     private static final String OUTPUT_DIR = "output";
 
     public static class ExtractionResult {
-        private String targetDatasetId;
-        private String datasetFormat;
-        private int rowCount;
-        private List<String> extractedColumns;
-        private List<String> csvPreview;
-        private String downloadUrl;
+        private final String targetDatasetId;
+        private final String datasetFormat;
+        private final int rowCount;
+        private final List<String> extractedColumns;
+        private final List<String> csvPreview;
+        private final String downloadUrl;
 
         public ExtractionResult(String targetDatasetId, String datasetFormat, int rowCount,
                                 List<String> extractedColumns, List<String> csvPreview, String downloadUrl) {
@@ -65,8 +72,7 @@ public class MetricsExtractionService {
         Files.createDirectories(outputDirPath);
         Path outputFile = outputDirPath.resolve("extracted-metrics-" + targetDatasetId + ".csv");
 
-        List<String> columns = new ArrayList<>();
-        
+        List<String> columns;
         int rowCount;
         if ("aeeem".equals(normalizedFormat)) {
             List<AeeemMetricResult> allMetrics = calculateAeeemMetricsForDirectories(sourceDirs);
