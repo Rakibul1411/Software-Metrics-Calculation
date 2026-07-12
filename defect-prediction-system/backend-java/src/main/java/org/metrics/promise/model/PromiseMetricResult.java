@@ -3,9 +3,6 @@ package org.metrics.promise.model;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Data model to hold calculated metrics for a Java class (PROMISE format).
- */
 public class PromiseMetricResult {
     private String fullyQualifiedName;
     private int wmc;           // Weighted Methods per Class
@@ -43,7 +40,6 @@ public class PromiseMetricResult {
         this.fullyQualifiedName = fullyQualifiedName;
     }
 
-    // Getters and Setters
     public String getFullyQualifiedName() { return fullyQualifiedName; }
     public void setFullyQualifiedName(String fullyQualifiedName) { this.fullyQualifiedName = fullyQualifiedName; }
 

@@ -3,7 +3,6 @@ package org.metrics.service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -51,22 +50,20 @@ public class PredictionService {
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        ByteArrayResource targetResource = new ByteArrayResource(targetBytes) {
+        body.add("target_file", new ByteArrayResource(targetBytes) {
             @Override
             public String getFilename() {
                 return targetFilename;
             }
-        };
-        body.add("target_file", targetResource);
+        });
 
         for (MultipartFile file : sourceFiles) {
-            ByteArrayResource sourceResource = new ByteArrayResource(file.getBytes()) {
+            body.add("source_files", new ByteArrayResource(file.getBytes()) {
                 @Override
                 public String getFilename() {
                     return file.getOriginalFilename();
                 }
-            };
-            body.add("source_files", sourceResource);
+            });
         }
 
         body.add("label_column", labelColumnName);
@@ -80,16 +77,14 @@ public class PredictionService {
             ResponseEntity<Object> response = restTemplate.postForEntity(serviceUrl, requestEntity, Object.class);
             return response.getBody();
         } catch (HttpStatusCodeException e) {
-            Map<String, Object> errorMap = new HashMap<>();
-            errorMap.put("status", "error");
-            errorMap.put("message", extractServiceError(e.getResponseBodyAsString()));
-            return errorMap;
+            return errorResponse(extractServiceError(e.getResponseBodyAsString()));
         } catch (Exception e) {
-            Map<String, Object> errorMap = new HashMap<>();
-            errorMap.put("status", "error");
-            errorMap.put("message", "Failed to communicate with Python FastAPI ML Service: " + e.getMessage());
-            return errorMap;
+            return errorResponse("Failed to communicate with Python FastAPI ML Service: " + e.getMessage());
         }
+    }
+
+    private Map<String, Object> errorResponse(String message) {
+        return Map.of("status", "error", "message", message);
     }
 
     private String extractServiceError(String responseBody) {

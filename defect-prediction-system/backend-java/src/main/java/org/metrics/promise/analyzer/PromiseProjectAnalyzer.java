@@ -123,11 +123,37 @@ public class PromiseProjectAnalyzer {
             try (Stream<Path> stream = Files.walk(root)) {
                 stream.filter(Files::isRegularFile)
                         .filter(path -> path.toString().endsWith(".java"))
+                        .filter(this::isProductionSourceFile)
                         .sorted()
                         .forEach(files::add);
             }
         }
         return files;
+    }
+
+    private boolean isProductionSourceFile(Path path) {
+        Path fileName = path.getFileName();
+        if (fileName != null && fileName.toString().endsWith("Test.java")) {
+            return false;
+        }
+        for (Path segment : path.toAbsolutePath().normalize()) {
+            String name = segment.toString().toLowerCase(Locale.ROOT);
+            if (isNonProductionSourceSegment(name)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isNonProductionSourceSegment(String name) {
+        return "test".equals(name)
+                || "tests".equals(name)
+                || "testcase".equals(name)
+                || "testcases".equals(name)
+                || "example".equals(name)
+                || "examples".equals(name)
+                || "sample".equals(name)
+                || "samples".equals(name);
     }
 
     private void parseProject(List<Path> javaFiles, Collection<Path> requestedRoots) throws IOException {

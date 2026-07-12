@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Comparator;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -14,7 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class FileStorageService {
-    
+
     private final Path uploadLocation = Paths.get("storage/uploads");
 
     public FileStorageService() throws IOException {
@@ -36,11 +37,11 @@ public class FileStorageService {
         return targetPath;
     }
 
-    public static boolean isSupportedArchive(String filename) {
+    private static boolean isSupportedArchive(String filename) {
         if (filename == null) {
             return false;
         }
-        String lower = filename.toLowerCase();
+        String lower = filename.toLowerCase(Locale.ROOT);
         return lower.endsWith(".zip") || lower.endsWith(".tar.gz") || lower.endsWith(".tgz");
     }
 
@@ -53,11 +54,9 @@ public class FileStorageService {
                 try {
                     Files.deleteIfExists(item);
                 } catch (IOException ignored) {
-                    // Temporary-file cleanup should not hide the extraction result.
                 }
             });
         } catch (IOException ignored) {
-            // Best-effort cleanup.
         }
     }
 }

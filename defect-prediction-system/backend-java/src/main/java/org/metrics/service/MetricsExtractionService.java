@@ -1,8 +1,8 @@
 package org.metrics.service;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -99,14 +99,11 @@ public class MetricsExtractionService {
             throw new IllegalArgumentException("No Java classes were found in the supplied project.");
         }
 
-        // Include every extracted class; the UI keeps this bounded with scrollbars.
         List<String> csvPreview = new ArrayList<>();
-        if (Files.exists(outputFile)) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(outputFile.toFile()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    csvPreview.add(line);
-                }
+        try (BufferedReader reader = Files.newBufferedReader(outputFile, StandardCharsets.UTF_8)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                csvPreview.add(line);
             }
         }
 
@@ -129,7 +126,7 @@ public class MetricsExtractionService {
 
     private Set<String> loadClassNamesFromCSV(String csvPath) throws IOException {
         Set<String> classNames = new HashSet<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(csvPath))) {
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(csvPath), StandardCharsets.UTF_8)) {
             String line;
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
