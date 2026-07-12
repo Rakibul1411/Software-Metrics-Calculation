@@ -56,6 +56,11 @@ class PromiseProjectAnalyzerTest {
                 "protected void reset() { count = 0; }\n" +
                 "private void localOnly() { collaborator.work(); }\n" +
                 "}\n");
+        write("src/test/java/fixture/ChildTest.java",
+                "package fixture;\n" +
+                "public class ChildTest {\n" +
+                "public void exercisesTestSource() { new Child().reset(); }\n" +
+                "}\n");
         write("src/main/java/fixture/Outer.java",
                 "package fixture;\n" +
                 "public class Outer {\n" +
@@ -70,15 +75,16 @@ class PromiseProjectAnalyzerTest {
                 .collect(Collectors.toMap(PromiseMetricResult::getFullyQualifiedName, Function.identity()));
 
         assertTrue(byName.containsKey("fixture.Outer.Nested"));
+        assertTrue(byName.containsKey("fixture.ChildTest"));
 
         PromiseMetricResult child = byName.get("fixture.Child");
-        assertEquals(8, child.getWmc());
+        assertEquals(5, child.getWmc());
         assertEquals(2, child.getDit());
         assertEquals(0, child.getNoc());
         assertEquals(3, child.getCbo());
         assertEquals(9, child.getRfc());
         assertEquals(6, child.getLcom());
-        assertEquals(0, child.getCa());
+        assertEquals(1, child.getCa());
         assertEquals(3, child.getCe());
         assertEquals(3, child.getNpm());
         assertEquals(0.94, child.getLcom3(), 0.01);
@@ -90,15 +96,15 @@ class PromiseProjectAnalyzerTest {
         assertEquals(1, child.getIc());
         assertEquals(1, child.getCbm());
         assertEquals(1.00, child.getAmc(), 0.001);
-        assertEquals(4, child.getMaxCc());
-        assertEquals(1.60, child.getAvgCc(), 0.001);
+        assertEquals(3, child.getMaxCc());
+        assertEquals(0.60, child.getAvgCc(), 0.001);
 
         PromiseMetricResult base = byName.get("fixture.Base");
         assertEquals(1, base.getNoc());
         assertEquals(1, base.getDit());
         assertEquals(1, base.getCe());
         assertEquals(1, base.getCa());
-        assertEquals(2, base.getCbo());
+        assertEquals(1, base.getCbo());
 
         assertFalse(results.isEmpty());
     }
