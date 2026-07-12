@@ -2,3 +2,5 @@ node_modules/
 dist/
 .angular/
 .DS_Store
+package-lock.json
+out-tsc/
