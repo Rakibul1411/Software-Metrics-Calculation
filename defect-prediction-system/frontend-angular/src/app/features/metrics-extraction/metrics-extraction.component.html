@@ -25,7 +25,7 @@
     <span>3</span>
     <div>
       <strong>Defect prediction</strong>
-      <small>{{ predictionResult ? 'Prediction complete' : 'Run CORAL + KNN' }}</small>
+      <small>{{ predictionResult ? 'Prediction complete' : 'Run CORAL + KNN/SVM' }}</small>
     </div>
   </div>
 </nav>
@@ -51,9 +51,9 @@
       <button type="button" class="format-card" [class.selected]="datasetFormat === 'aeeem'"
               (click)="setDatasetFormat('aeeem')" [attr.aria-pressed]="datasetFormat === 'aeeem'">
         <span class="format-icon aeeem" aria-hidden="true">A</span>
-        <span class="format-copy"><strong>AEEEM</strong><small>Static multi-tool metric schema</small></span>
+        <span class="format-copy"><strong>AEEEM</strong><small>JDT + Git history metrics</small></span>
         <span class="check" aria-hidden="true">✓</span>
-        <span class="metric-count">Static metrics</span>
+        <span class="metric-count">56 features · 57 CSV columns</span>
       </button>
     </div>
 
@@ -63,7 +63,8 @@
       <span class="section-number">02</span>
       <div>
         <h2>Add your Java project</h2>
-        <p>Upload an archive or analyze a public GitHub repository.</p>
+        <p *ngIf="datasetFormat === 'promise'">Upload an archive or analyze a public GitHub repository.</p>
+        <p *ngIf="datasetFormat === 'aeeem'">Use a GitHub repository or an archive containing its full <strong>.git</strong> history. The latest 26 bi-weekly snapshots are analyzed by default.</p>
       </div>
     </div>
 
@@ -99,7 +100,7 @@
       </label>
 
       <div *ngIf="sourceMode === 'github'" class="github-field">
-        <label for="github-url">Public GitHub repository, folder, or ZIP URL</label>
+        <label for="github-url">Public GitHub {{ datasetFormat === 'aeeem' ? 'repository or folder URL' : 'repository, folder, or ZIP URL' }}</label>
         <div class="input-shell">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.2 13.8a4 4 0 0 0 5.7 0l2-2a4 4 0 0 0-5.7-5.7l-1.1 1.1M13.8 10.2a4 4 0 0 0-5.7 0l-2 2a4 4 0 0 0 5.7 5.7l1.1-1.1"/></svg>
           <input id="github-url" type="url" name="githubUrl" [(ngModel)]="githubUrl" (ngModelChange)="clearResult()"
@@ -119,7 +120,10 @@
       <svg *ngIf="!loading" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M6 15l3-3 3 2 5-6 2 2M7 6h3"/></svg>
       {{ loading ? 'Analyzing Java classes…' : 'Extract metrics' }}
     </button>
-    <p class="privacy-note"><span>✓</span> Uploaded source is deleted after extraction; only the generated CSV is retained.</p>
+    <p *ngIf="loading && datasetFormat === 'aeeem'" class="privacy-note">
+      Processing Git history · elapsed {{ analysisElapsedLabel }} · terminal logs show snapshot progress.
+    </p>
+    <p class="privacy-note"><span>✓</span> Uploaded source is deleted after extraction; only generated metric datasets are retained.</p>
   </section>
 
   <aside class="panel insight-panel">
@@ -152,7 +156,7 @@
       </li>
       <li>
         <span>3</span>
-        <div><strong>Dataset generation</strong><p>A model-ready CSV is built with class identifiers.</p></div>
+        <div><strong>Dataset generation</strong><p>Model-ready CSV and ARFF files are built with class identifiers.</p></div>
       </li>
     </ol>
     <div class="safe-note">
@@ -173,10 +177,16 @@
         analyzed in {{ result.datasetFormat | uppercase }} format.
       </p>
     </div>
-    <a class="download-button" [href]="downloadUrl">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
-      Download CSV
-    </a>
+    <div class="dataset-downloads">
+      <a class="download-button" [href]="csvDownloadUrl">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+        Download CSV
+      </a>
+      <a class="download-button secondary" [href]="arffDownloadUrl">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+        Download ARFF
+      </a>
+    </div>
   </div>
   <div class="result-stats">
     <div><small>Classes</small><strong>{{ result.rowCount }}</strong></div>
@@ -209,20 +219,21 @@
   <section class="prediction-section">
     <div class="prediction-heading">
       <span class="result-kicker">Defect prediction</span><h2>Run the prediction model</h2>
-      <p>Upload labelled source datasets whose metric columns match the extracted target dataset.</p>
+      <p>Upload labelled source datasets whose metric columns match the extracted target dataset. Use all CSV files or all ARFF files; the matching generated target is selected automatically.</p>
+      <p *ngIf="result.datasetFormat === 'aeeem'">Use CSV or ARFF sources with the same 56 AEEEM features and a <strong>class</strong> label column.</p>
     </div>
     <div class="prediction-form">
       <div class="source-picker-group">
-        <span>Labelled source CSV files</span>
+        <span>Labelled source datasets</span>
         <div class="source-picker-actions">
           <label class="source-file-field">
-            <input type="file" accept=".csv,text/csv" multiple (change)="onSourceFilesChange($event)">
+            <input type="file" accept=".csv,.arff,text/csv" multiple (change)="onSourceFilesChange($event)">
             <strong>{{ sourceFilesLabel }}</strong>
           </label>
           <label class="source-file-field compact">
-            <input type="file" accept=".csv,text/csv" multiple webkitdirectory directory
+            <input type="file" accept=".csv,.arff,text/csv" multiple webkitdirectory directory
                    (change)="onSourceFolderChange($event)">
-            <strong>Add CSV folder</strong>
+            <strong>Add dataset folder</strong>
           </label>
           <button *ngIf="sourceFiles.length" type="button" class="clear-files-button" (click)="clearSourceFiles()">
             Clear
@@ -231,11 +242,30 @@
       </div>
       <label>
         <span>Label column</span>
-        <input type="text" [(ngModel)]="labelColumn" placeholder="bug">
+        <input type="text" [(ngModel)]="labelColumn" [readonly]="datasetFormat === 'aeeem'"
+               [placeholder]="datasetFormat === 'aeeem' ? 'class' : 'bug'">
       </label>
       <label>
-        <span>K neighbors</span>
-        <input type="number" [(ngModel)]="knnValue" min="1" step="1">
+        <span>Classifier</span>
+        <select [(ngModel)]="classifierType" (ngModelChange)="onPredictionClassifierChange()"
+                aria-label="Prediction classifier">
+          <option value="knn">KNN</option>
+          <option value="svm">Linear SVM</option>
+        </select>
+      </label>
+      <label class="model-parameter-control">
+        <span>{{ classifierType === 'knn' ? 'K neighbors' : 'SVM C' }}</span>
+        <div class="parameter-shell">
+          <input *ngIf="classifierType === 'knn'" type="number" [(ngModel)]="knnValue"
+                 min="1" step="1" [disabled]="autoTuneK">
+          <input *ngIf="classifierType === 'svm'" type="number" [(ngModel)]="svmC"
+                 min="0.000001" step="0.1" [disabled]="autoTuneSvmC">
+          <span class="auto-tune-option">
+            <input *ngIf="classifierType === 'knn'" type="checkbox" [(ngModel)]="autoTuneK">
+            <input *ngIf="classifierType === 'svm'" type="checkbox" [(ngModel)]="autoTuneSvmC">
+            Auto
+          </span>
+        </div>
       </label>
       <label>
         <span>Top-K sources</span>
@@ -246,7 +276,7 @@
         <span>Apply CORAL</span>
       </label>
       <button type="button" class="run-prediction-button"
-              [disabled]="!sourceFiles.length || predictionLoading || knnValue < 1 || topKValue < 1"
+              [disabled]="!canRunPrediction"
               (click)="runPrediction()">
         <span *ngIf="predictionLoading" class="spinner" aria-hidden="true"></span>
         {{ predictionLoading ? 'Running prediction…' : 'Run prediction model' }}
@@ -260,9 +290,13 @@
       <div class="preview-title">
         <div>
           <h3>Prediction results</h3>
-          <p>CORAL-aligned KNN defect classifications.</p>
+          <p>{{ predictionResult.method || 'Similarity-based CORAL defect classifications.' }}</p>
         </div>
         <div class="prediction-actions">
+          <span class="classifier-chip" [class.svm]="predictionResult.modelConfiguration?.classifierType === 'svm'">
+            {{ classifierName(predictionResult.modelConfiguration) }}
+          </span>
+          <span class="parameter-chip">{{ classifierSetting(predictionResult.modelConfiguration) }}</span>
           <span>{{ predictionResult.predictions.length }} classes</span>
           <button type="button" (click)="downloadPredictionCsv()">Download prediction CSV</button>
         </div>
@@ -278,9 +312,10 @@
           <div *ngIf="predictionResult.selectedSources?.length" class="source-ranking">
             <h4>Selected nearest source datasets</h4>
             <div>
-              <span *ngFor="let source of predictionResult.selectedSources">
-                #{{ source.rank }} {{ source.dataset }}
+              <span *ngFor="let source of predictionResult.selectedSources" class="source-ranking-item">
+                <b>#{{ source.rank }} {{ source.dataset }}</b>
                 <small>distance {{ source.distance | number:'1.3-3' }}</small>
+                <em>{{ source.rows }} rows · {{ source.buggyRows }} buggy · {{ source.cleanRows }} clean</em>
               </span>
             </div>
           </div>
@@ -295,7 +330,7 @@
                 <th>Confidence</th>
                 <th>Status</th>
                 <th>Top risky metrics</th>
-                <th>Nearest buggy classes</th>
+                <th *ngIf="usesNearestNeighbors(predictionResult)">Nearest buggy classes</th>
               </tr>
             </thead>
             <tbody>
@@ -311,7 +346,7 @@
                   </span>
                 </td>
                 <td>{{ topRiskyMetricsText(item) }}</td>
-                <td>{{ nearestBuggyText(item) }}</td>
+                <td *ngIf="usesNearestNeighbors(predictionResult)">{{ nearestBuggyText(item) }}</td>
               </tr>
             </tbody>
           </table>
@@ -322,49 +357,77 @@
         <div class="model-test-heading">
           <div>
             <span class="result-kicker">Model test</span>
-            <h3>Compare predictions with real labels</h3>
-            <p>Upload the predefined labelled dataset for this same target project to verify which classes are really buggy or clean.</p>
+            <h3>{{ datasetFormat === 'aeeem' ? 'AEEEM benchmark evaluation' : 'Compare predictions with real labels' }}</h3>
+            <p *ngIf="datasetFormat === 'promise'">Upload the predefined labelled dataset for this same target project to verify which classes are really buggy or clean.</p>
+            <p *ngIf="datasetFormat === 'aeeem'">AEEEM benchmark rows do not contain Java class identifiers, so they cannot be matched to extracted class predictions.</p>
           </div>
-          <button *ngIf="modelTestResult" type="button" (click)="downloadModelTestCsv()">
+          <button *ngIf="datasetFormat === 'promise' && modelTestResult" type="button" (click)="downloadModelTestCsv()">
             Download test CSV
           </button>
         </div>
 
-        <div class="model-test-form">
-          <label class="source-file-field">
-            <span>Predefined labelled target CSV</span>
-            <input type="file" accept=".csv,text/csv" (change)="onModelTestFileChange($event)">
-            <strong>{{ modelTestFileLabel }}</strong>
-          </label>
-          <label>
-            <span>Label column</span>
-            <input type="text" [(ngModel)]="modelTestLabelColumn" placeholder="bug">
-          </label>
-          <button type="button" class="run-prediction-button"
-                  [disabled]="!modelTestFile"
-                  (click)="runModelTest()">
-            Test previous prediction
-          </button>
-        </div>
+        <ng-container *ngIf="datasetFormat === 'promise'; else aeeemModelTestNotice">
+          <div class="model-test-form">
+            <label class="source-file-field">
+              <span>Predefined labelled target CSV</span>
+              <input type="file" accept=".csv,text/csv" (change)="onModelTestFileChange($event)">
+              <strong>{{ modelTestFileLabel }}</strong>
+            </label>
+            <label>
+              <span>Label column</span>
+              <input type="text" [(ngModel)]="modelTestLabelColumn" placeholder="bug">
+            </label>
+            <button type="button" class="run-prediction-button"
+                    [disabled]="!modelTestFile"
+                    (click)="runModelTest()">
+              Test previous prediction
+            </button>
+          </div>
+        </ng-container>
 
-        <div *ngIf="modelTestError" class="alert error prediction-alert" role="alert">
+        <ng-template #aeeemModelTestNotice>
+          <div class="aeeem-evaluation-notice">
+            <strong>Why LC.csv cannot be used here</strong>
+            <p><code>class</code> is the defect label in AEEEM—it contains values such as buggy or clean. It is not a class-name column. LC also describes a fixed historical Lucene dataset, not the current Lucene repository you extracted.</p>
+            <p>For a valid AEEEM accuracy test, use <b>Model evaluation</b> below: upload labelled AEEEM source datasets, upload LC.csv or LC.arff as the labelled target, and keep the label column as <code>class</code>.</p>
+            <a href="#model-evaluation">Go to model evaluation</a>
+          </div>
+        </ng-template>
+
+        <div *ngIf="datasetFormat === 'promise' && modelTestError" class="alert error prediction-alert" role="alert">
           <span aria-hidden="true">!</span>
           <p>{{ modelTestError }}</p>
         </div>
 
-        <ng-container *ngIf="modelTestResult">
-          <div class="model-test-overview" aria-label="Previous prediction test overview">
-            <div class="primary"><small>Accuracy</small><strong>{{ modelTestResult.accuracy | percent:'1.1-1' }}</strong></div>
-            <div><small>Matched classes</small><strong>{{ modelTestResult.matchedRows }}</strong></div>
-            <div><small>Correct</small><strong>{{ modelTestResult.correct }}</strong></div>
-            <div><small>Unmatched</small><strong>{{ modelTestResult.unmatchedPredictions }}</strong></div>
+        <ng-container *ngIf="datasetFormat === 'promise' && modelTestResult">
+          <div class="evaluation-metrics model-test-metrics" aria-label="Previous prediction performance metrics">
+            <div class="primary"><small>Balanced accuracy</small><strong>{{ modelTestResult.balancedAccuracy | percent:'1.1-1' }}</strong></div>
+            <div><small>Bug precision</small><strong>{{ modelTestResult.precision | percent:'1.1-1' }}</strong></div>
+            <div><small>Bug recall</small><strong>{{ modelTestResult.recall | percent:'1.1-1' }}</strong></div>
+            <div><small>F2 score</small><strong>{{ modelTestResult.f2 | percent:'1.1-1' }}</strong></div>
+            <div><small>MCC</small><strong>{{ modelTestResult.mcc | number:'1.3-3' }}</strong></div>
+            <div><small>F1 score</small><strong>{{ modelTestResult.f1 | percent:'1.1-1' }}</strong></div>
+            <div><small>Specificity</small><strong>{{ modelTestResult.specificity | percent:'1.1-1' }}</strong></div>
+            <div><small>Accuracy</small><strong>{{ modelTestResult.accuracy | percent:'1.1-1' }}</strong></div>
           </div>
 
-          <div class="confusion-summary model-test-confusion">
-            <span>True buggy <strong>{{ modelTestResult.truePositive }}</strong></span>
-            <span>True clean <strong>{{ modelTestResult.trueNegative }}</strong></span>
-            <span>False alarm <strong>{{ modelTestResult.falsePositive }}</strong></span>
-            <span>Missed buggy <strong>{{ modelTestResult.falseNegative }}</strong></span>
+          <div class="model-test-coverage" aria-label="Prediction comparison coverage">
+            <span><small>Matched classes</small><strong>{{ modelTestResult.matchedRows }}</strong></span>
+            <span><small>Correct predictions</small><strong>{{ modelTestResult.correct }}</strong></span>
+            <span><small>Unmatched extracted</small><strong>{{ modelTestResult.unmatchedPredictions }}</strong></span>
+          </div>
+
+          <div class="confusion-matrix-section model-test-confusion">
+            <div class="confusion-matrix-heading">
+              <div><span>Classification outcomes</span><h4>Confusion matrix</h4></div>
+              <small>Correct predictions and model errors</small>
+            </div>
+            <div class="confusion-summary" aria-label="Previous prediction confusion matrix">
+              <span class="true-positive">True buggy <strong>{{ modelTestResult.truePositive }}</strong></span>
+              <span class="true-negative">True clean <strong>{{ modelTestResult.trueNegative }}</strong></span>
+              <span class="false-positive">False alarm <strong>{{ modelTestResult.falsePositive }}</strong></span>
+              <span class="false-negative">Missed buggy <strong>{{ modelTestResult.falseNegative }}</strong></span>
+            </div>
           </div>
 
           <div class="table-shell model-test-table" tabindex="0" aria-label="Previous prediction label comparison">
@@ -399,12 +462,12 @@
   </section>
 </section>
 
-<section class="panel evaluation-panel">
+<section id="model-evaluation" class="panel evaluation-panel">
   <div class="evaluation-heading">
     <div>
       <span class="result-kicker">Model evaluation</span>
       <h2>Measure accuracy with labelled datasets</h2>
-      <p>Upload ready-made labelled source and target CSV files. No metric extraction is performed.</p>
+      <p>Upload ready-made labelled datasets using one matching pair: CSV sources with a CSV target, or ARFF sources with an ARFF target. For AEEEM, use <code>class</code> as the label column.</p>
     </div>
     <button *ngIf="evaluationResult" type="button" (click)="downloadEvaluationCsv()">
       Download evaluation CSV
@@ -412,16 +475,16 @@
   </div>
   <div class="evaluation-files">
     <div class="source-picker-group">
-      <span>Labelled source CSV files</span>
+      <span>Labelled source datasets</span>
       <div class="source-picker-actions">
         <label class="source-file-field">
-          <input type="file" accept=".csv,text/csv" multiple (change)="onEvaluationSourceFilesChange($event)">
+          <input type="file" accept=".csv,.arff,text/csv" multiple (change)="onEvaluationSourceFilesChange($event)">
           <strong>{{ evaluationSourceFilesLabel }}</strong>
         </label>
         <label class="source-file-field compact">
-          <input type="file" accept=".csv,text/csv" multiple webkitdirectory directory
+          <input type="file" accept=".csv,.arff,text/csv" multiple webkitdirectory directory
                  (change)="onEvaluationSourceFolderChange($event)">
-          <strong>Add CSV folder</strong>
+          <strong>Add dataset folder</strong>
         </label>
         <button *ngIf="evaluationSourceFiles.length" type="button" class="clear-files-button"
                 (click)="clearEvaluationSourceFiles()">
@@ -430,19 +493,38 @@
       </div>
     </div>
     <label class="source-file-field">
-      <span>Labelled target CSV file</span>
-      <input type="file" accept=".csv,text/csv" (change)="onEvaluationTargetFileChange($event)">
+      <span>Labelled target dataset</span>
+      <input type="file" accept=".csv,.arff,text/csv" (change)="onEvaluationTargetFileChange($event)">
       <strong>{{ evaluationTargetFileLabel }}</strong>
     </label>
   </div>
   <div class="evaluation-options">
     <label>
       <span>Label column</span>
-      <input type="text" [(ngModel)]="evaluationLabelColumn" placeholder="bug">
+      <input type="text" [(ngModel)]="evaluationLabelColumn" [readonly]="datasetFormat === 'aeeem'"
+             [placeholder]="datasetFormat === 'aeeem' ? 'class' : 'bug'">
     </label>
     <label>
-      <span>K neighbors</span>
-      <input type="number" [(ngModel)]="evaluationKnnValue" min="1" step="1">
+      <span>Classifier</span>
+      <select [(ngModel)]="evaluationClassifierType" (ngModelChange)="onEvaluationClassifierChange()"
+              aria-label="Evaluation classifier">
+        <option value="knn">KNN</option>
+        <option value="svm">Linear SVM</option>
+      </select>
+    </label>
+    <label class="model-parameter-control">
+      <span>{{ evaluationClassifierType === 'knn' ? 'K neighbors' : 'SVM C' }}</span>
+      <div class="parameter-shell">
+        <input *ngIf="evaluationClassifierType === 'knn'" type="number" [(ngModel)]="evaluationKnnValue"
+               min="1" step="1" [disabled]="evaluationAutoTuneK">
+        <input *ngIf="evaluationClassifierType === 'svm'" type="number" [(ngModel)]="evaluationSvmC"
+               min="0.000001" step="0.1" [disabled]="evaluationAutoTuneSvmC">
+        <span class="auto-tune-option">
+          <input *ngIf="evaluationClassifierType === 'knn'" type="checkbox" [(ngModel)]="evaluationAutoTuneK">
+          <input *ngIf="evaluationClassifierType === 'svm'" type="checkbox" [(ngModel)]="evaluationAutoTuneSvmC">
+          Auto
+        </span>
+      </div>
     </label>
     <label>
       <span>Top-K sources</span>
@@ -453,7 +535,7 @@
       <span>Apply CORAL</span>
     </label>
     <button type="button" class="run-prediction-button"
-            [disabled]="!evaluationTargetFile || !evaluationSourceFiles.length || evaluationLoading || evaluationKnnValue < 1 || evaluationTopKValue < 1"
+            [disabled]="!canRunEvaluation"
             (click)="runEvaluation()">
       <span *ngIf="evaluationLoading" class="spinner" aria-hidden="true"></span>
       {{ evaluationLoading ? 'Evaluating model…' : 'Evaluate model accuracy' }}
@@ -464,29 +546,67 @@
     <p>{{ evaluationError }}</p>
   </div>
   <div *ngIf="evaluationResult" class="evaluation-results" aria-live="polite">
-    <div class="evaluation-metrics">
-      <div class="primary"><small>Accuracy</small><strong>{{ evaluationResult.metrics.accuracy | percent:'1.1-1' }}</strong></div>
-      <div><small>Precision</small><strong>{{ evaluationResult.metrics.precision | percent:'1.1-1' }}</strong></div>
-      <div><small>Recall</small><strong>{{ evaluationResult.metrics.recall | percent:'1.1-1' }}</strong></div>
-      <div><small>F1 score</small><strong>{{ evaluationResult.metrics.f1 | percent:'1.1-1' }}</strong></div>
-      <div><small>MCC</small><strong>{{ metricNumber(evaluationResult.metrics.mcc) | number:'1.3-3' }}</strong></div>
-      <div><small>ROC-AUC</small><strong>{{ metricScore(evaluationResult.metrics.rocAuc) }}</strong></div>
-      <div><small>PR-AUC</small><strong>{{ metricScore(evaluationResult.metrics.prAuc) }}</strong></div>
+    <div class="evaluation-result-heading">
+      <div>
+        <span>Evaluation complete</span>
+        <h3>{{ evaluationResult.method || 'Similarity-based CORAL defect prediction' }}</h3>
+      </div>
+      <div class="evaluation-result-meta">
+        <span class="classifier-chip" [class.svm]="evaluationResult.modelConfiguration?.classifierType === 'svm'">
+          {{ classifierName(evaluationResult.modelConfiguration) }}
+        </span>
+        <span class="parameter-chip">{{ classifierSetting(evaluationResult.modelConfiguration) }}</span>
+        <strong>{{ evaluationResult.predictions.length }} evaluated classes</strong>
+      </div>
     </div>
+
+    <div class="evaluation-overview-grid">
+      <div class="evaluation-scoreboard">
+        <div class="evaluation-metrics">
+          <div class="primary"><small>Balanced accuracy</small><strong>{{ metricPercent(evaluationResult.metrics.balancedAccuracy) }}</strong></div>
+          <div><small>Bug recall</small><strong>{{ evaluationResult.metrics.recall | percent:'1.1-1' }}</strong></div>
+          <div><small>Precision</small><strong>{{ evaluationResult.metrics.precision | percent:'1.1-1' }}</strong></div>
+          <div><small>F2 score</small><strong>{{ metricPercent(evaluationResult.metrics.f2) }}</strong></div>
+          <div><small>MCC</small><strong>{{ metricScore(evaluationResult.metrics.mcc) }}</strong></div>
+          <div><small>ROC-AUC</small><strong>{{ metricScore(evaluationResult.metrics.rocAuc) }}</strong></div>
+          <div><small>PR-AUC</small><strong>{{ metricScore(evaluationResult.metrics.prAuc) }}</strong></div>
+          <div><small>Accuracy</small><strong>{{ evaluationResult.metrics.accuracy | percent:'1.1-1' }}</strong></div>
+        </div>
+
+        <div class="secondary-metrics" aria-label="Additional evaluation metrics">
+          <span><small>Specificity</small><strong>{{ metricPercent(evaluationResult.metrics.specificity) }}</strong></span>
+          <span><small>F1</small><strong>{{ evaluationResult.metrics.f1 | percent:'1.1-1' }}</strong></span>
+          <span><small>G-mean</small><strong>{{ metricScore(evaluationResult.metrics.gMean) }}</strong></span>
+          <span><small>Average precision</small><strong>{{ metricScore(evaluationResult.metrics.averagePrecision) }}</strong></span>
+          <span><small>Bug prevalence</small><strong>{{ metricPercent(evaluationResult.metrics.positivePrevalence) }}</strong></span>
+          <span><small>PR no-skill baseline</small><strong>{{ metricScore(evaluationResult.metrics.prAucNoSkillBaseline) }}</strong></span>
+        </div>
+
+        <div class="confusion-matrix-section">
+          <div class="confusion-matrix-heading">
+            <div><span>Classification outcomes</span><h4>Confusion matrix</h4></div>
+            <small>Correct predictions and model errors</small>
+          </div>
+          <div class="confusion-summary" aria-label="Evaluation confusion matrix">
+            <span class="true-positive">True buggy <strong>{{ evaluationResult.confusionMatrix.truePositive }}</strong></span>
+            <span class="true-negative">True clean <strong>{{ evaluationResult.confusionMatrix.trueNegative }}</strong></span>
+            <span class="false-positive">False alarm <strong>{{ evaluationResult.confusionMatrix.falsePositive }}</strong></span>
+            <span class="false-negative">Missed buggy <strong>{{ evaluationResult.confusionMatrix.falseNegative }}</strong></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
     <div *ngIf="evaluationResult.selectedSources?.length" class="source-ranking evaluation-source-ranking">
       <h4>Selected nearest source datasets</h4>
       <div>
-        <span *ngFor="let source of evaluationResult.selectedSources">
-          #{{ source.rank }} {{ source.dataset }}
+        <span *ngFor="let source of evaluationResult.selectedSources" class="source-ranking-item">
+          <b>#{{ source.rank }} {{ source.dataset }}</b>
           <small>distance {{ source.distance | number:'1.3-3' }}</small>
+          <em>{{ source.rows }} rows · {{ source.buggyRows }} buggy · {{ source.cleanRows }} clean</em>
         </span>
       </div>
-    </div>
-    <div class="confusion-summary">
-      <span>True buggy <strong>{{ evaluationResult.confusionMatrix.truePositive }}</strong></span>
-      <span>True clean <strong>{{ evaluationResult.confusionMatrix.trueNegative }}</strong></span>
-      <span>False alarm <strong>{{ evaluationResult.confusionMatrix.falsePositive }}</strong></span>
-      <span>Missed buggy <strong>{{ evaluationResult.confusionMatrix.falseNegative }}</strong></span>
     </div>
     <div #evaluationTableShell class="table-shell evaluation-table-shell" tabindex="0" aria-label="Evaluation predictions">
       <table>

@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
+import org.metrics.common.enums.DatasetFileFormat;
 import org.metrics.service.FileStorageService;
 import org.metrics.service.GitHubCloneService;
 import org.metrics.service.MetricsExtractionService;
@@ -60,10 +61,15 @@ public class MetricsController {
                 uploadedFile = fileStorageService.storeUploadedFile(projectZip);
                 sourceDirectory = zipExtractionService.extractArchiveFile(uploadedFile);
             } else if (gitHubCloneService.isZipFileUrl(githubUrl)) {
+                if ("aeeem".equalsIgnoreCase(datasetFormat)) {
+                    throw new IllegalArgumentException(
+                            "AEEEM extraction requires repository history; use the GitHub repository URL, not a ZIP file URL.");
+                }
                 uploadedFile = gitHubCloneService.downloadZipFile(githubUrl);
                 sourceDirectory = zipExtractionService.extractArchiveFile(uploadedFile);
             } else {
-                sourceDirectory = gitHubCloneService.cloneRepository(githubUrl);
+                sourceDirectory = gitHubCloneService.cloneRepository(githubUrl,
+                        "aeeem".equalsIgnoreCase(datasetFormat));
             }
             return ResponseEntity.ok(metricsExtractionService.extractMetrics(
                     sourceDirectory.toString(), datasetFormat, null));
@@ -84,18 +90,25 @@ public class MetricsController {
 
     @GetMapping("/download/{datasetId}")
     public ResponseEntity<Resource> downloadDataset(@PathVariable("datasetId") String datasetId) {
+        return downloadDataset(datasetId, "csv");
+    }
+
+    @GetMapping("/download/{datasetId}/{fileFormat}")
+    public ResponseEntity<Resource> downloadDataset(@PathVariable("datasetId") String datasetId,
+                                                    @PathVariable("fileFormat") String fileFormat) {
         try {
             UUID.fromString(datasetId);
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException("Invalid target dataset ID.");
         }
-        Path filePath = metricsExtractionService.getDatasetPath(datasetId);
+        DatasetFileFormat format = DatasetFileFormat.fromExtension(fileFormat);
+        Path filePath = metricsExtractionService.getDatasetPath(datasetId, format);
         if (!Files.exists(filePath)) {
             return ResponseEntity.notFound().build();
         }
         Resource resource = new FileSystemResource(filePath.toFile());
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("text/csv"))
+                .contentType(MediaType.parseMediaType(format.getMediaType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + filePath.getFileName() + "\"")
                 .body(resource);

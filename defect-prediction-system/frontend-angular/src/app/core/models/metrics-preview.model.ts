@@ -4,5 +4,6 @@ export interface MetricsPreview {
   rowCount: number;
   extractedColumns: string[];
   csvPreview: string[];
-  downloadUrl: string;
+  csvDownloadUrl: string;
+  arffDownloadUrl: string;
 }
