@@ -38,13 +38,55 @@ export interface PredictionResultItem {
 }
 
 export interface EvaluationMetrics {
+  threshold?: number;
   accuracy: number;
+  balancedAccuracy?: number;
   precision: number;
   recall: number;
+  specificity?: number;
   f1: number;
+  f2?: number;
   mcc?: number;
+  gMean?: number;
   rocAuc?: number | null;
   prAuc?: number | null;
+  averagePrecision?: number | null;
+  positivePrevalence?: number;
+  prAucNoSkillBaseline?: number;
+}
+
+export type ClassifierType = 'knn' | 'svm';
+
+export interface PredictionRequestOptions {
+  classifierType: ClassifierType;
+  knnValue: number;
+  autoTuneK: boolean;
+  svmC: number;
+  autoTuneSvmC: boolean;
+  coralOption: boolean;
+  topK: number;
+  decisionThreshold?: number;
+  thresholdBeta?: number;
+}
+
+export interface ModelConfiguration {
+  classifierType?: ClassifierType;
+  classifier?: string;
+  selectedK?: number | null;
+  autoTuneK?: boolean;
+  selectedSvmC?: number | null;
+  autoTuneSvmC?: boolean;
+  classWeight?: 'balanced' | string | null;
+  decisionThreshold?: number;
+  thresholdSelection?: string;
+  thresholdBeta?: number;
+  coralEnabled?: boolean;
+  coralType?: string;
+  targetLabelUsage?: string;
+  riskScoreMeaning?: string;
+  sourceRankingMethod?: string;
+  sourceDominanceWarning?: boolean;
+  largestSourceRowShare?: number;
 }
 
 export interface ConfusionMatrix {
@@ -57,6 +99,7 @@ export interface ConfusionMatrix {
 export interface EvaluationResult {
   status: string;
   method?: string;
+  modelConfiguration?: ModelConfiguration;
   selectedSources?: SourceRankingItem[];
   sourceRanking?: SourceRankingItem[];
   metrics: EvaluationMetrics;
@@ -74,6 +117,7 @@ export interface PredictionSummary {
 export interface PredictionResult {
   status: string;
   method?: string;
+  modelConfiguration?: ModelConfiguration;
   selectedSources?: SourceRankingItem[];
   sourceRanking?: SourceRankingItem[];
   predictions: PredictionResultItem[];

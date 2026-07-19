@@ -14,6 +14,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.stereotype.Service;
@@ -21,7 +24,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class GitHubCloneService {
 
-    private static final long CLONE_TIMEOUT_SECONDS = 120;
+    private static final long CLONE_TIMEOUT_SECONDS = 600;
     private static final int MAX_COMMAND_OUTPUT_BYTES = 16_384;
     private static final long MAX_ZIP_BYTES = 50L * 1024L * 1024L;
     private static final int DOWNLOAD_TIMEOUT_MILLIS = 120_000;
@@ -86,41 +89,68 @@ public class GitHubCloneService {
     }
 
     public Path cloneRepository(String gitUrl) throws IOException {
+        return cloneRepository(gitUrl, false);
+    }
+
+    public Path cloneRepository(String gitUrl, boolean fullHistory) throws IOException {
         String normalizedUrl = validateAndNormalizeUrl(gitUrl);
         Path targetPath = cloneLocation.resolve("git_" + UUID.randomUUID()).toAbsolutePath().normalize();
+        try {
+            List<List<String>> attempts = cloneAttempts(normalizedUrl, targetPath, fullHistory);
+            IOException lastFailure = null;
+            for (List<String> command : attempts) {
+                FileStorageService.deleteRecursively(targetPath);
+                try {
+                    runClone(command);
+                    return targetPath;
+                } catch (IOException exception) {
+                    lastFailure = exception;
+                }
+            }
+            throw lastFailure == null ? new IOException("Unable to clone the GitHub repository.") : lastFailure;
+        } catch (IOException exception) {
+            FileStorageService.deleteRecursively(targetPath);
+            throw exception;
+        }
+    }
 
+    private List<List<String>> cloneAttempts(String url, Path targetPath, boolean fullHistory) {
+        List<List<String>> attempts = new ArrayList<>();
+        if (fullHistory) {
+            attempts.add(Arrays.asList("git", "-c", "http.version=HTTP/1.1", "clone",
+                    "--no-single-branch", "--filter=blob:none", "--no-checkout", url, targetPath.toString()));
+            attempts.add(Arrays.asList("git", "-c", "http.version=HTTP/1.1", "clone",
+                    "--no-single-branch", url, targetPath.toString()));
+        } else {
+            attempts.add(Arrays.asList("git", "-c", "http.version=HTTP/1.1", "clone",
+                    "--depth", "1", "--single-branch", url, targetPath.toString()));
+        }
+        return attempts;
+    }
+
+    private void runClone(List<String> command) throws IOException {
         Process process = null;
         try {
-            ProcessBuilder processBuilder = new ProcessBuilder(
-                    "git", "clone", "--depth", "1", "--single-branch", normalizedUrl, targetPath.toString());
-            processBuilder.redirectErrorStream(true);
-            process = processBuilder.start();
-
+            process = new ProcessBuilder(command).redirectErrorStream(true).start();
             final Process runningProcess = process;
             final ByteArrayOutputStream commandOutput = new ByteArrayOutputStream();
             Thread outputReader = new Thread(() -> readOutput(runningProcess.getInputStream(), commandOutput));
             outputReader.setDaemon(true);
             outputReader.start();
-
             if (!process.waitFor(CLONE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 throw new IOException("GitHub repository cloning timed out.");
             }
             outputReader.join(1000);
-
             if (process.exitValue() != 0) {
                 String details = new String(commandOutput.toByteArray(), StandardCharsets.UTF_8).trim();
                 throw new IOException(details.isEmpty()
                         ? "Unable to clone the GitHub repository."
                         : "Unable to clone the GitHub repository: " + details);
             }
-            return targetPath;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IOException("GitHub repository cloning was interrupted.", exception);
-        } catch (IOException exception) {
-            FileStorageService.deleteRecursively(targetPath);
-            throw exception;
         } finally {
             if (process != null) {
                 process.destroy();

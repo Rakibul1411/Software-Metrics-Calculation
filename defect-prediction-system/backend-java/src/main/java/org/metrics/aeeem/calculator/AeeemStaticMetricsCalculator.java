@@ -6,12 +6,17 @@ import java.util.Set;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.IBinding;
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.metrics.aeeem.model.AeeemMetricResult;
 import org.metrics.aeeem.calculator.legacy.CBOCalculator;
-import org.metrics.aeeem.calculator.legacy.DITCalculator;
 import org.metrics.aeeem.calculator.legacy.ICCalculator;
 import org.metrics.aeeem.calculator.legacy.LCOMCalculator;
 import org.metrics.aeeem.calculator.legacy.LOCCalculator;
@@ -27,11 +32,15 @@ public final class AeeemStaticMetricsCalculator {
     public static AeeemMetricResult calculateAeeemForType(CompilationUnit compilationUnit,
                                                            AbstractTypeDeclaration typeDeclaration,
                                                            String sourceCode) {
+        ITypeBinding typeBinding = typeDeclaration.resolveBinding();
         String packageName = compilationUnit.getPackage() == null
                 ? "" : compilationUnit.getPackage().getName().getFullyQualifiedName();
         String className = typeDeclaration.getName().getIdentifier();
-        String fullyQualifiedName = packageName.isEmpty() ? className : packageName + "." + className;
+        String fullyQualifiedName = typeBinding == null || typeBinding.getQualifiedName().isEmpty()
+                ? (packageName.isEmpty() ? className : packageName + "." + className)
+                : typeBinding.getQualifiedName();
         AeeemMetricResult metrics = new AeeemMetricResult(fullyQualifiedName);
+        metrics.setCkOoDit(inheritanceDepth(typeBinding));
 
         int privateMethods = 0;
         int publicMethods = 0;
@@ -39,7 +48,8 @@ public final class AeeemStaticMetricsCalculator {
         int privateAttributes = 0;
         int publicAttributes = 0;
         int attributes = 0;
-        boolean interfaceType = DITCalculator.isInterface(typeDeclaration);
+        boolean interfaceType = typeDeclaration instanceof TypeDeclaration
+                && ((TypeDeclaration) typeDeclaration).isInterface();
 
         for (Object declaration : typeDeclaration.bodyDeclarations()) {
             if (declaration instanceof MethodDeclaration) {
@@ -67,9 +77,14 @@ public final class AeeemStaticMetricsCalculator {
 
         @SuppressWarnings("unchecked")
         List<ImportDeclaration> imports = compilationUnit.imports();
-        Set<String> dependencies = CBOCalculator.extractDependencies(typeDeclaration, fullyQualifiedName, imports);
+        Set<String> dependencies = semanticDependencies(typeDeclaration, typeBinding);
+        if (dependencies.isEmpty()) {
+            dependencies = CBOCalculator.extractDependencies(typeDeclaration, fullyQualifiedName, imports);
+        }
         metrics.setDependencies(dependencies);
-        metrics.setSuperclassName(NOCCalculator.extractSuperclassName(typeDeclaration));
+        ITypeBinding superclass = typeBinding == null ? null : typeBinding.getSuperclass();
+        metrics.setSuperclassName(superclass == null
+                ? NOCCalculator.extractSuperclassName(typeDeclaration) : superclass.getQualifiedName());
         metrics.setInterface(interfaceType);
         metrics.setMethodNames(ICCalculator.extractMethodNames(typeDeclaration));
         metrics.setDeclaredAttributeCount(attributes);
@@ -77,6 +92,68 @@ public final class AeeemStaticMetricsCalculator {
         applyLocalMetrics(metrics, privateMethods, publicMethods, methods, privateAttributes,
                 publicAttributes, attributes, wmc, loc, lcom, rfc, dependencies.size());
         return metrics;
+    }
+
+    private static Set<String> semanticDependencies(AbstractTypeDeclaration declaration, ITypeBinding owner) {
+        Set<String> dependencies = new java.util.LinkedHashSet<>();
+        declaration.accept(new org.eclipse.jdt.core.dom.ASTVisitor() {
+            @Override
+            public boolean visit(SimpleName node) {
+                IBinding binding = node.resolveBinding();
+                if (binding instanceof ITypeBinding) {
+                    addType((ITypeBinding) binding, owner, dependencies);
+                } else if (binding instanceof IVariableBinding) {
+                    IVariableBinding variable = (IVariableBinding) binding;
+                    addType(variable.getType(), owner, dependencies);
+                    addType(variable.getDeclaringClass(), owner, dependencies);
+                } else if (binding instanceof IMethodBinding) {
+                    IMethodBinding method = (IMethodBinding) binding;
+                    addType(method.getDeclaringClass(), owner, dependencies);
+                    addType(method.getReturnType(), owner, dependencies);
+                    for (ITypeBinding parameter : method.getParameterTypes()) {
+                        addType(parameter, owner, dependencies);
+                    }
+                }
+                return true;
+            }
+        });
+        return dependencies;
+    }
+
+    private static void addType(ITypeBinding binding, ITypeBinding owner, Set<String> dependencies) {
+        if (binding == null) {
+            return;
+        }
+        ITypeBinding type = binding;
+        while (type.isArray()) {
+            type = type.getElementType();
+        }
+        if (type.isPrimitive() || type.isTypeVariable() || type.isWildcardType()) {
+            return;
+        }
+        ITypeBinding declaration = type.getTypeDeclaration();
+        String name = declaration.getQualifiedName();
+        String ownerName = owner == null ? "" : owner.getTypeDeclaration().getQualifiedName();
+        if (!name.isEmpty() && !name.equals(ownerName)) {
+            dependencies.add(name);
+        }
+        for (ITypeBinding argument : type.getTypeArguments()) {
+            addType(argument, owner, dependencies);
+        }
+    }
+
+    private static int inheritanceDepth(ITypeBinding binding) {
+        if (binding == null || binding.isInterface()) {
+            return 0;
+        }
+        int depth = 0;
+        Set<String> visited = new java.util.HashSet<>();
+        ITypeBinding current = binding.getSuperclass();
+        while (current != null && visited.add(current.getTypeDeclaration().getKey())) {
+            depth++;
+            current = current.getSuperclass();
+        }
+        return depth;
     }
 
     private static void applyLocalMetrics(AeeemMetricResult metrics, int privateMethods, int publicMethods,

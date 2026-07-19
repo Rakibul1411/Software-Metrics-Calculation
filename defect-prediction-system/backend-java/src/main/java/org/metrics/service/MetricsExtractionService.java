@@ -7,26 +7,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
-import org.metrics.aeeem.calculator.legacy.CBOCalculator;
-import org.metrics.aeeem.calculator.legacy.DITCalculator;
-import org.metrics.aeeem.calculator.legacy.NOCCalculator;
-import org.metrics.promise.analyzer.PromiseProjectAnalyzer;
-import org.metrics.promise.model.PromiseMetricResult;
-import org.metrics.promise.export.PromiseCsvExporter;
-
-import org.metrics.aeeem.model.AeeemMetricResult;
-import org.metrics.aeeem.parser.AeeemJavaSourceParser;
+import org.metrics.aeeem.git.GitHistoryAnalyzer;
+import org.metrics.aeeem.export.AeeemArffExporter;
 import org.metrics.aeeem.export.AeeemCsvExporter;
+import org.metrics.aeeem.export.AeeemFeatureSchema;
+import org.metrics.aeeem.model.AeeemMetricResult;
+import org.metrics.common.enums.DatasetFileFormat;
+import org.metrics.promise.analyzer.PromiseProjectAnalyzer;
+import org.metrics.promise.export.PromiseArffExporter;
+import org.metrics.promise.export.PromiseCsvExporter;
+import org.metrics.promise.export.PromiseFeatureSchema;
+import org.metrics.promise.model.PromiseMetricResult;
 
 import org.springframework.stereotype.Service;
 
@@ -41,16 +38,19 @@ public class MetricsExtractionService {
         private final int rowCount;
         private final List<String> extractedColumns;
         private final List<String> csvPreview;
-        private final String downloadUrl;
+        private final String csvDownloadUrl;
+        private final String arffDownloadUrl;
 
         public ExtractionResult(String targetDatasetId, String datasetFormat, int rowCount,
-                                List<String> extractedColumns, List<String> csvPreview, String downloadUrl) {
+                                List<String> extractedColumns, List<String> csvPreview,
+                                String csvDownloadUrl, String arffDownloadUrl) {
             this.targetDatasetId = targetDatasetId;
             this.datasetFormat = datasetFormat;
             this.rowCount = rowCount;
             this.extractedColumns = extractedColumns;
             this.csvPreview = csvPreview;
-            this.downloadUrl = downloadUrl;
+            this.csvDownloadUrl = csvDownloadUrl;
+            this.arffDownloadUrl = arffDownloadUrl;
         }
 
         public String getTargetDatasetId() { return targetDatasetId; }
@@ -58,7 +58,8 @@ public class MetricsExtractionService {
         public int getRowCount() { return rowCount; }
         public List<String> getExtractedColumns() { return extractedColumns; }
         public List<String> getCsvPreview() { return csvPreview; }
-        public String getDownloadUrl() { return downloadUrl; }
+        public String getCsvDownloadUrl() { return csvDownloadUrl; }
+        public String getArffDownloadUrl() { return arffDownloadUrl; }
     }
 
     public ExtractionResult extractMetrics(String sourceDirsStr, String datasetFormat, String filterFile) throws IOException {
@@ -70,7 +71,8 @@ public class MetricsExtractionService {
         String[] sourceDirs = sourceDirsStr.split(",");
         Path outputDirPath = Paths.get(OUTPUT_DIR);
         Files.createDirectories(outputDirPath);
-        Path outputFile = outputDirPath.resolve("extracted-metrics-" + targetDatasetId + ".csv");
+        Path csvOutput = getDatasetPath(targetDatasetId, DatasetFileFormat.CSV);
+        Path arffOutput = getDatasetPath(targetDatasetId, DatasetFileFormat.ARFF);
 
         List<String> columns;
         int rowCount;
@@ -80,7 +82,8 @@ public class MetricsExtractionService {
                 Set<String> predefinedClasses = loadClassNamesFromCSV(filterFile);
                 allMetrics.removeIf(m -> !predefinedClasses.contains(m.getFullyQualifiedName()));
             }
-            AeeemCsvExporter.exportAeeemToCSV(allMetrics, outputFile);
+            AeeemCsvExporter.exportAeeemToCSV(allMetrics, csvOutput);
+            AeeemArffExporter.exportAeeemToArff(allMetrics, arffOutput);
             columns = getAeeemColumns();
             rowCount = allMetrics.size();
         } else {
@@ -89,27 +92,30 @@ public class MetricsExtractionService {
                 Set<String> predefinedClasses = loadClassNamesFromCSV(filterFile);
                 allMetrics.removeIf(m -> !predefinedClasses.contains(m.getFullyQualifiedName()));
             }
-            PromiseCsvExporter.exportPromiseToCSV(allMetrics, outputFile);
+            PromiseCsvExporter.exportPromiseToCSV(allMetrics, csvOutput);
+            PromiseArffExporter.exportPromiseToArff(allMetrics, arffOutput);
             columns = getPromiseColumns();
             rowCount = allMetrics.size();
         }
 
         if (rowCount == 0) {
-            Files.deleteIfExists(outputFile);
+            Files.deleteIfExists(csvOutput);
+            Files.deleteIfExists(arffOutput);
             throw new IllegalArgumentException("No Java classes were found in the supplied project.");
         }
 
         List<String> csvPreview = new ArrayList<>();
-        try (BufferedReader reader = Files.newBufferedReader(outputFile, StandardCharsets.UTF_8)) {
+        try (BufferedReader reader = Files.newBufferedReader(csvOutput, StandardCharsets.UTF_8)) {
             String line;
             while ((line = reader.readLine()) != null) {
                 csvPreview.add(line);
             }
         }
 
-        String downloadUrl = "/api/metrics/download/" + targetDatasetId;
+        String downloadBaseUrl = "/api/metrics/download/" + targetDatasetId + "/";
 
-        return new ExtractionResult(targetDatasetId, normalizedFormat, rowCount, columns, csvPreview, downloadUrl);
+        return new ExtractionResult(targetDatasetId, normalizedFormat, rowCount, columns, csvPreview,
+                downloadBaseUrl + "csv", downloadBaseUrl + "arff");
     }
 
     private String normalizeDatasetFormat(String datasetFormat) {
@@ -120,8 +126,9 @@ public class MetricsExtractionService {
         return normalized;
     }
 
-    public Path getDatasetPath(String targetDatasetId) {
-        return Paths.get(OUTPUT_DIR).resolve("extracted-metrics-" + targetDatasetId + ".csv");
+    public Path getDatasetPath(String targetDatasetId, DatasetFileFormat fileFormat) {
+        return Paths.get(OUTPUT_DIR).resolve(
+                "extracted-metrics-" + targetDatasetId + "." + fileFormat.getExtension());
     }
 
     private Set<String> loadClassNamesFromCSV(String csvPath) throws IOException {
@@ -153,101 +160,21 @@ public class MetricsExtractionService {
 
     private List<AeeemMetricResult> calculateAeeemMetricsForDirectories(String[] dirPaths) throws IOException {
         List<AeeemMetricResult> allMetrics = new ArrayList<>();
+        GitHistoryAnalyzer analyzer = new GitHistoryAnalyzer();
         for (String dirPath : dirPaths) {
             Path sourcePath = Paths.get(dirPath.trim());
-            if (!Files.exists(sourcePath) || !Files.isDirectory(sourcePath)) continue;
-
-            try (Stream<Path> paths = Files.walk(sourcePath)) {
-                paths.filter(Files::isRegularFile)
-                        .filter(path -> path.toString().endsWith(".java"))
-                        .filter(path -> !path.toString().contains("/optional/") && !path.toString().contains("\\optional\\"))
-                        .filter(path -> !path.toString().contains("/test/") && !path.toString().contains("\\test\\"))
-                        .forEach(javaFile -> {
-                            try {
-                                List<AeeemMetricResult> metrics = AeeemJavaSourceParser.parseAeeemFile(javaFile);
-                                allMetrics.addAll(metrics);
-                            } catch (Exception ignored) {}
-                        });
+            if (Files.exists(sourcePath) && Files.isDirectory(sourcePath)) {
+                allMetrics.addAll(analyzer.analyze(sourcePath));
             }
         }
-        calculateAeeemProjectMetrics(allMetrics);
         return allMetrics;
     }
 
-    private void calculateAeeemProjectMetrics(List<AeeemMetricResult> allMetrics) {
-        DITCalculator ditCalculator = new DITCalculator();
-        NOCCalculator nocCalculator = new NOCCalculator();
-        CBOCalculator cboCalculator = new CBOCalculator();
-        Map<String, AeeemMetricResult> classesByName = new HashMap<>();
-
-        for (AeeemMetricResult metrics : allMetrics) {
-            String name = metrics.getFullyQualifiedName();
-            ditCalculator.registerClass(name, metrics.getSuperclassName(), metrics.isInterface());
-            nocCalculator.registerClass(name, metrics.getSuperclassName());
-            cboCalculator.registerClass(name, metrics.getSuperclassName(), metrics.getDependencies());
-            classesByName.put(name, metrics);
-            int dot = name.lastIndexOf('.');
-            classesByName.putIfAbsent(dot < 0 ? name : name.substring(dot + 1), metrics);
-        }
-        cboCalculator.postProcessDependencies();
-
-        for (AeeemMetricResult metrics : allMetrics) {
-            String name = metrics.getFullyQualifiedName();
-            int dit = ditCalculator.calculateDIT(name);
-            int noc = nocCalculator.calculateNOC(name);
-            int fanIn = cboCalculator.calculateCA(name);
-            int fanOut = cboCalculator.calculateCE(name);
-            int cbo = cboCalculator.calculateCBO(name);
-            int inheritedAttributes = 0;
-            Set<String> inheritedMethods = new HashSet<>();
-            Set<String> visited = new HashSet<>();
-            AeeemMetricResult parent = classesByName.get(metrics.getSuperclassName());
-            while (parent != null && visited.add(parent.getFullyQualifiedName())) {
-                inheritedAttributes += parent.getDeclaredAttributeCount();
-                inheritedMethods.addAll(parent.getMethodNames());
-                parent = classesByName.get(parent.getSuperclassName());
-            }
-            applyAeeemProjectMetrics(metrics, dit, noc, fanIn, fanOut, cbo,
-                    inheritedAttributes, inheritedMethods.size());
-        }
-    }
-
-    private void applyAeeemProjectMetrics(AeeemMetricResult metrics, int dit, int noc, int fanIn,
-                                           int fanOut, int cbo, int attributesInherited, int methodsInherited) {
-        metrics.setCkOoDit(dit); metrics.setLdhhDit(dit); metrics.setWchuDit(dit);
-        metrics.setCkOoNoc(noc); metrics.setLdhhNoc(noc); metrics.setWchuNoc(noc);
-        metrics.setCkOoFanIn(fanIn); metrics.setLdhhFanIn(fanIn); metrics.setWchuFanIn(fanIn);
-        metrics.setCkOoFanOut(fanOut); metrics.setLdhhFanOut(fanOut); metrics.setWchuFanOut(fanOut);
-        metrics.setCkOoCbo(cbo); metrics.setLdhhCbo(cbo); metrics.setWchuCbo(cbo);
-        metrics.setCkOoNumberOfAttributesInherited(attributesInherited);
-        metrics.setLdhhNumberOfAttributesInherited(attributesInherited);
-        metrics.setWchuNumberOfAttributesInherited(attributesInherited);
-        metrics.setCkOoNumberOfMethodsInherited(methodsInherited);
-        metrics.setLdhhNumberOfMethodsInherited(methodsInherited);
-        metrics.setWchuNumberOfMethodsInherited(methodsInherited);
-    }
-
     private List<String> getPromiseColumns() {
-        return Arrays.asList("name", "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce", "npm",
-                "lcom3", "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc", "max_cc", "avg_cc");
+        return PromiseFeatureSchema.columns();
     }
 
     private List<String> getAeeemColumns() {
-        return Arrays.asList(
-                "name", "ck_oo_numberOfPrivateMethods", "LDHH_lcom", "LDHH_fanIn",
-                "WCHU_numberOfPublicAttributes", "WCHU_numberOfAttributes", "LDHH_numberOfPublicMethods",
-                "WCHU_fanIn", "LDHH_numberOfPrivateAttributes", "LDHH_numberOfPublicAttributes",
-                "WCHU_numberOfPrivateMethods", "WCHU_numberOfMethods", "ck_oo_numberOfPublicAttributes", "ck_oo_noc",
-                "ck_oo_wmc", "LDHH_numberOfPrivateMethods", "WCHU_numberOfPrivateAttributes",
-                "WCHU_noc", "LDHH_numberOfAttributesInherited", "WCHU_wmc", "ck_oo_fanOut",
-                "ck_oo_numberOfLinesOfCode", "ck_oo_numberOfAttributesInherited", "ck_oo_numberOfMethods", "ck_oo_dit",
-                "ck_oo_fanIn", "LDHH_noc", "WCHU_dit", "ck_oo_lcom", "WCHU_numberOfAttributesInherited", "ck_oo_rfc",
-                "LDHH_wmc", "LDHH_numberOfAttributes", "LDHH_numberOfLinesOfCode", "WCHU_fanOut", "WCHU_lcom", "ck_oo_cbo",
-                "WCHU_rfc", "ck_oo_numberOfAttributes", "ck_oo_numberOfPrivateAttributes",
-                "WCHU_numberOfPublicMethods", "LDHH_dit", "WCHU_cbo",
-                "WCHU_numberOfMethodsInherited", "LDHH_fanOut", "LDHH_numberOfMethodsInherited",
-                "LDHH_rfc", "ck_oo_numberOfMethodsInherited", "ck_oo_numberOfPublicMethods", "LDHH_cbo", "WCHU_numberOfLinesOfCode",
-                "LDHH_numberOfMethods"
-        );
+        return AeeemFeatureSchema.columnsWithIdentifier();
     }
 }

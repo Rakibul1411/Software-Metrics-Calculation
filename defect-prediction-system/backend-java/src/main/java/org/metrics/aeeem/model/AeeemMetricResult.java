@@ -9,6 +9,7 @@ import java.util.Set;
  */
 public class AeeemMetricResult {
     private String fullyQualifiedName;
+    private String sourcePath;
     private String superclassName;
     private boolean isInterface;
     private Set<String> dependencies = new HashSet<>();
@@ -79,16 +80,6 @@ public class AeeemMetricResult {
     private double cvsLinEntropy;
     private double cvsExpEntropy;
 
-    // Bug count metrics
-    private double numberOfNonTrivialBugsFoundUntil;
-    private double numberOfCriticalBugsFoundUntil;
-    private double numberOfHighPriorityBugsFoundUntil;
-    private double numberOfMajorBugsFoundUntil;
-    private double numberOfBugsFoundUntil;
-
-    // Class label (buggy/clean)
-    private String classification = "clean"; // default to clean
-
     public AeeemMetricResult() {
     }
 
@@ -103,6 +94,9 @@ public class AeeemMetricResult {
     public void setFullyQualifiedName(String fullyQualifiedName) {
         this.fullyQualifiedName = fullyQualifiedName;
     }
+
+    public String getSourcePath() { return sourcePath; }
+    public void setSourcePath(String sourcePath) { this.sourcePath = sourcePath; }
 
     public String getSuperclassName() { return superclassName; }
     public void setSuperclassName(String superclassName) { this.superclassName = superclassName; }
@@ -287,23 +281,4 @@ public class AeeemMetricResult {
     public double getCvsExpEntropy() { return cvsExpEntropy; }
     public void setCvsExpEntropy(double val) { this.cvsExpEntropy = val; }
 
-    // Getters and Setters for Bug count
-    public double getNumberOfNonTrivialBugsFoundUntil() { return numberOfNonTrivialBugsFoundUntil; }
-    public void setNumberOfNonTrivialBugsFoundUntil(double val) { this.numberOfNonTrivialBugsFoundUntil = val; }
-
-    public double getNumberOfCriticalBugsFoundUntil() { return numberOfCriticalBugsFoundUntil; }
-    public void setNumberOfCriticalBugsFoundUntil(double val) { this.numberOfCriticalBugsFoundUntil = val; }
-
-    public double getNumberOfHighPriorityBugsFoundUntil() { return numberOfHighPriorityBugsFoundUntil; }
-    public void setNumberOfHighPriorityBugsFoundUntil(double val) { this.numberOfHighPriorityBugsFoundUntil = val; }
-
-    public double getNumberOfMajorBugsFoundUntil() { return numberOfMajorBugsFoundUntil; }
-    public void setNumberOfMajorBugsFoundUntil(double val) { this.numberOfMajorBugsFoundUntil = val; }
-
-    public double getNumberOfBugsFoundUntil() { return numberOfBugsFoundUntil; }
-    public void setNumberOfBugsFoundUntil(double val) { this.numberOfBugsFoundUntil = val; }
-
-    // Getter and Setter for classification
-    public String getClassification() { return classification; }
-    public void setClassification(String val) { this.classification = val; }
 }
