@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+import org.metrics.common.dto.PredictionModelOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -28,27 +29,48 @@ public class PredictionService {
     private String mlEvaluationUrl;
 
     public Object runPrediction(Path targetCsvPath, MultipartFile[] sourceFiles, String labelColumnName,
-                                int knnValue, boolean coralOption, int topK) throws IOException {
+                                boolean coralOption, int topK,
+                                PredictionModelOptions modelOptions) throws IOException {
         return sendRequest(Files.readAllBytes(targetCsvPath), targetCsvPath.getFileName().toString(),
-                sourceFiles, labelColumnName, knnValue, coralOption, topK, mlServiceUrl);
+                sourceFiles, labelColumnName, coralOption, topK, modelOptions, mlServiceUrl);
     }
 
     public Object evaluatePrediction(MultipartFile targetFile, MultipartFile[] sourceFiles,
-                                     String labelColumnName, int knnValue,
-                                     boolean coralOption, int topK) throws IOException {
+                                     String labelColumnName, boolean coralOption, int topK,
+                                     PredictionModelOptions modelOptions) throws IOException {
         String targetFilename = targetFile.getOriginalFilename() == null
                 ? "target.csv" : targetFile.getOriginalFilename();
         return sendRequest(targetFile.getBytes(), targetFilename, sourceFiles,
-                labelColumnName, knnValue, coralOption, topK, mlEvaluationUrl);
+                labelColumnName, coralOption, topK, modelOptions, mlEvaluationUrl);
     }
 
     private Object sendRequest(byte[] targetBytes, String targetFilename,
                                MultipartFile[] sourceFiles, String labelColumnName,
-                               int knnValue, boolean coralOption, int topK, String serviceUrl) throws IOException {
+                               boolean coralOption, int topK, PredictionModelOptions modelOptions,
+                               String serviceUrl) throws IOException {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
+        MultiValueMap<String, Object> body = buildRequestBody(
+                targetBytes, targetFilename, sourceFiles, labelColumnName,
+                coralOption, topK, modelOptions);
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        try {
+            ResponseEntity<Object> response = restTemplate.postForEntity(serviceUrl, requestEntity, Object.class);
+            return response.getBody();
+        } catch (HttpStatusCodeException e) {
+            return errorResponse(extractServiceError(e.getResponseBodyAsString()));
+        } catch (Exception e) {
+            return errorResponse("Failed to communicate with Python FastAPI ML Service: " + e.getMessage());
+        }
+    }
+
+    MultiValueMap<String, Object> buildRequestBody(
+            byte[] targetBytes, String targetFilename,
+            MultipartFile[] sourceFiles, String labelColumnName,
+            boolean coralOption, int topK, PredictionModelOptions modelOptions) throws IOException {
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("target_file", new ByteArrayResource(targetBytes) {
             @Override
@@ -67,20 +89,18 @@ public class PredictionService {
         }
 
         body.add("label_column", labelColumnName);
-        body.add("knn_value", String.valueOf(knnValue));
+        body.add("classifier_type", modelOptions.getClassifier().getApiValue());
+        body.add("knn_value", String.valueOf(modelOptions.getKnnValue()));
+        body.add("auto_tune_k", String.valueOf(modelOptions.isAutoTuneK()));
+        body.add("svm_c", String.valueOf(modelOptions.getSvmC()));
+        body.add("auto_tune_svm_c", String.valueOf(modelOptions.isAutoTuneSvmC()));
+        body.add("threshold_beta", String.valueOf(modelOptions.getThresholdBeta()));
+        if (modelOptions.getDecisionThreshold() != null) {
+            body.add("decision_threshold", String.valueOf(modelOptions.getDecisionThreshold()));
+        }
         body.add("coral_option", String.valueOf(coralOption));
         body.add("top_k", String.valueOf(topK));
-
-        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-
-        try {
-            ResponseEntity<Object> response = restTemplate.postForEntity(serviceUrl, requestEntity, Object.class);
-            return response.getBody();
-        } catch (HttpStatusCodeException e) {
-            return errorResponse(extractServiceError(e.getResponseBodyAsString()));
-        } catch (Exception e) {
-            return errorResponse("Failed to communicate with Python FastAPI ML Service: " + e.getMessage());
-        }
+        return body;
     }
 
     private Map<String, Object> errorResponse(String message) {

@@ -7,9 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metrics.common.enums.DatasetFileFormat;
 
 class MetricsExtractionServiceTest {
 
@@ -23,8 +26,20 @@ class MetricsExtractionServiceTest {
         Files.write(source, ("package demo;\n" +
                 "public class PaymentService {\n" +
                 "  private int attempts;\n" +
-                "  public boolean pay(int amount) { if (amount > 0) return true; return false; }\n" +
+                "  public boolean pay(int amount) { return amount > 0; }\n" +
                 "}\n").getBytes(StandardCharsets.UTF_8));
+        git("2000-01-01T00:00:00Z", "init");
+        git(null, "config", "user.email", "metrics@example.com");
+        git(null, "config", "user.name", "Metrics Test");
+        git(null, "add", ".");
+        git("2000-01-01T00:00:00Z", "commit", "-m", "initial");
+        Files.write(source, ("package demo;\n" +
+                "public class PaymentService {\n" +
+                "  private int attempts;\n" +
+                "  public boolean pay(int amount) { if (amount > 0) { attempts++; return true; } return false; }\n" +
+                "}\n").getBytes(StandardCharsets.UTF_8));
+        git(null, "add", ".");
+        git("2000-01-16T00:00:00Z", "commit", "-m", "change payment logic");
 
         MetricsExtractionService service = new MetricsExtractionService();
         MetricsExtractionService.ExtractionResult promise = service.extractMetrics(
@@ -41,13 +56,50 @@ class MetricsExtractionServiceTest {
             assertFalse(promise.getExtractedColumns().contains("bug"));
             assertFalse(promise.getCsvPreview().get(0).contains("bug"));
             assertFalse(aeeem.getExtractedColumns().contains("class"));
-            assertFalse(aeeem.getExtractedColumns().stream().anyMatch(column -> column.startsWith("Cvs")));
+            assertEquals(57, aeeem.getExtractedColumns().size());
+            assertTrue(aeeem.getExtractedColumns().contains("CvsWEntropy"));
+            assertTrue(aeeem.getExtractedColumns().contains("CvsEntropy"));
+            assertTrue(aeeem.getExtractedColumns().contains("CvsLogEntropy"));
+            assertTrue(aeeem.getExtractedColumns().contains("CvsLinEntropy"));
+            assertTrue(aeeem.getExtractedColumns().contains("CvsExpEntropy"));
             assertEquals(promise.getRowCount() + 1, promise.getCsvPreview().size());
             assertEquals(aeeem.getRowCount() + 1, aeeem.getCsvPreview().size());
             assertTrue(aeeem.getCsvPreview().get(1).startsWith("demo.PaymentService,"));
+            assertTrue(promise.getCsvDownloadUrl().endsWith("/csv"));
+            assertTrue(promise.getArffDownloadUrl().endsWith("/arff"));
+            Path promiseArff = service.getDatasetPath(promise.getTargetDatasetId(), DatasetFileFormat.ARFF);
+            Path aeeemArff = service.getDatasetPath(aeeem.getTargetDatasetId(), DatasetFileFormat.ARFF);
+            assertTrue(Files.exists(promiseArff));
+            assertTrue(Files.exists(aeeemArff));
+            String promiseArffText = new String(Files.readAllBytes(promiseArff), StandardCharsets.UTF_8);
+            String aeeemArffText = new String(Files.readAllBytes(aeeemArff), StandardCharsets.UTF_8);
+            assertTrue(promiseArffText.contains("@attribute 'wmc' numeric"));
+            assertTrue(promiseArffText.contains("'demo.PaymentService'"));
+            assertTrue(aeeemArffText.contains("@attribute 'ck_oo_wmc' numeric"));
+            assertFalse(aeeemArffText.contains("@attribute 'class'"));
         } finally {
-            Files.deleteIfExists(service.getDatasetPath(promise.getTargetDatasetId()));
-            Files.deleteIfExists(service.getDatasetPath(aeeem.getTargetDatasetId()));
+            Files.deleteIfExists(service.getDatasetPath(promise.getTargetDatasetId(), DatasetFileFormat.CSV));
+            Files.deleteIfExists(service.getDatasetPath(aeeem.getTargetDatasetId(), DatasetFileFormat.CSV));
+            Files.deleteIfExists(service.getDatasetPath(promise.getTargetDatasetId(), DatasetFileFormat.ARFF));
+            Files.deleteIfExists(service.getDatasetPath(aeeem.getTargetDatasetId(), DatasetFileFormat.ARFF));
+        }
+    }
+
+    private void git(String date, String... arguments) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>();
+        command.add("git");
+        command.addAll(Arrays.asList(arguments));
+        ProcessBuilder builder = new ProcessBuilder(command).directory(projectDirectory.toFile())
+                .redirectErrorStream(true);
+        if (date != null) {
+            Map<String, String> environment = builder.environment();
+            environment.put("GIT_AUTHOR_DATE", date);
+            environment.put("GIT_COMMITTER_DATE", date);
+        }
+        Process process = builder.start();
+        byte[] output = process.getInputStream().readAllBytes();
+        if (process.waitFor() != 0) {
+            throw new IllegalStateException(new String(output, StandardCharsets.UTF_8));
         }
     }
 }
