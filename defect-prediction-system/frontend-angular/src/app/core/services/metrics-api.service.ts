@@ -28,7 +28,7 @@ export class MetricsApiService {
     return this.http.post<MetricsPreview>(`${this.baseUrl}/extract`, formData);
   }
 
-  downloadDataset(datasetId: string): string {
-    return `${this.baseUrl}/download/${encodeURIComponent(datasetId)}`;
+  downloadDataset(datasetId: string, fileFormat: 'csv' | 'arff' = 'csv'): string {
+    return `${this.baseUrl}/download/${encodeURIComponent(datasetId)}/${fileFormat}`;
   }
 }

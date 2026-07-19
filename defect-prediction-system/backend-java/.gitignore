@@ -5,3 +5,4 @@ storage/generated-datasets/
 storage/prediction-results/
 *.class
 *.jar
+output/

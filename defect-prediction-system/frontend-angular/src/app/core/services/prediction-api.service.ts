@@ -1,7 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { EvaluationResult, PredictionResult } from '../models/prediction-result.model';
+import {
+  EvaluationResult,
+  PredictionRequestOptions,
+  PredictionResult
+} from '../models/prediction-result.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -15,17 +19,14 @@ export class PredictionApiService {
   runPrediction(
     targetDatasetId: string,
     sourceFiles: File[],
-    labelColumn: string = 'bug',
-    knnValue: number = 5,
-    coralOption: boolean = true,
-    topK: number = 3
+    labelColumn: string,
+    options: PredictionRequestOptions
   ): Observable<PredictionResult> {
     const formData = new FormData();
     formData.append('targetDatasetId', targetDatasetId);
+    formData.append('targetFileFormat', this.datasetFileFormat(sourceFiles[0]));
     formData.append('labelColumn', labelColumn);
-    formData.append('knnValue', String(knnValue));
-    formData.append('coralOption', String(coralOption));
-    formData.append('topK', String(topK));
+    this.appendModelOptions(formData, options);
     sourceFiles.forEach(file => formData.append('sourceFiles', file, this.uploadName(file)));
     return this.http.post<PredictionResult>(`${this.baseUrl}/run`, formData);
   }
@@ -33,17 +34,13 @@ export class PredictionApiService {
   evaluatePrediction(
     targetFile: File,
     sourceFiles: File[],
-    labelColumn: string = 'bug',
-    knnValue: number = 5,
-    coralOption: boolean = true,
-    topK: number = 3
+    labelColumn: string,
+    options: PredictionRequestOptions
   ): Observable<EvaluationResult> {
     const formData = new FormData();
     formData.append('targetFile', targetFile, targetFile.name);
     formData.append('labelColumn', labelColumn);
-    formData.append('knnValue', String(knnValue));
-    formData.append('coralOption', String(coralOption));
-    formData.append('topK', String(topK));
+    this.appendModelOptions(formData, options);
     sourceFiles.forEach(file => formData.append('sourceFiles', file, this.uploadName(file)));
     return this.http.post<EvaluationResult>(`${this.baseUrl}/evaluate`, formData);
   }
@@ -51,5 +48,23 @@ export class PredictionApiService {
   private uploadName(file: File): string {
     const relativePath = file.webkitRelativePath || file.name;
     return relativePath.replace(/[\\/]+/g, '__');
+  }
+
+  private datasetFileFormat(file: File): 'csv' | 'arff' {
+    return file.name.toLowerCase().endsWith('.arff') ? 'arff' : 'csv';
+  }
+
+  private appendModelOptions(formData: FormData, options: PredictionRequestOptions): void {
+    formData.append('classifierType', options.classifierType);
+    formData.append('knnValue', String(options.knnValue));
+    formData.append('autoTuneK', String(options.autoTuneK));
+    formData.append('svmC', String(options.svmC));
+    formData.append('autoTuneSvmC', String(options.autoTuneSvmC));
+    formData.append('coralOption', String(options.coralOption));
+    formData.append('topK', String(options.topK));
+    formData.append('thresholdBeta', String(options.thresholdBeta ?? 2));
+    if (typeof options.decisionThreshold === 'number') {
+      formData.append('decisionThreshold', String(options.decisionThreshold));
+    }
   }
 }

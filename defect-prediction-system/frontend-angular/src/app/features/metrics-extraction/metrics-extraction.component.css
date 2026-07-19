@@ -836,6 +836,18 @@ h2, h3, p {
   font-weight: 800;
 }
 
+.dataset-downloads {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.download-button.secondary {
+  color: #465bcd;
+  background: #eef0ff;
+  border: 1px solid #d7dcfa;
+}
+
 .download-button svg {
   width: 16px;
   fill: none;
@@ -1040,7 +1052,7 @@ tbody tr:hover td {
 .prediction-form {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: minmax(260px, 1.6fr) minmax(130px, .7fr) 105px 118px auto minmax(190px, .95fr);
+  grid-template-columns: minmax(250px, 1.5fr) minmax(105px, .6fr) 110px minmax(155px, .7fr) 105px auto minmax(180px, .9fr);
   gap: 10px;
   align-items: end;
 }
@@ -1063,7 +1075,9 @@ tbody tr:hover td {
   align-items: center;
 }
 
-.prediction-form input[type="text"], .prediction-form input[type="number"] {
+.prediction-form input[type="text"],
+.prediction-form input[type="number"],
+.prediction-form select {
   height: 40px;
   box-sizing: border-box;
   border: 1px solid #d9deea;
@@ -1072,6 +1086,49 @@ tbody tr:hover td {
   color: #35415c;
   background: #fbfcfe;
   outline: 0;
+}
+
+.prediction-form select,
+.evaluation-options select {
+  cursor: pointer;
+}
+
+.parameter-shell {
+  position: relative;
+}
+
+.prediction-form .parameter-shell > input[type="number"],
+.evaluation-options .parameter-shell > input[type="number"] {
+  width: 100%;
+  padding-right: 90px;
+}
+
+.prediction-form .parameter-shell > input[type="number"]:disabled,
+.evaluation-options .parameter-shell > input[type="number"]:disabled {
+  color: #8b94a6;
+  background: #f1f3f7;
+}
+
+.auto-tune-option {
+  position: absolute;
+  top: 50%;
+  right: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #5267dc;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  transform: translateY(-50%);
+  cursor: pointer;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.auto-tune-option input {
+  margin: 0;
+  accent-color: #5267dc;
 }
 
 .prediction-form input:focus {
@@ -1277,6 +1334,7 @@ tbody tr:hover td {
 .source-ranking span {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 7px;
   padding: 6px 8px;
   border-radius: 7px;
@@ -1286,10 +1344,22 @@ tbody tr:hover td {
   font-weight: 800;
 }
 
+.source-ranking span b {
+  font-size: 9px;
+}
+
 .source-ranking small {
   color: #108d84;
   font-size: 8px;
   font-weight: 800;
+}
+
+.source-ranking em {
+  width: 100%;
+  color: #7d879b;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 600;
 }
 
 .prediction-value {
@@ -1324,6 +1394,24 @@ tbody tr:hover td {
   border-radius: 5px;
   font-size: 8px;
   font-weight: 800;
+}
+
+.prediction-actions .classifier-chip,
+.evaluation-result-meta .classifier-chip {
+  color: #087f77;
+  background: #e7f8f5;
+}
+
+.prediction-actions .classifier-chip.svm,
+.evaluation-result-meta .classifier-chip.svm {
+  color: #7149a2;
+  background: #f2ebfb;
+}
+
+.prediction-actions .parameter-chip,
+.evaluation-result-meta .parameter-chip {
+  color: #4f5d75;
+  background: #f2f4f8;
 }
 
 .prediction-actions button {
@@ -1409,43 +1497,79 @@ tbody tr:hover td {
   outline: 0;
 }
 
-.model-test-overview {
+.aeeem-evaluation-notice {
   margin-top: 12px;
+  padding: 13px 14px;
+  border: 1px solid #cfe9e5;
+  border-radius: 10px;
+  background: #f1faf8;
+  color: #536178;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.aeeem-evaluation-notice > strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #167f76;
+  font-size: 11px;
+}
+
+.aeeem-evaluation-notice p {
+  margin: 4px 0;
+}
+
+.aeeem-evaluation-notice code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: white;
+  color: #33415d;
+}
+
+.aeeem-evaluation-notice a {
+  display: inline-block;
+  margin-top: 6px;
+  color: #5267dc;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+#model-evaluation {
+  scroll-margin-top: 20px;
+}
+
+.model-test-metrics {
+  margin-top: 12px;
+}
+
+.model-test-coverage {
+  margin-top: 8px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
-.model-test-overview > div {
-  padding: 10px 12px;
-  border: 1px solid #e2e7ef;
-  border-radius: 9px;
-  background: white;
+.model-test-coverage span {
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: #f5f7fb;
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.model-test-overview .primary {
-  background: #effaf7;
-  border-color: #cdebe4;
-}
-
-.model-test-overview small {
+.model-test-coverage small {
   color: #7f899d;
-  font-size: 8px;
+  font-size: 7px;
   text-transform: uppercase;
-  letter-spacing: .07em;
+  letter-spacing: .05em;
   font-weight: 800;
 }
 
-.model-test-overview strong {
+.model-test-coverage strong {
   color: #35415c;
-  font-size: 18px;
-}
-
-.model-test-overview .primary strong {
-  color: #118e73;
+  font-size: 10px;
 }
 
 .model-test-confusion {
@@ -1517,12 +1641,14 @@ tbody tr:hover td {
 .evaluation-options {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 120px 120px auto minmax(210px, 1.2fr);
+  grid-template-columns: minmax(140px, 1fr) 110px minmax(155px, .7fr) 105px auto minmax(210px, 1.2fr);
   gap: 10px;
   align-items: end;
 }
 
-.evaluation-options input[type="text"], .evaluation-options input[type="number"] {
+.evaluation-options input[type="text"],
+.evaluation-options input[type="number"],
+.evaluation-options select {
   height: 40px;
   box-sizing: border-box;
   border: 1px solid #d9deea;
@@ -1544,9 +1670,75 @@ tbody tr:hover td {
   border-top: 1px solid #edf0f5;
 }
 
+.evaluation-result-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.evaluation-result-heading span {
+  color: #16a174;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.evaluation-result-heading h3 {
+  margin: 4px 0 0;
+  color: #26334e;
+  font-size: 14px;
+}
+
+.evaluation-result-heading > strong {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: #eef0ff;
+  color: #5267dc;
+  font-size: 8px;
+}
+
+.evaluation-result-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.evaluation-result-meta > span,
+.evaluation-result-meta > strong {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 7px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.evaluation-result-meta > strong {
+  color: #5267dc;
+  background: #eef0ff;
+}
+
+.evaluation-overview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.evaluation-scoreboard {
+  min-width: 0;
+}
+
 .evaluation-metrics {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 
@@ -1582,25 +1774,135 @@ tbody tr:hover td {
   color: #118e73;
 }
 
-.confusion-summary {
+.secondary-metrics {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.secondary-metrics span {
+  min-width: 0;
+  padding: 8px 9px;
+  border-radius: 7px;
+  background: #f5f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.secondary-metrics small {
+  color: #7f899d;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.secondary-metrics strong {
+  color: #35415c;
+  font-size: 9px;
+}
+
+.confusion-matrix-section {
   margin: 12px 0 18px;
+  padding: 12px;
+  border: 1px solid #dfe5f0;
+  border-radius: 11px;
+  background: #fbfcff;
+  box-shadow: 0 5px 16px rgba(35, 50, 82, .05);
+}
+
+.confusion-matrix-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.confusion-matrix-heading span {
+  color: #5267dc;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.confusion-matrix-heading h4 {
+  margin: 3px 0 0;
+  color: #293650;
+  font-size: 12px;
+}
+
+.confusion-matrix-heading small {
+  color: #8a93a6;
+  font-size: 8px;
+}
+
+.confusion-summary {
+  margin: 10px 0 0;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 
 .confusion-summary span {
-  padding: 9px 11px;
-  border-radius: 7px;
-  background: #f5f7fb;
-  color: #737d91;
+  min-height: 56px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-top-width: 3px;
+  border-radius: 8px;
+  color: #5f6b82;
   font-size: 9px;
+  font-weight: 800;
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 5px;
 }
 
 .confusion-summary strong {
-  color: #35415c;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.confusion-summary .true-positive {
+  border-color: #bfe7db;
+  background: #eaf8f4;
+}
+
+.confusion-summary .true-positive strong {
+  color: #0c8f6c;
+}
+
+.confusion-summary .true-negative {
+  border-color: #cbdcf4;
+  background: #eef4ff;
+}
+
+.confusion-summary .true-negative strong {
+  color: #466da3;
+}
+
+.confusion-summary .false-positive {
+  border-color: #f0d39e;
+  background: #fff7e8;
+}
+
+.confusion-summary .false-positive strong {
+  color: #ad6b0c;
+}
+
+.confusion-summary .false-negative {
+  border-color: #efc4cc;
+  background: #fff0f2;
+}
+
+.confusion-summary .false-negative strong {
+  color: #c54256;
 }
 
 .evaluation-source-ranking {
@@ -1689,10 +1991,6 @@ tbody tr:hover td {
     grid-column: 1/-1;
   }
 
-  .model-test-overview {
-    grid-template-columns: 1fr 1fr;
-  }
-
   .evaluation-options .run-prediction-button {
     grid-column: 1/-1;
   }
@@ -1741,8 +2039,13 @@ tbody tr:hover td {
   }
 
   .download-button {
-    grid-column: 1/-1;
     justify-content: center;
+  }
+
+  .dataset-downloads {
+    grid-column: 1/-1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   .result-stats {
@@ -1800,7 +2103,7 @@ tbody tr:hover td {
     padding: 22px 16px;
   }
 
-  .evaluation-files, .evaluation-options, .evaluation-metrics, .confusion-summary {
+  .evaluation-files, .evaluation-options, .evaluation-metrics, .secondary-metrics, .confusion-summary {
     grid-template-columns: 1fr;
   }
 
@@ -1813,13 +2116,17 @@ tbody tr:hover td {
     flex-direction: column;
   }
 
-  .model-test-form, .model-test-overview {
+  .model-test-form, .model-test-coverage {
     grid-template-columns: 1fr;
   }
 
   .evaluation-results {
     margin-inline: -16px;
     padding-inline: 16px;
+  }
+
+  .evaluation-result-heading {
+    flex-direction: column;
   }
 
 }

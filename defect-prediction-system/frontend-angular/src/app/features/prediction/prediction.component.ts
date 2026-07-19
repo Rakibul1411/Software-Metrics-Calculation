@@ -33,8 +33,16 @@ export class PredictionComponent {
       this.targetDatasetId,
       this.sourceFiles,
       this.labelColumn,
-      this.knnValue,
-      this.coralOption
+      {
+        classifierType: 'knn',
+        knnValue: this.knnValue,
+        autoTuneK: false,
+        svmC: 1,
+        autoTuneSvmC: false,
+        coralOption: this.coralOption,
+        topK: 3,
+        thresholdBeta: 2
+      }
     ).subscribe({
       next: (data) => {
         this.result = data;
