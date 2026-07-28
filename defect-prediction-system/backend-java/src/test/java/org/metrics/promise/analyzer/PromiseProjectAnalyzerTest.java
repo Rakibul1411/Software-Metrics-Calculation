@@ -69,13 +69,17 @@ class PromiseProjectAnalyzerTest {
                 "public void ping() { }\n" +
                 "}\n" +
                 "}\n");
+        write("src/main/java/fixture/Marker.java",
+                "package fixture;\n" +
+                "public @interface Marker { }\n");
 
         List<PromiseMetricResult> results = PromiseProjectAnalyzer.analyzeDirectories(
                 java.util.Collections.singletonList(project));
         Map<String, PromiseMetricResult> byName = results.stream()
                 .collect(Collectors.toMap(PromiseMetricResult::getFullyQualifiedName, Function.identity()));
 
-        assertTrue(byName.containsKey("fixture.Outer.Nested"));
+        assertFalse(byName.containsKey("fixture.Outer.Nested"));
+        assertTrue(byName.containsKey("fixture.Marker"));
         assertNull(byName.get("fixture.ChildTest"));
 
         PromiseMetricResult child = byName.get("fixture.Child");
@@ -108,6 +112,39 @@ class PromiseProjectAnalyzerTest {
         assertEquals(1, base.getCbo());
 
         assertFalse(results.isEmpty());
+    }
+
+    @Test
+    void selectsOnlyPromiseReleaseProductSources() throws Exception {
+        write("jakarta-ant-1.3/src/main/org/example/Core.java",
+                "package org.example; public class Core { }");
+        write("jakarta-ant-1.3/src/main/org/example/Secondary.java",
+                "package org.example; class Secondary { } class Additional { }");
+        write("jakarta-ant-1.3/src/main/org/apache/tools/ant/taskdefs/SendEmail.java",
+                "package org.apache.tools.ant.taskdefs; public class SendEmail { }");
+        write("jakarta-ant-1.3/src/main/org/apache/tools/ant/taskdefs/optional/OptionalTask.java",
+                "package org.apache.tools.ant.taskdefs.optional; public class OptionalTask { }");
+        write("jakarta-ant-1.3/src/main/org/apache/tools/ant/launch/Launcher.java",
+                "package org.apache.tools.ant.launch; public class Launcher { }");
+        write("jakarta-ant-1.3/src/main/org/apache/tools/ant/util/regexp/Regexp.java",
+                "package org.apache.tools.ant.util.regexp; public interface Regexp { }");
+        write("jakarta-ant-1.3/src/main/org/apache/tools/ant/util/regexp/JakartaRegexpMatcher.java",
+                "package org.apache.tools.ant.util.regexp; public class JakartaRegexpMatcher { }");
+        write("jakarta-ant-1.3/src/antidote/org/example/Gui.java",
+                "package org.example; public class Gui { }");
+
+        List<PromiseMetricResult> results = PromiseProjectAnalyzer.analyzeDirectories(
+                java.util.Collections.singletonList(project));
+        List<String> names = results.stream()
+                .map(PromiseMetricResult::getFullyQualifiedName)
+                .sorted()
+                .collect(Collectors.toList());
+
+        assertEquals(List.of(
+                "org.apache.tools.ant.util.regexp.Regexp",
+                "org.example.Additional",
+                "org.example.Core",
+                "org.example.Secondary"), names);
     }
 
     private void write(String relativePath, String source) throws Exception {

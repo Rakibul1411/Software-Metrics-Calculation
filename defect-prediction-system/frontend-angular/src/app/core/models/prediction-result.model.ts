@@ -59,10 +59,6 @@ export type ClassifierType = 'knn' | 'svm';
 
 export interface PredictionRequestOptions {
   classifierType: ClassifierType;
-  knnValue: number;
-  autoTuneK: boolean;
-  svmC: number;
-  autoTuneSvmC: boolean;
   coralOption: boolean;
   topK: number;
   decisionThreshold?: number;
@@ -75,6 +71,7 @@ export interface ModelConfiguration {
   selectedK?: number | null;
   autoTuneK?: boolean;
   selectedSvmC?: number | null;
+  selectedC?: number | null;
   autoTuneSvmC?: boolean;
   classWeight?: 'balanced' | string | null;
   decisionThreshold?: number;
@@ -87,6 +84,33 @@ export interface ModelConfiguration {
   sourceRankingMethod?: string;
   sourceDominanceWarning?: boolean;
   largestSourceRowShare?: number;
+  modelSelectionStrategy?: string;
+  hyperparameterSelection?: string;
+  imbalanceHandling?: string;
+}
+
+export interface MetricAggregate {
+  mean?: number | null;
+  std?: number | null;
+  validFoldCount: number;
+}
+
+export interface ModelSelection {
+  strategy: string;
+  sourceProjectCount: number;
+  foldCount?: number;
+  selectedClassifier?: ClassifierType;
+  selectedK?: number | null;
+  selectedC?: number | null;
+  decisionThreshold: number;
+  hyperparameterSelectionMetric?: string | null;
+  thresholdSelectionMetric?: string | null;
+  candidateValues?: Array<number>;
+  candidateResults?: Array<Record<string, unknown>>;
+  thresholdCandidateResults?: Array<Record<string, unknown>>;
+  aggregateMetrics?: Record<string, MetricAggregate>;
+  foldResults?: Array<Record<string, unknown>>;
+  warnings?: string[];
 }
 
 export interface ConfusionMatrix {
@@ -100,6 +124,7 @@ export interface EvaluationResult {
   status: string;
   method?: string;
   modelConfiguration?: ModelConfiguration;
+  modelSelection?: ModelSelection;
   selectedSources?: SourceRankingItem[];
   sourceRanking?: SourceRankingItem[];
   metrics: EvaluationMetrics;
@@ -118,6 +143,7 @@ export interface PredictionResult {
   status: string;
   method?: string;
   modelConfiguration?: ModelConfiguration;
+  modelSelection?: ModelSelection;
   selectedSources?: SourceRankingItem[];
   sourceRanking?: SourceRankingItem[];
   predictions: PredictionResultItem[];

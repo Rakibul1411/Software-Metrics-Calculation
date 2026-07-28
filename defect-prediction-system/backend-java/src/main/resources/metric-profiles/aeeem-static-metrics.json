@@ -1,15 +1,17 @@
 {
   "schema": "aeeem-static",
-  "version": "1.1",
-  "description": "AEEEM-compatible static metrics derivable from a Java AST. Defect-history, repository-entropy, and label columns are intentionally excluded from unlabelled target data.",
+  "version": "2.0",
+  "description": "Self-contained JDT and Git implementation of the 56 non-defect AEEEM predictors. Bug-history fields and the class label are intentionally excluded from unlabelled target data.",
   "columns": [
     "ck_oo_numberOfPrivateMethods", "LDHH_lcom", "LDHH_fanIn",
     "WCHU_numberOfPublicAttributes", "WCHU_numberOfAttributes",
-    "LDHH_numberOfPublicMethods", "WCHU_fanIn", "LDHH_numberOfPrivateAttributes",
-    "LDHH_numberOfPublicAttributes", "WCHU_numberOfPrivateMethods",
+    "CvsWEntropy", "LDHH_numberOfPublicMethods", "WCHU_fanIn",
+    "LDHH_numberOfPrivateAttributes", "CvsEntropy", "LDHH_numberOfPublicAttributes",
+    "WCHU_numberOfPrivateMethods",
     "WCHU_numberOfMethods", "ck_oo_numberOfPublicAttributes", "ck_oo_noc",
     "ck_oo_wmc", "LDHH_numberOfPrivateMethods", "WCHU_numberOfPrivateAttributes",
-    "WCHU_noc", "LDHH_numberOfAttributesInherited", "WCHU_wmc", "ck_oo_fanOut",
+    "CvsLogEntropy", "WCHU_noc", "LDHH_numberOfAttributesInherited", "WCHU_wmc",
+    "ck_oo_fanOut",
     "ck_oo_numberOfLinesOfCode", "ck_oo_numberOfAttributesInherited",
     "ck_oo_numberOfMethods", "ck_oo_dit", "ck_oo_fanIn", "LDHH_noc",
     "WCHU_dit", "ck_oo_lcom", "WCHU_numberOfAttributesInherited", "ck_oo_rfc",
@@ -17,9 +19,11 @@
     "WCHU_fanOut", "WCHU_lcom", "ck_oo_cbo", "WCHU_rfc",
     "ck_oo_numberOfAttributes", "ck_oo_numberOfPrivateAttributes",
     "WCHU_numberOfPublicMethods", "LDHH_dit", "WCHU_cbo",
-    "WCHU_numberOfMethodsInherited", "LDHH_fanOut", "LDHH_numberOfMethodsInherited",
+    "CvsLinEntropy", "WCHU_numberOfMethodsInherited", "LDHH_fanOut",
+    "LDHH_numberOfMethodsInherited",
     "LDHH_rfc", "ck_oo_numberOfMethodsInherited", "ck_oo_numberOfPublicMethods",
-    "LDHH_cbo", "WCHU_numberOfLinesOfCode", "LDHH_numberOfMethods"
+    "LDHH_cbo", "WCHU_numberOfLinesOfCode", "CvsExpEntropy",
+    "LDHH_numberOfMethods"
   ],
   "identifierColumn": "name",
   "sourceLabelColumn": "class"

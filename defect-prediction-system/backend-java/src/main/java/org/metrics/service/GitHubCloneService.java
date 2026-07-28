@@ -8,6 +8,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -93,10 +94,13 @@ public class GitHubCloneService {
     }
 
     public Path cloneRepository(String gitUrl, boolean fullHistory) throws IOException {
-        String normalizedUrl = validateAndNormalizeUrl(gitUrl);
+        return cloneRepository(parseTarget(gitUrl), fullHistory);
+    }
+
+    public Path cloneRepository(GitHubTarget target, boolean fullHistory) throws IOException {
         Path targetPath = cloneLocation.resolve("git_" + UUID.randomUUID()).toAbsolutePath().normalize();
         try {
-            List<List<String>> attempts = cloneAttempts(normalizedUrl, targetPath, fullHistory);
+            List<List<String>> attempts = cloneAttempts(target, targetPath, fullHistory);
             IOException lastFailure = null;
             for (List<String> command : attempts) {
                 FileStorageService.deleteRecursively(targetPath);
@@ -114,18 +118,42 @@ public class GitHubCloneService {
         }
     }
 
-    private List<List<String>> cloneAttempts(String url, Path targetPath, boolean fullHistory) {
+    List<List<String>> cloneAttempts(String url, Path targetPath, boolean fullHistory) {
+        return cloneAttempts(new GitHubTarget(url, null, ""), targetPath, fullHistory);
+    }
+
+    List<List<String>> cloneAttempts(GitHubTarget target, Path targetPath, boolean fullHistory) {
         List<List<String>> attempts = new ArrayList<>();
         if (fullHistory) {
-            attempts.add(Arrays.asList("git", "-c", "http.version=HTTP/1.1", "clone",
-                    "--no-single-branch", "--filter=blob:none", "--no-checkout", url, targetPath.toString()));
-            attempts.add(Arrays.asList("git", "-c", "http.version=HTTP/1.1", "clone",
-                    "--no-single-branch", url, targetPath.toString()));
+            // AEEEM later calculates numstat for historical ranges. A partial
+            // blobless clone would fetch missing blobs during that calculation,
+            // allowing a transient GitHub error to destroy an otherwise
+            // completed multi-snapshot extraction.
+            attempts.add(cloneCommand(target, targetPath, true));
+            attempts.add(cloneCommand(target, targetPath, false));
         } else {
-            attempts.add(Arrays.asList("git", "-c", "http.version=HTTP/1.1", "clone",
-                    "--depth", "1", "--single-branch", url, targetPath.toString()));
+            List<String> command = cloneCommand(target, targetPath, true);
+            command.add(command.size() - 2, "--depth");
+            command.add(command.size() - 2, "1");
+            attempts.add(command);
         }
         return attempts;
+    }
+
+    private List<String> cloneCommand(GitHubTarget target, Path targetPath, boolean singleBranch) {
+        List<String> command = new ArrayList<>(Arrays.asList(
+                "git", "-c", "http.version=HTTP/1.1", "clone"));
+        if (singleBranch) {
+            command.add("--single-branch");
+        }
+        command.add("--no-checkout");
+        if (target.getBranch() != null) {
+            command.add("--branch");
+            command.add(target.getBranch());
+        }
+        command.add(target.getRepositoryUrl());
+        command.add(targetPath.toString());
+        return command;
     }
 
     private void runClone(List<String> command) throws IOException {
@@ -159,6 +187,10 @@ public class GitHubCloneService {
     }
 
     String validateAndNormalizeUrl(String gitUrl) {
+        return parseTarget(gitUrl).getRepositoryUrl();
+    }
+
+    public GitHubTarget parseTarget(String gitUrl) {
         if (gitUrl == null || gitUrl.trim().isEmpty()) {
             throw new IllegalArgumentException("Enter a GitHub repository URL.");
         }
@@ -167,15 +199,44 @@ public class GitHubCloneService {
             String host = uri.getHost();
             String path = uri.getPath();
             boolean githubHost = "github.com".equalsIgnoreCase(host) || "www.github.com".equalsIgnoreCase(host);
-            boolean repositoryUrl = path != null
-                    && path.matches("/[^/]+/[^/]+(?:/tree/[^/]+(?:/.*)?)?/?");
-            if (!"https".equalsIgnoreCase(uri.getScheme()) || !githubHost || uri.getUserInfo() != null
-                    || uri.getQuery() != null || uri.getFragment() != null || !repositoryUrl) {
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || !githubHost
+                    || uri.getUserInfo() != null || uri.getQuery() != null
+                    || uri.getFragment() != null || path == null) {
                 throw new IllegalArgumentException("Use an HTTPS GitHub repository URL or folder URL such as https://github.com/owner/repository/tree/main/src.");
             }
-            String[] pathParts = path.split("/");
-            return "https://github.com/" + pathParts[1] + "/" + pathParts[2];
+            String decodedPath = URLDecoder.decode(path, StandardCharsets.UTF_8.name());
+            String[] pathParts = decodedPath.split("/");
+            if (pathParts.length < 3 || pathParts[1].isEmpty() || pathParts[2].isEmpty()) {
+                throw new IllegalArgumentException("Use an HTTPS GitHub repository URL or folder URL such as https://github.com/owner/repository/tree/main/src.");
+            }
+            String repositoryName = pathParts[2].endsWith(".git")
+                    ? pathParts[2].substring(0, pathParts[2].length() - 4)
+                    : pathParts[2];
+            String branch = null;
+            StringBuilder module = new StringBuilder();
+            if (pathParts.length > 3) {
+                if (pathParts.length < 5 || !"tree".equals(pathParts[3])
+                        || pathParts[4].isEmpty()) {
+                    throw new IllegalArgumentException("Use an HTTPS GitHub repository URL or folder URL such as https://github.com/owner/repository/tree/main/src.");
+                }
+                branch = pathParts[4];
+                for (int index = 5; index < pathParts.length; index++) {
+                    if (pathParts[index].isEmpty()) {
+                        continue;
+                    }
+                    if (module.length() > 0) {
+                        module.append('/');
+                    }
+                    module.append(pathParts[index]);
+                }
+            }
+            return new GitHubTarget(
+                    "https://github.com/" + pathParts[1] + "/" + repositoryName,
+                    branch,
+                    module.toString());
         } catch (URISyntaxException exception) {
+            throw new IllegalArgumentException("Enter a valid GitHub repository URL.");
+        } catch (IOException exception) {
             throw new IllegalArgumentException("Enter a valid GitHub repository URL.");
         }
     }
@@ -218,6 +279,31 @@ public class GitHubCloneService {
             }
         } catch (IOException ignored) {
             // The process exit code still gives the caller a reliable failure signal.
+        }
+    }
+
+    public static final class GitHubTarget {
+        private final String repositoryUrl;
+        private final String branch;
+        private final String modulePath;
+
+        private GitHubTarget(String repositoryUrl, String branch, String modulePath) {
+            this.repositoryUrl = repositoryUrl;
+            this.branch = branch == null || branch.trim().isEmpty() ? null : branch.trim();
+            this.modulePath = org.metrics.aeeem.history.AeeemAnalysisOptions
+                    .normalizeModulePath(modulePath);
+        }
+
+        public String getRepositoryUrl() {
+            return repositoryUrl;
+        }
+
+        public String getBranch() {
+            return branch;
+        }
+
+        public String getModulePath() {
+            return modulePath;
         }
     }
 }

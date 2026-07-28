@@ -51,7 +51,7 @@
       <button type="button" class="format-card" [class.selected]="datasetFormat === 'aeeem'"
               (click)="setDatasetFormat('aeeem')" [attr.aria-pressed]="datasetFormat === 'aeeem'">
         <span class="format-icon aeeem" aria-hidden="true">A</span>
-        <span class="format-copy"><strong>AEEEM</strong><small>JDT + Git history metrics</small></span>
+        <span class="format-copy"><strong>AEEEM</strong><small>17 static + 34 metric-history + 5 Git-entropy</small></span>
         <span class="check" aria-hidden="true">✓</span>
         <span class="metric-count">56 features · 57 CSV columns</span>
       </button>
@@ -64,7 +64,7 @@
       <div>
         <h2>Add your Java project</h2>
         <p *ngIf="datasetFormat === 'promise'">Upload an archive or analyze a public GitHub repository.</p>
-        <p *ngIf="datasetFormat === 'aeeem'">Use a GitHub repository or an archive containing its full <strong>.git</strong> history. The latest 26 bi-weekly snapshots are analyzed by default.</p>
+        <p *ngIf="datasetFormat === 'aeeem'">Use a GitHub repository or an archive containing its full <strong>.git</strong> history. Choose current-project analysis or one exact AEEEM benchmark window below.</p>
       </div>
     </div>
 
@@ -111,6 +111,35 @@
       </div>
     </div>
 
+    <div *ngIf="datasetFormat === 'aeeem'" class="history-profile-panel">
+      <div class="history-profile-heading">
+        <div>
+          <label for="aeeem-profile">History period</label>
+          <small>Benchmark profiles use the dates and releases reported with the supplied AEEEM datasets.</small>
+        </div>
+        <span>14-day snapshots</span>
+      </div>
+      <select id="aeeem-profile" name="aeeemProfile"
+              [(ngModel)]="aeeemProfile" (ngModelChange)="clearResult()">
+        <option *ngFor="let profile of aeeemProfiles" [ngValue]="profile.id">
+          {{ profile.name }}
+        </option>
+      </select>
+      <div class="history-profile-details">
+        <div><span>Period</span><strong>{{ selectedAeeemProfile.period }}</strong></div>
+        <div><span>Release</span><strong>{{ selectedAeeemProfile.release }}</strong></div>
+        <div *ngIf="selectedAeeemProfile.versions">
+          <span>Reference</span>
+          <strong>{{ selectedAeeemProfile.versions }} versions · {{ selectedAeeemProfile.rows }} labelled rows</strong>
+        </div>
+      </div>
+      <p>
+        A GitHub <code>/tree/branch/folder</code> URL restricts static snapshots and
+        Git entropy to that folder. Sibling modules, tests, fixtures, JCL stubs,
+        and generated sources are not exported.
+      </p>
+    </div>
+
     <div *ngIf="error" class="alert error" role="alert">
       <span aria-hidden="true">!</span><p>{{ error }}</p>
     </div>
@@ -152,7 +181,7 @@
       </li>
       <li>
         <span>2</span>
-        <div><strong>JDT AST analysis</strong><p>Classes, methods, coupling and complexity are parsed.</p></div>
+        <div><strong>JDT + history analysis</strong><p>Source metrics are parsed; AEEEM also mines biweekly Git changes.</p></div>
       </li>
       <li>
         <span>3</span>
@@ -188,11 +217,48 @@
       </a>
     </div>
   </div>
+  <div *ngIf="result.aeeemAnalysis as analysis" class="analysis-provenance">
+    <div>
+      <span>AEEEM profile</span>
+      <strong>{{ analysis.profileName }}</strong>
+    </div>
+    <div>
+      <span>Calculated period</span>
+      <strong>{{ analysis.historyStart }} → {{ analysis.releaseDate }}</strong>
+    </div>
+    <div>
+      <span>Snapshots</span>
+      <strong>{{ analysis.snapshotCount }}</strong>
+    </div>
+    <div>
+      <span>Source scope</span>
+      <strong>{{ analysis.modulePath || 'Repository root' }}</strong>
+    </div>
+    <div>
+      <span>Release commit</span>
+      <strong><code>{{ analysis.releaseCommit | slice:0:12 }}</code></strong>
+    </div>
+  </div>
   <div class="result-stats">
     <div><small>Classes</small><strong>{{ result.rowCount }}</strong></div>
     <div><small>Columns</small><strong>{{ result.extractedColumns.length }}</strong></div>
     <div><small>Format</small><strong>{{ result.datasetFormat | uppercase }}</strong></div>
     <div class="dataset-id"><small>Target dataset ID</small><strong>{{ result.targetDatasetId }}</strong></div>
+  </div>
+  <div *ngIf="result.datasetFormat === 'aeeem'" class="aeeem-feature-summary">
+    <div>
+      <span class="summary-check" aria-hidden="true">✓</span>
+      <p><strong>56-field AEEEM target schema generated</strong>
+        <small>Self-contained JDT and Git implementation; benchmark profiles align repository scope and historical period.</small>
+      </p>
+    </div>
+    <ul aria-label="AEEEM feature groups">
+      <li><b>17</b><span>final CK/OO</span></li>
+      <li><b>17</b><span>WCHU</span></li>
+      <li><b>17</b><span>LDHH</span></li>
+      <li><b>5</b><span>Cvs entropy</span></li>
+    </ul>
+    <p class="summary-note">Bug-history predictors and the <code>class</code> label are intentionally excluded because this is an unlabelled target dataset. Historic FAMIX/CVS values are not expected to be byte-identical to a modern Git/JDT extraction.</p>
   </div>
   <div class="preview-title">
     <div>
@@ -253,20 +319,11 @@
           <option value="svm">Linear SVM</option>
         </select>
       </label>
-      <label class="model-parameter-control">
+      <div class="automatic-parameter-control">
         <span>{{ classifierType === 'knn' ? 'K neighbors' : 'SVM C' }}</span>
-        <div class="parameter-shell">
-          <input *ngIf="classifierType === 'knn'" type="number" [(ngModel)]="knnValue"
-                 min="1" step="1" [disabled]="autoTuneK">
-          <input *ngIf="classifierType === 'svm'" type="number" [(ngModel)]="svmC"
-                 min="0.000001" step="0.1" [disabled]="autoTuneSvmC">
-          <span class="auto-tune-option">
-            <input *ngIf="classifierType === 'knn'" type="checkbox" [(ngModel)]="autoTuneK">
-            <input *ngIf="classifierType === 'svm'" type="checkbox" [(ngModel)]="autoTuneSvmC">
-            Auto
-          </span>
-        </div>
-      </label>
+        <strong>Selected automatically</strong>
+        <small>Source-only validation</small>
+      </div>
       <label>
         <span>Top-K sources</span>
         <input type="number" [(ngModel)]="topKValue" min="1" [max]="sourceFiles.length || null" step="1">
@@ -293,13 +350,24 @@
           <p>{{ predictionResult.method || 'Similarity-based CORAL defect classifications.' }}</p>
         </div>
         <div class="prediction-actions">
-          <span class="classifier-chip" [class.svm]="predictionResult.modelConfiguration?.classifierType === 'svm'">
+          <span class="classifier-chip" [class.svm]="isSvmConfiguration(predictionResult.modelConfiguration)">
             {{ classifierName(predictionResult.modelConfiguration) }}
           </span>
           <span class="parameter-chip">{{ classifierSetting(predictionResult.modelConfiguration) }}</span>
           <span>{{ predictionResult.predictions.length }} classes</span>
           <button type="button" (click)="downloadPredictionCsv()">Download prediction CSV</button>
         </div>
+      </div>
+      <div *ngIf="predictionResult.modelSelection as selection" class="model-selection-summary">
+        <div>
+          <span>Automatic model selection</span>
+          <strong>{{ selection.strategy }}</strong>
+        </div>
+        <small>
+          {{ selection.foldCount || selection.foldResults?.length || 0 }} validation folds
+          · {{ selection.candidateValues?.length || selection.candidateResults?.length || 0 }} candidates
+          · threshold {{ selection.decisionThreshold | number:'1.2-2' }}
+        </small>
       </div>
       <div class="prediction-dashboard">
         <div class="prediction-summary-column">
@@ -512,20 +580,11 @@
         <option value="svm">Linear SVM</option>
       </select>
     </label>
-    <label class="model-parameter-control">
+    <div class="automatic-parameter-control">
       <span>{{ evaluationClassifierType === 'knn' ? 'K neighbors' : 'SVM C' }}</span>
-      <div class="parameter-shell">
-        <input *ngIf="evaluationClassifierType === 'knn'" type="number" [(ngModel)]="evaluationKnnValue"
-               min="1" step="1" [disabled]="evaluationAutoTuneK">
-        <input *ngIf="evaluationClassifierType === 'svm'" type="number" [(ngModel)]="evaluationSvmC"
-               min="0.000001" step="0.1" [disabled]="evaluationAutoTuneSvmC">
-        <span class="auto-tune-option">
-          <input *ngIf="evaluationClassifierType === 'knn'" type="checkbox" [(ngModel)]="evaluationAutoTuneK">
-          <input *ngIf="evaluationClassifierType === 'svm'" type="checkbox" [(ngModel)]="evaluationAutoTuneSvmC">
-          Auto
-        </span>
-      </div>
-    </label>
+      <strong>Selected automatically</strong>
+      <small>Source-only validation</small>
+    </div>
     <label>
       <span>Top-K sources</span>
       <input type="number" [(ngModel)]="evaluationTopKValue" min="1" [max]="evaluationSourceFiles.length || null" step="1">
@@ -552,12 +611,23 @@
         <h3>{{ evaluationResult.method || 'Similarity-based CORAL defect prediction' }}</h3>
       </div>
       <div class="evaluation-result-meta">
-        <span class="classifier-chip" [class.svm]="evaluationResult.modelConfiguration?.classifierType === 'svm'">
+        <span class="classifier-chip" [class.svm]="isSvmConfiguration(evaluationResult.modelConfiguration)">
           {{ classifierName(evaluationResult.modelConfiguration) }}
         </span>
         <span class="parameter-chip">{{ classifierSetting(evaluationResult.modelConfiguration) }}</span>
         <strong>{{ evaluationResult.predictions.length }} evaluated classes</strong>
       </div>
+    </div>
+    <div *ngIf="evaluationResult.modelSelection as selection" class="model-selection-summary evaluation-selection-summary">
+      <div>
+        <span>Automatic model selection</span>
+        <strong>{{ selection.strategy }}</strong>
+      </div>
+      <small>
+        {{ selection.foldCount || selection.foldResults?.length || 0 }} validation folds
+        · {{ selection.candidateValues?.length || selection.candidateResults?.length || 0 }} candidates
+        · threshold {{ selection.decisionThreshold | number:'1.2-2' }}
+      </small>
     </div>
 
     <div class="evaluation-overview-grid">

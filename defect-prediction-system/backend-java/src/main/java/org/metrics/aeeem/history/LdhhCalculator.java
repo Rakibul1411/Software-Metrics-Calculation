@@ -6,67 +6,87 @@ import java.util.Map;
 
 import org.metrics.aeeem.model.AeeemMetricResult;
 
+/**
+ * Linearly decayed history of adaptive entropy (LDHH) for the 17 source metrics.
+ */
 public final class LdhhCalculator {
-
-    private static final double DECAY = 0.9d;
 
     private LdhhCalculator() {
     }
 
     public static void apply(List<Map<String, AeeemMetricResult>> snapshots,
                              Map<String, AeeemMetricResult> finalSnapshot) {
-        Map<String, double[]> accumulated = new LinkedHashMap<>();
-        int intervalCount = snapshots.size() - 1;
-        for (int snapshotIndex = 1; snapshotIndex < snapshots.size(); snapshotIndex++) {
-            Map<String, double[]> changes = changes(snapshots.get(snapshotIndex - 1), snapshots.get(snapshotIndex));
-            double[] totals = totals(changes);
-            double recencyWeight = Math.pow(DECAY, intervalCount - snapshotIndex);
-            for (Map.Entry<String, double[]> entry : changes.entrySet()) {
-                double[] result = accumulated.computeIfAbsent(entry.getKey(), ignored ->
-                        new double[AeeemMetricAccess.FEATURE_COUNT]);
-                for (int metricIndex = 0; metricIndex < result.length; metricIndex++) {
-                    if (totals[metricIndex] == 0d) {
-                        continue;
+        apply(MetricDeltaHistory.from(snapshots, finalSnapshot.keySet()), finalSnapshot,
+                AeeemHistoryConfiguration.fromEnvironment());
+    }
+
+    static void apply(MetricDeltaHistory history,
+                      Map<String, AeeemMetricResult> finalSnapshot,
+                      AeeemHistoryConfiguration configuration) {
+        Map<String, double[]> accumulated = emptyValues(finalSnapshot);
+        int intervalCount = history.getIntervals().size();
+
+        for (MetricDeltaHistory.Interval interval : history.getIntervals()) {
+            double[] totals = new double[AeeemMetricAccess.FEATURE_COUNT];
+            int[] changedClassCounts = new int[AeeemMetricAccess.FEATURE_COUNT];
+            for (double[] deltas : interval.getDeltasByClass().values()) {
+                for (int metric = 0; metric < deltas.length; metric++) {
+                    if (deltas[metric] > 0d) {
+                        totals[metric] += deltas[metric];
+                        changedClassCounts[metric]++;
                     }
-                    double probability = entry.getValue()[metricIndex] / totals[metricIndex];
-                    if (probability > 0d) {
-                        result[metricIndex] += recencyWeight * -probability * Math.log(probability);
+                }
+            }
+
+            int age = intervalCount - 1 - interval.getIndex();
+            double denominator = configuration.getLinearDecayFactor() * (age + 1d);
+            for (int metric = 0; metric < AeeemMetricAccess.FEATURE_COUNT; metric++) {
+                double entropy = adaptiveEntropy(
+                        interval.getDeltasByClass(), metric,
+                        totals[metric], changedClassCounts[metric]);
+                if (entropy == 0d) {
+                    continue;
+                }
+                double contribution = entropy / denominator;
+                for (Map.Entry<String, double[]> entry
+                        : interval.getDeltasByClass().entrySet()) {
+                    if (entry.getValue()[metric] > 0d) {
+                        accumulated.get(entry.getKey())[metric] += contribution;
                     }
                 }
             }
         }
+
         for (Map.Entry<String, AeeemMetricResult> entry : finalSnapshot.entrySet()) {
-            AeeemMetricAccess.setLdhhValues(entry.getValue(), accumulated.getOrDefault(
-                    entry.getKey(), new double[AeeemMetricAccess.FEATURE_COUNT]));
+            AeeemMetricAccess.setLdhhValues(entry.getValue(), accumulated.get(entry.getKey()));
         }
     }
 
-    private static Map<String, double[]> changes(Map<String, AeeemMetricResult> previous,
-                                                  Map<String, AeeemMetricResult> current) {
-        Map<String, double[]> result = new LinkedHashMap<>();
-        for (Map.Entry<String, AeeemMetricResult> entry : current.entrySet()) {
-            AeeemMetricResult oldValue = previous.get(entry.getKey());
-            if (oldValue == null) {
-                continue;
-            }
-            double[] oldMetrics = AeeemMetricAccess.staticValues(oldValue);
-            double[] newMetrics = AeeemMetricAccess.staticValues(entry.getValue());
-            double[] delta = new double[AeeemMetricAccess.FEATURE_COUNT];
-            for (int metricIndex = 0; metricIndex < delta.length; metricIndex++) {
-                delta[metricIndex] = Math.abs(newMetrics[metricIndex] - oldMetrics[metricIndex]);
-            }
-            result.put(entry.getKey(), delta);
+    static double adaptiveEntropy(Map<String, double[]> deltasByClass,
+                                  int metric,
+                                  double total,
+                                  int changedClassCount) {
+        if (total <= 0d || changedClassCount <= 1) {
+            return 0d;
         }
-        return result;
+        double logBase = Math.log(changedClassCount);
+        double entropy = 0d;
+        for (double[] deltas : deltasByClass.values()) {
+            double delta = deltas[metric];
+            if (delta > 0d) {
+                double probability = delta / total;
+                entropy -= probability * Math.log(probability) / logBase;
+            }
+        }
+        return entropy;
     }
 
-    private static double[] totals(Map<String, double[]> changes) {
-        double[] totals = new double[AeeemMetricAccess.FEATURE_COUNT];
-        for (double[] values : changes.values()) {
-            for (int metricIndex = 0; metricIndex < totals.length; metricIndex++) {
-                totals[metricIndex] += values[metricIndex];
-            }
+    private static Map<String, double[]> emptyValues(
+            Map<String, AeeemMetricResult> finalSnapshot) {
+        Map<String, double[]> values = new LinkedHashMap<>();
+        for (String className : finalSnapshot.keySet()) {
+            values.put(className, new double[AeeemMetricAccess.FEATURE_COUNT]);
         }
-        return totals;
+        return values;
     }
 }
