@@ -17,6 +17,16 @@ import { PredictionApiService } from '../../core/services/prediction-api.service
 type DatasetFormat = 'promise' | 'aeeem';
 type SourceMode = 'zip' | 'github';
 type DatasetFileExtension = 'csv' | 'arff';
+type AeeemProfileId = 'current' | 'jdt' | 'pde' | 'eq' | 'ml' | 'lc';
+
+interface AeeemProfileOption {
+  id: AeeemProfileId;
+  name: string;
+  period: string;
+  release: string;
+  versions: number | null;
+  rows: number | null;
+}
 
 interface ModelTestRow {
   className: string;
@@ -48,8 +58,6 @@ interface ModelTestResult {
 }
 
 const DEFAULT_LABEL_COLUMN = 'bug';
-const DEFAULT_KNN_VALUE = 5;
-const DEFAULT_SVM_C = 1;
 const DEFAULT_TOP_K_VALUE = 3;
 const MAX_ZIP_BYTES = 50 * 1024 * 1024;
 const BUGGY_VALUES = new Set(['buggy', 'defective', 'true', 'yes']);
@@ -64,6 +72,57 @@ export class MetricsExtractionComponent implements OnDestroy {
   @ViewChild('evaluationTableShell') private evaluationTableShell?: ElementRef<HTMLElement>;
 
   datasetFormat: DatasetFormat = 'promise';
+  aeeemProfile: AeeemProfileId = 'current';
+  readonly aeeemProfiles: AeeemProfileOption[] = [
+    {
+      id: 'current',
+      name: 'Current project / HEAD',
+      period: 'Latest 26 bi-weekly snapshots by default',
+      release: 'Current repository state',
+      versions: null,
+      rows: null
+    },
+    {
+      id: 'jdt',
+      name: 'JDT · AEEEM benchmark',
+      period: '2005-01-01 → 2008-06-17',
+      release: 'Eclipse JDT Core 3.4',
+      versions: 91,
+      rows: 997
+    },
+    {
+      id: 'pde',
+      name: 'PDE · AEEEM benchmark',
+      period: '2005-01-01 → 2008-09-11',
+      release: 'Eclipse PDE UI 3.4.1',
+      versions: 97,
+      rows: 1497
+    },
+    {
+      id: 'eq',
+      name: 'EQ · AEEEM benchmark',
+      period: '2005-01-01 → 2008-06-25',
+      release: 'Equinox framework 3.4',
+      versions: 91,
+      rows: 324
+    },
+    {
+      id: 'ml',
+      name: 'ML · AEEEM benchmark',
+      period: '2005-01-17 → 2009-03-17',
+      release: 'Mylyn 3.1',
+      versions: 98,
+      rows: 1862
+    },
+    {
+      id: 'lc',
+      name: 'LC · AEEEM benchmark',
+      period: '2005-01-01 → 2008-10-08',
+      release: 'Apache Lucene 2.4.0',
+      versions: 99,
+      rows: 691
+    }
+  ];
   sourceMode: SourceMode = 'zip';
   selectedZip: File | null = null;
   githubUrl = '';
@@ -75,10 +134,6 @@ export class MetricsExtractionComponent implements OnDestroy {
   sourceFiles: File[] = [];
   labelColumn = DEFAULT_LABEL_COLUMN;
   classifierType: ClassifierType = 'knn';
-  knnValue = DEFAULT_KNN_VALUE;
-  autoTuneK = false;
-  svmC = DEFAULT_SVM_C;
-  autoTuneSvmC = false;
   topKValue = DEFAULT_TOP_K_VALUE;
   coralOption = true;
   predictionLoading = false;
@@ -92,10 +147,6 @@ export class MetricsExtractionComponent implements OnDestroy {
   evaluationTargetFile: File | null = null;
   evaluationLabelColumn = DEFAULT_LABEL_COLUMN;
   evaluationClassifierType: ClassifierType = 'knn';
-  evaluationKnnValue = DEFAULT_KNN_VALUE;
-  evaluationAutoTuneK = false;
-  evaluationSvmC = DEFAULT_SVM_C;
-  evaluationAutoTuneSvmC = false;
   evaluationTopKValue = DEFAULT_TOP_K_VALUE;
   evaluationCoralOption = true;
   evaluationLoading = false;
@@ -171,6 +222,8 @@ export class MetricsExtractionComponent implements OnDestroy {
 
     this.metricsApi.extractMetrics({
       datasetFormat: this.datasetFormat,
+      aeeemProfile: this.datasetFormat === 'aeeem'
+        ? this.aeeemProfile : undefined,
       projectZip: this.sourceMode === 'zip' ? this.selectedZip ?? undefined : undefined,
       githubUrl: this.sourceMode === 'github' ? this.githubUrl : undefined
     }).pipe(finalize(() => {
@@ -186,6 +239,11 @@ export class MetricsExtractionComponent implements OnDestroy {
     const minutes = Math.floor(this.analysisElapsedSeconds / 60);
     const seconds = this.analysisElapsedSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  get selectedAeeemProfile(): AeeemProfileOption {
+    return this.aeeemProfiles.find(profile => profile.id === this.aeeemProfile)
+      ?? this.aeeemProfiles[0];
   }
 
   get canExtract(): boolean {
@@ -240,13 +298,11 @@ export class MetricsExtractionComponent implements OnDestroy {
 
   get canRunPrediction(): boolean {
     return !!this.result && this.sourceFiles.length > 0 && !this.predictionLoading
-      && this.isValidModelOptions(this.classifierType, this.knnValue, this.svmC)
       && this.topKValue >= 1 && this.hasOneDatasetFormat(this.sourceFiles);
   }
 
   get canRunEvaluation(): boolean {
     return !!this.evaluationTargetFile && this.evaluationSourceFiles.length > 0 && !this.evaluationLoading
-      && this.isValidModelOptions(this.evaluationClassifierType, this.evaluationKnnValue, this.evaluationSvmC)
       && this.evaluationTopKValue >= 1
       && this.hasOneDatasetFormat(this.evaluationSourceFiles)
       && this.datasetFileFormat(this.evaluationTargetFile) === this.datasetFileFormat(this.evaluationSourceFiles[0]);
@@ -309,7 +365,7 @@ export class MetricsExtractionComponent implements OnDestroy {
 
   classifierSetting(configuration: ModelConfiguration | undefined): string {
     if (this.isSvmConfiguration(configuration)) {
-      const cValue = configuration?.selectedSvmC;
+      const cValue = configuration?.selectedC ?? configuration?.selectedSvmC;
       return typeof cValue === 'number' ? `C = ${cValue}` : 'Balanced classes';
     }
     const kValue = configuration?.selectedK;
@@ -318,6 +374,11 @@ export class MetricsExtractionComponent implements OnDestroy {
 
   usesNearestNeighbors(result: PredictionResult | null): boolean {
     return !this.isSvmConfiguration(result?.modelConfiguration);
+  }
+
+  isSvmConfiguration(configuration: ModelConfiguration | undefined): boolean {
+    return configuration?.classifierType === 'svm'
+      || configuration?.classifier?.toLowerCase().includes('svm') === true;
   }
 
   metricNumber(value: number | null | undefined): number {
@@ -736,10 +797,6 @@ export class MetricsExtractionComponent implements OnDestroy {
   private predictionOptions(): PredictionRequestOptions {
     return {
       classifierType: this.classifierType,
-      knnValue: this.knnValue,
-      autoTuneK: this.autoTuneK,
-      svmC: this.svmC,
-      autoTuneSvmC: this.autoTuneSvmC,
       coralOption: this.coralOption,
       topK: this.normalizedTopK(this.topKValue, this.sourceFiles.length),
       thresholdBeta: 2
@@ -749,25 +806,10 @@ export class MetricsExtractionComponent implements OnDestroy {
   private evaluationOptions(): PredictionRequestOptions {
     return {
       classifierType: this.evaluationClassifierType,
-      knnValue: this.evaluationKnnValue,
-      autoTuneK: this.evaluationAutoTuneK,
-      svmC: this.evaluationSvmC,
-      autoTuneSvmC: this.evaluationAutoTuneSvmC,
       coralOption: this.evaluationCoralOption,
       topK: this.normalizedTopK(this.evaluationTopKValue, this.evaluationSourceFiles.length),
       thresholdBeta: 2
     };
-  }
-
-  private isValidModelOptions(classifier: ClassifierType, knnValue: number, svmC: number): boolean {
-    return classifier === 'knn'
-      ? Number.isFinite(knnValue) && knnValue >= 1
-      : Number.isFinite(svmC) && svmC > 0;
-  }
-
-  private isSvmConfiguration(configuration: ModelConfiguration | undefined): boolean {
-    return configuration?.classifierType === 'svm'
-      || configuration?.classifier?.toLowerCase().includes('svm') === true;
   }
 
   private hasExpectedClassifier(

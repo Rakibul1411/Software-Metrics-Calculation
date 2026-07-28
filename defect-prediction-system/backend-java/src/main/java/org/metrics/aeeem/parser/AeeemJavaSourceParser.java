@@ -18,6 +18,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.jar.JarFile;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.compiler.IProblem;
@@ -28,42 +30,93 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.FileASTRequestor;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
+import org.eclipse.jdt.core.dom.TypeDeclarationStatement;
 import org.metrics.aeeem.calculator.AeeemStaticMetricsCalculator;
 import org.metrics.aeeem.model.AeeemMetricResult;
 
 public final class AeeemJavaSourceParser {
 
-    private static final int MAX_DIAGNOSTICS = 30;
+    private static final int MAX_DIAGNOSTICS = 5;
+    private static final int DEFAULT_BATCH_SIZE = 96;
+    private static final Pattern PACKAGE_DECLARATION = Pattern.compile(
+            "(?m)^\\s*package\\s+([\\p{javaJavaIdentifierStart}][\\p{javaJavaIdentifierPart}]*"
+                    + "(?:\\.[\\p{javaJavaIdentifierStart}][\\p{javaJavaIdentifierPart}]*)*)\\s*;");
 
     private AeeemJavaSourceParser() {
     }
 
     public static List<AeeemMetricResult> parseProject(Path projectRoot) throws IOException {
-        List<Path> javaFiles = collectJavaFiles(projectRoot);
+        return parseProject(projectRoot, projectRoot);
+    }
+
+    /**
+     * Parses only {@code sourceScope}, while keeping repository-relative paths
+     * anchored at {@code projectRoot}. This prevents sibling modules from
+     * becoming output rows without breaking Git file-to-class matching.
+     */
+    public static List<AeeemMetricResult> parseProject(
+            Path projectRoot,
+            Path sourceScope) throws IOException {
+        Path normalizedRoot = projectRoot.toAbsolutePath().normalize();
+        Path normalizedScope = sourceScope.toAbsolutePath().normalize();
+        if (!normalizedScope.startsWith(normalizedRoot)) {
+            throw new IllegalArgumentException(
+                    "AEEEM source scope must be inside the Git repository.");
+        }
+        if (!Files.isDirectory(normalizedScope)) {
+            return java.util.Collections.emptyList();
+        }
+        List<Path> javaFiles = ProductionSourceSelector.collectJavaFiles(normalizedScope);
         if (javaFiles.isEmpty()) {
             return java.util.Collections.emptyList();
         }
+        String sourceVersion = inferSourceVersion(javaFiles);
+        String[] classPath = classPath(normalizedRoot);
+        String[] sourceRoots = inferSourceRoots(javaFiles).toArray(new String[0]);
+        List<AeeemMetricResult> results = new ArrayList<>();
+        int[] diagnosticCounts = new int[2];
+        int batchSize = configuredBatchSize();
+        for (int start = 0; start < javaFiles.size(); start += batchSize) {
+            int end = Math.min(javaFiles.size(), start + batchSize);
+            parseBatch(normalizedRoot, javaFiles.subList(start, end), classPath, sourceRoots,
+                    sourceVersion, results, diagnosticCounts);
+        }
+        if (diagnosticCounts[1] > 0) {
+            System.err.println("AEEEM JDT warning: " + diagnosticCounts[1]
+                    + " additional diagnostics were suppressed for this snapshot.");
+        }
+        return results.stream()
+                .filter(value -> value.getFullyQualifiedName() != null)
+                .sorted(Comparator.comparing(AeeemMetricResult::getFullyQualifiedName))
+                .collect(Collectors.toList());
+    }
+
+    private static void parseBatch(
+            Path projectRoot,
+            List<Path> javaFiles,
+            String[] classPath,
+            String[] sourceRoots,
+            String sourceVersion,
+            List<AeeemMetricResult> results,
+            int[] diagnosticCounts) throws IOException {
         Map<Path, String> sourceByPath = new LinkedHashMap<>();
         for (Path file : javaFiles) {
-            sourceByPath.put(file.toAbsolutePath().normalize(),
-                    new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
+            sourceByPath.put(file.toAbsolutePath().normalize(), readSource(file));
         }
 
-        String sourceVersion = inferSourceVersion(sourceByPath.values());
         ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
         parser.setResolveBindings(true);
         parser.setBindingsRecovery(true);
         parser.setStatementsRecovery(true);
-        parser.setEnvironment(classPath(projectRoot), inferSourceRoots(javaFiles).toArray(new String[0]), null, true);
+        parser.setEnvironment(classPath, sourceRoots, null, true);
         parser.setCompilerOptions(compilerOptions(sourceVersion));
 
-        String[] fileNames = javaFiles.stream().map(path -> path.toAbsolutePath().normalize().toString())
+        String[] fileNames = javaFiles.stream()
+                .map(path -> path.toAbsolutePath().normalize().toString())
                 .toArray(String[]::new);
         String[] encodings = new String[fileNames.length];
         Arrays.fill(encodings, StandardCharsets.UTF_8.name());
-        List<AeeemMetricResult> results = new ArrayList<>();
-        int[] diagnosticCounts = new int[2];
         parser.createASTs(fileNames, encodings, new String[0], new FileASTRequestor() {
             @Override
             public void acceptAST(String sourceFilePath, CompilationUnit unit) {
@@ -73,26 +126,24 @@ public final class AeeemJavaSourceParser {
                 unit.accept(new org.eclipse.jdt.core.dom.ASTVisitor() {
                     @Override
                     public boolean visit(TypeDeclaration node) {
+                        if (node.getParent() instanceof TypeDeclarationStatement) {
+                            return false;
+                        }
                         addResult(unit, node, sourcePath, projectRoot, source, results, diagnosticCounts);
                         return true;
                     }
 
                     @Override
                     public boolean visit(EnumDeclaration node) {
+                        if (node.getParent() instanceof TypeDeclarationStatement) {
+                            return false;
+                        }
                         addResult(unit, node, sourcePath, projectRoot, source, results, diagnosticCounts);
                         return true;
                     }
                 });
             }
         }, null);
-        if (diagnosticCounts[1] > 0) {
-            System.err.println("AEEEM JDT warning: " + diagnosticCounts[1]
-                    + " additional diagnostics were suppressed for this snapshot.");
-        }
-        return results.stream()
-                .filter(value -> value.getFullyQualifiedName() != null)
-                .sorted(Comparator.comparing(AeeemMetricResult::getFullyQualifiedName))
-                .collect(Collectors.toList());
     }
 
     private static void addResult(CompilationUnit unit, AbstractTypeDeclaration type, Path sourcePath,
@@ -107,49 +158,36 @@ public final class AeeemJavaSourceParser {
         results.add(metrics);
     }
 
-    private static List<Path> collectJavaFiles(Path root) throws IOException {
-        try (Stream<Path> paths = Files.walk(root)) {
-            return paths.filter(Files::isRegularFile)
-                    .filter(path -> path.toString().endsWith(".java"))
-                    .filter(AeeemJavaSourceParser::isProductionSource)
-                    .sorted()
-                    .collect(Collectors.toList());
-        }
-    }
-
-    private static boolean isProductionSource(Path path) {
-        String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
-        if (fileName.equals("module-info.java") || fileName.equals("package-info.java")) {
-            return false;
-        }
-        if (fileName.startsWith("test") || fileName.endsWith("test.java") || fileName.endsWith("tests.java")) {
-            return false;
-        }
-        for (Path segment : path.toAbsolutePath().normalize()) {
-            String name = segment.toString().toLowerCase(Locale.ROOT);
-            boolean testSourceSet = name.equals("test") || name.equals("tests") || name.equals("testcase")
-                    || name.equals("testcases") || name.startsWith("test-") || name.endsWith("-test")
-                    || name.equals("testdata") || name.equals("test-framework");
-            boolean buildInfrastructure = Arrays.asList("build-tools", "build-infra", "buildsrc", "gradle",
-                    ".gradle", "dev-tools", "devtools").contains(name);
-            boolean nonProductSource = Arrays.asList("generated", "target", "build", "out", ".git",
-                    "examples", "samples", "benchmark", "benchmarks").contains(name);
-            if (testSourceSet || buildInfrastructure || nonProductSource) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static List<String> inferSourceRoots(Collection<Path> files) {
+    private static List<String> inferSourceRoots(Collection<Path> files) throws IOException {
         Set<String> roots = new LinkedHashSet<>();
         for (Path file : files) {
-            Path root = conventionalSourceRoot(file);
+            Path root = sourceRootFromPackage(file, readSource(file));
             if (root != null) {
                 roots.add(root.toString());
             }
         }
         return new ArrayList<>(roots);
+    }
+
+    private static Path sourceRootFromPackage(Path file, String source) {
+        Matcher matcher = PACKAGE_DECLARATION.matcher(source);
+        if (matcher.find()) {
+            String[] packageSegments = matcher.group(1).split("\\.");
+            Path root = file.toAbsolutePath().normalize().getParent();
+            boolean matchesPath = true;
+            for (int index = packageSegments.length - 1; index >= 0; index--) {
+                if (root == null || root.getFileName() == null
+                        || !packageSegments[index].equals(root.getFileName().toString())) {
+                    matchesPath = false;
+                    break;
+                }
+                root = root.getParent();
+            }
+            if (matchesPath && root != null) {
+                return root;
+            }
+        }
+        return conventionalSourceRoot(file);
     }
 
     private static Path conventionalSourceRoot(Path file) {
@@ -177,6 +215,7 @@ public final class AeeemJavaSourceParser {
         try (Stream<Path> paths = Files.walk(projectRoot)) {
             paths.filter(Files::isRegularFile)
                     .filter(path -> path.toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
+                    .filter(path -> !ProductionSourceSelector.isExcludedPath(projectRoot, path))
                     .filter(AeeemJavaSourceParser::isValidJar)
                     .map(path -> path.toAbsolutePath().normalize().toString())
                     .forEach(entries::add);
@@ -184,7 +223,14 @@ public final class AeeemJavaSourceParser {
         return entries.toArray(new String[0]);
     }
 
-    private static String inferSourceVersion(Collection<String> sources) {
+    private static String inferSourceVersion(List<Path> javaFiles) throws IOException {
+        List<String> sources = new ArrayList<>();
+        for (Path file : javaFiles) {
+            sources.add(readSource(file));
+            if (sources.size() == 25) {
+                break;
+            }
+        }
         String latest = JavaCore.latestSupportedJavaVersion();
         List<String> candidates = Arrays.asList(JavaCore.VERSION_1_4, JavaCore.VERSION_1_5,
                 JavaCore.VERSION_1_8, JavaCore.VERSION_11, JavaCore.VERSION_17, latest);
@@ -207,7 +253,7 @@ public final class AeeemJavaSourceParser {
                 if (errors > bestErrors) {
                     break;
                 }
-                if (++inspected == 25) {
+                if (++inspected == sources.size()) {
                     break;
                 }
             }
@@ -217,6 +263,25 @@ public final class AeeemJavaSourceParser {
             }
         }
         return selected;
+    }
+
+    private static int configuredBatchSize() {
+        String configured = System.getProperty("aeeem.jdt.batchSize");
+        if (configured == null || configured.trim().isEmpty()) {
+            configured = System.getenv("AEEEM_JDT_BATCH_SIZE");
+        }
+        if (configured != null && !configured.trim().isEmpty()) {
+            try {
+                return Math.max(16, Math.min(512, Integer.parseInt(configured.trim())));
+            } catch (NumberFormatException ignored) {
+                // Use the memory-safe default.
+            }
+        }
+        return DEFAULT_BATCH_SIZE;
+    }
+
+    private static String readSource(Path path) throws IOException {
+        return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
     }
 
     private static Map<String, String> compilerOptions(String sourceVersion) {

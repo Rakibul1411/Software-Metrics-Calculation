@@ -1,5 +1,5 @@
 #Backend
-AEEEM_MAX_SNAPSHOTS=8 mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
 
 #ML Backend
 source venv/bin/activate

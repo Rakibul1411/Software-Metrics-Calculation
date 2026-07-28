@@ -4,8 +4,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 
+import org.metrics.common.exception.ExtractionBusyException;
 import org.metrics.common.enums.DatasetFileFormat;
+import org.metrics.aeeem.history.AeeemAnalysisOptions;
 import org.metrics.service.FileStorageService;
 import org.metrics.service.GitHubCloneService;
 import org.metrics.service.MetricsExtractionService;
@@ -27,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/metrics")
 public class MetricsController {
 
+    private final Semaphore aeeemExtractionSlot = new Semaphore(1, true);
     private final MetricsExtractionService metricsExtractionService;
     private final FileStorageService fileStorageService;
     private final ZipExtractionService zipExtractionService;
@@ -47,35 +51,72 @@ public class MetricsController {
     public ResponseEntity<MetricsExtractionService.ExtractionResult> extractMetrics(
             @RequestParam(value = "projectZip", required = false) MultipartFile projectZip,
             @RequestParam(value = "githubUrl", required = false) String githubUrl,
-            @RequestParam(value = "datasetFormat", defaultValue = "promise") String datasetFormat) throws IOException {
+            @RequestParam(value = "datasetFormat", defaultValue = "promise") String datasetFormat,
+            @RequestParam(value = "aeeemProfile", defaultValue = "current") String aeeemProfile,
+            @RequestParam(value = "aeeemHistoryStart", required = false) String aeeemHistoryStart,
+            @RequestParam(value = "aeeemReleaseDate", required = false) String aeeemReleaseDate,
+            @RequestParam(value = "aeeemReleaseRef", required = false) String aeeemReleaseRef,
+            @RequestParam(value = "aeeemModulePath", required = false) String aeeemModulePath,
+            @RequestParam(value = "aeeemMaxSnapshots", required = false) Integer aeeemMaxSnapshots)
+            throws IOException {
         boolean hasZip = projectZip != null && !projectZip.isEmpty();
         boolean hasGitHubUrl = githubUrl != null && !githubUrl.trim().isEmpty();
         if (hasZip == hasGitHubUrl) {
             throw new IllegalArgumentException("Provide either one project archive or one GitHub repository URL.");
         }
 
+        boolean aeeemSlotAcquired = acquireAeeemSlot(datasetFormat);
         Path uploadedFile = null;
         Path sourceDirectory = null;
+        Path cleanupDirectory = null;
+        AeeemAnalysisOptions aeeemOptions = AeeemAnalysisOptions.fromRequest(
+                aeeemProfile, null, aeeemModulePath, aeeemHistoryStart,
+                aeeemReleaseDate, aeeemReleaseRef, aeeemMaxSnapshots);
         try {
             if (hasZip) {
                 uploadedFile = fileStorageService.storeUploadedFile(projectZip);
                 sourceDirectory = zipExtractionService.extractArchiveFile(uploadedFile);
+                cleanupDirectory = sourceDirectory;
             } else if (gitHubCloneService.isZipFileUrl(githubUrl)) {
-                if ("aeeem".equalsIgnoreCase(datasetFormat)) {
+                if (isAeeem(datasetFormat)) {
                     throw new IllegalArgumentException(
                             "AEEEM extraction requires repository history; use the GitHub repository URL, not a ZIP file URL.");
                 }
                 uploadedFile = gitHubCloneService.downloadZipFile(githubUrl);
                 sourceDirectory = zipExtractionService.extractArchiveFile(uploadedFile);
+                cleanupDirectory = sourceDirectory;
             } else {
-                sourceDirectory = gitHubCloneService.cloneRepository(githubUrl,
-                        "aeeem".equalsIgnoreCase(datasetFormat));
+                GitHubCloneService.GitHubTarget target =
+                        gitHubCloneService.parseTarget(githubUrl);
+                sourceDirectory = gitHubCloneService.cloneRepository(
+                        target, isAeeem(datasetFormat));
+                cleanupDirectory = sourceDirectory;
+                if (isAeeem(datasetFormat)) {
+                    String modulePath = aeeemModulePath == null
+                            || aeeemModulePath.trim().isEmpty()
+                            ? target.getModulePath() : aeeemModulePath;
+                    aeeemOptions = AeeemAnalysisOptions.fromRequest(
+                            aeeemProfile, target.getBranch(), modulePath,
+                            aeeemHistoryStart, aeeemReleaseDate,
+                            aeeemReleaseRef, aeeemMaxSnapshots);
+                } else if (!target.getModulePath().isEmpty()) {
+                    Path scopedSource = sourceDirectory.resolve(
+                            target.getModulePath()).normalize();
+                    if (!scopedSource.startsWith(sourceDirectory)
+                            || !Files.isDirectory(scopedSource)) {
+                        throw new IllegalArgumentException(
+                                "The requested GitHub folder does not exist on the selected branch.");
+                    }
+                    sourceDirectory = scopedSource;
+                }
             }
             return ResponseEntity.ok(metricsExtractionService.extractMetrics(
-                    sourceDirectory.toString(), datasetFormat, null));
+                    sourceDirectory.toString(), datasetFormat, null, aeeemOptions));
         } finally {
-            FileStorageService.deleteRecursively(sourceDirectory);
+            FileStorageService.deleteRecursively(
+                    cleanupDirectory == null ? sourceDirectory : cleanupDirectory);
             FileStorageService.deleteRecursively(uploadedFile);
+            releaseAeeemSlot(aeeemSlotAcquired);
         }
     }
 
@@ -84,8 +125,46 @@ public class MetricsController {
     public ResponseEntity<MetricsExtractionService.ExtractionResult> extractMetricsFromLocalPath(
             @RequestParam("sourceDirectory") String sourceDirectory,
             @RequestParam(value = "datasetFormat", defaultValue = "promise") String datasetFormat,
-            @RequestParam(value = "filterFile", required = false) String filterFile) throws IOException {
-        return ResponseEntity.ok(metricsExtractionService.extractMetrics(sourceDirectory, datasetFormat, filterFile));
+            @RequestParam(value = "filterFile", required = false) String filterFile,
+            @RequestParam(value = "aeeemProfile", defaultValue = "current") String aeeemProfile,
+            @RequestParam(value = "aeeemHistoryStart", required = false) String aeeemHistoryStart,
+            @RequestParam(value = "aeeemReleaseDate", required = false) String aeeemReleaseDate,
+            @RequestParam(value = "aeeemReleaseRef", required = false) String aeeemReleaseRef,
+            @RequestParam(value = "aeeemModulePath", required = false) String aeeemModulePath,
+            @RequestParam(value = "aeeemMaxSnapshots", required = false) Integer aeeemMaxSnapshots)
+            throws IOException {
+        boolean aeeemSlotAcquired = acquireAeeemSlot(datasetFormat);
+        try {
+            AeeemAnalysisOptions options = AeeemAnalysisOptions.fromRequest(
+                    aeeemProfile, null, aeeemModulePath, aeeemHistoryStart,
+                    aeeemReleaseDate, aeeemReleaseRef, aeeemMaxSnapshots);
+            return ResponseEntity.ok(
+                    metricsExtractionService.extractMetrics(
+                            sourceDirectory, datasetFormat, filterFile, options));
+        } finally {
+            releaseAeeemSlot(aeeemSlotAcquired);
+        }
+    }
+
+    private boolean acquireAeeemSlot(String datasetFormat) {
+        if (!isAeeem(datasetFormat)) {
+            return false;
+        }
+        if (!aeeemExtractionSlot.tryAcquire()) {
+            throw new ExtractionBusyException(
+                    "Another AEEEM repository is already being analyzed. Wait for it to finish before starting a new extraction.");
+        }
+        return true;
+    }
+
+    private void releaseAeeemSlot(boolean acquired) {
+        if (acquired) {
+            aeeemExtractionSlot.release();
+        }
+    }
+
+    private static boolean isAeeem(String datasetFormat) {
+        return datasetFormat != null && "aeeem".equalsIgnoreCase(datasetFormat.trim());
     }
 
     @GetMapping("/download/{datasetId}")

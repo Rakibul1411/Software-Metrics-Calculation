@@ -1,3 +1,16 @@
+export interface AeeemAnalysisSummary {
+  profileId: string;
+  profileName: string;
+  historyStart: string;
+  releaseDate: string;
+  releaseCommit: string;
+  snapshotCount: number;
+  branch: string;
+  modulePath: string;
+  referenceSnapshotCount: number;
+  referenceRowCount: number;
+}
+
 export interface MetricsPreview {
   targetDatasetId: string;
   datasetFormat: 'promise' | 'aeeem';
@@ -6,4 +19,5 @@ export interface MetricsPreview {
   csvPreview: string[];
   csvDownloadUrl: string;
   arffDownloadUrl: string;
+  aeeemAnalysis?: AeeemAnalysisSummary | null;
 }
