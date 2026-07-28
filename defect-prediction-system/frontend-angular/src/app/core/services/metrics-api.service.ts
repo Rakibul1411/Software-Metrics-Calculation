@@ -8,6 +8,7 @@ export interface MetricsExtractionRequest {
   datasetFormat: 'promise' | 'aeeem';
   projectZip?: File;
   githubUrl?: string;
+  aeeemProfile?: 'current' | 'jdt' | 'pde' | 'eq' | 'ml' | 'lc';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +20,9 @@ export class MetricsApiService {
   extractMetrics(request: MetricsExtractionRequest): Observable<MetricsPreview> {
     const formData = new FormData();
     formData.append('datasetFormat', request.datasetFormat);
+    if (request.datasetFormat === 'aeeem') {
+      formData.append('aeeemProfile', request.aeeemProfile ?? 'current');
+    }
     if (request.projectZip) {
       formData.append('projectZip', request.projectZip, request.projectZip.name);
     }

@@ -12,6 +12,7 @@ from app.services.coral_service import CoralService
 from app.services.knn_service import KnnService
 from app.services.metrics_service import MetricsService
 from app.services.preprocessing_service import PreprocessingService
+from app.services.project_validation_service import ProjectValidationService
 from app.services.svm_service import SvmService
 
 
@@ -46,6 +47,13 @@ class PredictionService:
         )
         self.preprocessing = PreprocessingService()
         self.metrics_service = MetricsService()
+        self.project_validation = ProjectValidationService(
+            coral=self.coral,
+            preprocessing=self.preprocessing,
+            knn=self.knn,
+            svm=self.svm,
+            metrics=self.metrics_service,
+        )
 
     async def run(
         self,
@@ -55,12 +63,12 @@ class PredictionService:
         knn_value: int,
         coral_option: bool,
         top_k: int = 3,
-        auto_tune_k: bool = False,
+        auto_tune_k: bool = True,
         decision_threshold: Optional[float] = None,
         threshold_beta: float = 2.0,
         classifier_type: str = "knn",
         svm_c: float = 1.0,
-        auto_tune_svm_c: bool = False,
+        auto_tune_svm_c: bool = True,
     ) -> Dict:
         """Predict defects for a target project whose labels may be absent."""
         selected_classifier = self._normalize_classifier_type(classifier_type)
@@ -83,10 +91,21 @@ class PredictionService:
         )
         X_target = self._numeric_features(target_df, feature_cols, "target")
 
-        selected_sources, ranking = self._rank_and_select_sources(
-            source_files,
-            label_column,
-            feature_cols,
+        source_projects = self._load_source_projects(
+            source_files, label_column, feature_cols
+        )
+        model_selection = self.project_validation.select(
+            source_projects=source_projects,
+            classifier=selected_classifier,
+            top_k=top_k,
+            coral_enabled=coral_option,
+            threshold_beta=threshold_beta,
+        )
+        if decision_threshold is not None:
+            model_selection["decisionThreshold"] = float(decision_threshold)
+
+        selected_sources, ranking = self._rank_loaded_sources(
+            source_projects,
             X_target,
             top_k,
         )
@@ -95,15 +114,16 @@ class PredictionService:
             X_target,
             coral_option,
         )
-        prediction_output = self._fit_and_predict(
+        prediction_output = self._fit_final_model(
             model_data=model_data,
             classifier_type=selected_classifier,
-            requested_k=knn_value,
-            requested_svm_c=svm_c,
-            auto_tune_k=auto_tune_k,
-            auto_tune_svm_c=auto_tune_svm_c,
-            decision_threshold=decision_threshold,
-            threshold_beta=threshold_beta,
+            selected_k=model_selection["selectedK"],
+            selected_c=model_selection["selectedC"],
+            decision_threshold=(
+                float(decision_threshold)
+                if decision_threshold is not None
+                else model_selection["decisionThreshold"]
+            ),
         )
 
         classifier = prediction_output["classifier"]
@@ -166,7 +186,9 @@ class PredictionService:
                 threshold_beta=threshold_beta,
                 threshold_was_tuned=decision_threshold is None,
                 model_data=model_data,
+                model_selection=model_selection,
             ),
+            "modelSelection": model_selection,
             "predictions": results,
             "summary": {
                 "total": len(results),
@@ -183,12 +205,12 @@ class PredictionService:
         knn_value: int,
         coral_option: bool,
         top_k: int = 3,
-        auto_tune_k: bool = False,
+        auto_tune_k: bool = True,
         decision_threshold: Optional[float] = None,
         threshold_beta: float = 2.0,
         classifier_type: str = "knn",
         svm_c: float = 1.0,
-        auto_tune_svm_c: bool = False,
+        auto_tune_svm_c: bool = True,
     ) -> Dict:
         """
         Evaluate on a labelled target dataset without target-label leakage.
@@ -226,12 +248,22 @@ class PredictionService:
             raise ValueError("Every target row must have a label for evaluation.")
 
         X_target = self._numeric_features(target_df, feature_cols, "target")
-        y_target = self._binary_labels(target_df[label_column], label_column)
 
-        selected_sources, ranking = self._rank_and_select_sources(
-            source_files,
-            label_column,
-            feature_cols,
+        source_projects = self._load_source_projects(
+            source_files, label_column, feature_cols
+        )
+        model_selection = self.project_validation.select(
+            source_projects=source_projects,
+            classifier=selected_classifier,
+            top_k=top_k,
+            coral_enabled=coral_option,
+            threshold_beta=threshold_beta,
+        )
+        if decision_threshold is not None:
+            model_selection["decisionThreshold"] = float(decision_threshold)
+
+        selected_sources, ranking = self._rank_loaded_sources(
+            source_projects,
             X_target,
             top_k,
         )
@@ -240,20 +272,24 @@ class PredictionService:
             X_target,
             coral_option,
         )
-        prediction_output = self._fit_and_predict(
+        prediction_output = self._fit_final_model(
             model_data=model_data,
             classifier_type=selected_classifier,
-            requested_k=knn_value,
-            requested_svm_c=svm_c,
-            auto_tune_k=auto_tune_k,
-            auto_tune_svm_c=auto_tune_svm_c,
-            decision_threshold=decision_threshold,
-            threshold_beta=threshold_beta,
+            selected_k=model_selection["selectedK"],
+            selected_c=model_selection["selectedC"],
+            decision_threshold=(
+                float(decision_threshold)
+                if decision_threshold is not None
+                else model_selection["decisionThreshold"]
+            ),
         )
 
         risk_scores = prediction_output["riskScores"]
         selected_threshold = prediction_output["decisionThreshold"]
 
+        # Target labels are converted only after model selection, adaptation,
+        # fitting, and scoring have completed.
+        y_target = self._binary_labels(target_df[label_column], label_column)
         evaluation = self.metrics_service.evaluate(
             y_true=y_target,
             risk_scores=risk_scores,
@@ -295,52 +331,36 @@ class PredictionService:
                 threshold_beta=threshold_beta,
                 threshold_was_tuned=decision_threshold is None,
                 model_data=model_data,
+                model_selection=model_selection,
             ),
+            "modelSelection": model_selection,
             "metrics": evaluation["metrics"],
             "confusionMatrix": evaluation["confusionMatrix"],
             "predictions": results,
         }
 
-    def _fit_and_predict(
+    def _fit_final_model(
         self,
         model_data: Dict,
         classifier_type: str,
-        requested_k: int,
-        requested_svm_c: float,
-        auto_tune_k: bool,
-        auto_tune_svm_c: bool,
-        decision_threshold: Optional[float],
-        threshold_beta: float,
+        selected_k: Optional[int],
+        selected_c: Optional[float],
+        decision_threshold: float,
     ) -> Dict:
         X_source = model_data["X_source_model"]
         y_source = model_data["y_source"]
         X_target = model_data["X_target_model"]
-
-        selected_k: Optional[int] = None
         selected_svm_c: Optional[float] = None
 
         if classifier_type == "knn":
-            selected_k = (
-                self.knn.tune_k_source_cv(X_source, y_source)
-                if auto_tune_k
-                else int(requested_k)
-            )
+            selected_k = int(selected_k or 1)
             if selected_k > len(y_source):
                 raise ValueError(
                     f"K neighbors ({selected_k}) cannot exceed selected labelled "
                     f"source rows ({len(y_source)})."
                 )
 
-            selected_threshold = (
-                self.knn.tune_threshold_source_cv(
-                    X_source,
-                    y_source,
-                    k=selected_k,
-                    beta=threshold_beta,
-                )
-                if decision_threshold is None
-                else float(decision_threshold)
-            )
+            selected_threshold = float(decision_threshold)
             classifier = self.knn.fit(
                 X_source,
                 y_source,
@@ -352,21 +372,8 @@ class PredictionService:
                 selected_threshold,
             )
         else:
-            selected_svm_c = (
-                self.svm.tune_c_source_cv(X_source, y_source)
-                if auto_tune_svm_c
-                else float(requested_svm_c)
-            )
-            selected_threshold = (
-                self.svm.tune_threshold_source_cv(
-                    X_source,
-                    y_source,
-                    c_value=selected_svm_c,
-                    beta=threshold_beta,
-                )
-                if decision_threshold is None
-                else float(decision_threshold)
-            )
+            selected_svm_c = float(selected_c or 1.0)
+            selected_threshold = float(decision_threshold)
             classifier = self.svm.fit(
                 X_source,
                 y_source,
@@ -386,6 +393,27 @@ class PredictionService:
             "selectedSvmC": selected_svm_c,
             "decisionThreshold": float(selected_threshold),
         }
+
+    # Backward-compatible internal entry point retained for callers outside FastAPI.
+    def _fit_and_predict(
+        self,
+        model_data: Dict,
+        classifier_type: str,
+        requested_k: int,
+        requested_svm_c: float,
+        auto_tune_k: bool,
+        auto_tune_svm_c: bool,
+        decision_threshold: Optional[float],
+        threshold_beta: float,
+    ) -> Dict:
+        del auto_tune_k, auto_tune_svm_c, threshold_beta
+        return self._fit_final_model(
+            model_data,
+            classifier_type,
+            selected_k=requested_k if classifier_type == "knn" else None,
+            selected_c=requested_svm_c if classifier_type == "svm" else None,
+            decision_threshold=0.5 if decision_threshold is None else decision_threshold,
+        )
     def _rank_and_select_sources(
         self,
         source_files: List[UploadFile],
@@ -471,6 +499,87 @@ class PredictionService:
         ]
         return candidates[:selected_count], ranking
 
+    def _load_source_projects(
+        self,
+        source_files: List[UploadFile],
+        label_column: str,
+        feature_cols: List[str],
+    ) -> List[Dict]:
+        projects = []
+        for source_file in source_files:
+            source_df = self._read_dataset(source_file)
+            filename = source_file.filename or "source.csv"
+            if label_column not in source_df.columns:
+                raise ValueError(
+                    f"Label column '{label_column}' was not found in {filename}. "
+                    f"Available columns: {', '.join(source_df.columns)}"
+                )
+            missing = [
+                column for column in feature_cols if column not in source_df.columns
+            ]
+            if missing:
+                raise ValueError(
+                    f"Source dataset '{filename}' does not match the target schema. "
+                    f"Missing metric columns: {', '.join(missing)}"
+                )
+
+            labelled = source_df[label_column].notna()
+            if not labelled.any():
+                continue
+            features = self._numeric_features(
+                source_df.loc[labelled], feature_cols, filename
+            )
+            labels = self._binary_labels(
+                source_df.loc[labelled, label_column], label_column
+            )
+            projects.append({
+                "dataset": filename,
+                "X": features,
+                "y": labels,
+                "rows": int(len(labels)),
+                "buggyRows": int(np.sum(labels == 1)),
+                "cleanRows": int(np.sum(labels == 0)),
+                "classNames": (
+                    source_df.loc[labelled, "name"].astype(str).tolist()
+                    if "name" in source_df.columns
+                    else [f"{filename}#{index}" for index in range(len(labels))]
+                ),
+            })
+        if not projects:
+            raise ValueError(
+                "No labelled source rows were found in the uploaded source datasets."
+            )
+        return projects
+
+    def _rank_loaded_sources(
+        self,
+        source_projects: List[Dict],
+        X_target: np.ndarray,
+        top_k: int,
+    ) -> Tuple[List[Dict], List[Dict]]:
+        candidates = []
+        for source in source_projects:
+            candidate = dict(source)
+            candidate["distance"] = self.project_validation.covariance_distance(
+                source["X"], X_target
+            )
+            candidates.append(candidate)
+        candidates.sort(key=lambda item: item["distance"])
+        selected_count = min(top_k, len(candidates))
+        ranking = [
+            {
+                "rank": index + 1,
+                "dataset": source["dataset"],
+                "distance": round(float(source["distance"]), 6),
+                "rows": source["rows"],
+                "buggyRows": source["buggyRows"],
+                "cleanRows": source["cleanRows"],
+                "selected": index < selected_count,
+            }
+            for index, source in enumerate(candidates)
+        ]
+        return candidates[:selected_count], ranking
+
     def _build_model_data(
         self,
         selected_sources: List[Dict],
@@ -553,6 +662,7 @@ class PredictionService:
         threshold_beta: float,
         threshold_was_tuned: bool,
         model_data: Dict,
+        model_selection: Dict,
     ) -> Dict:
         is_knn = classifier_type == "knn"
         classifier_name = (
@@ -570,19 +680,42 @@ class PredictionService:
 
         return {
             "classifierType": classifier_type,
-            "classifier": classifier_name,
+            "classifier": "knn" if is_knn else "linear-svm",
+            "classifierDescription": classifier_name,
             "selectedK": int(selected_k) if selected_k is not None else None,
-            "autoTuneK": bool(auto_tune_k) if is_knn else False,
+            "autoTuneK": is_knn,
+            "hyperparameterSelection": "automatic-source-only-validation",
+            "kCandidateRule": (
+                "odd K values from 1 through floor(sqrt(minimum safe training rows))"
+                if is_knn
+                else None
+            ),
+            "cCandidateRule": (
+                "coarse logarithmic C grid followed by local logarithmic refinement"
+                if not is_knn
+                else None
+            ),
             "selectedSvmC": (
                 float(selected_svm_c)
                 if selected_svm_c is not None
                 else None
             ),
-            "autoTuneSvmC": bool(auto_tune_svm_c) if not is_knn else False,
+            "selectedC": (
+                float(selected_svm_c)
+                if selected_svm_c is not None
+                else None
+            ),
+            "autoTuneSvmC": not is_knn,
             "classWeight": "balanced" if not is_knn else None,
+            "imbalanceHandling": (
+                "distance-weighted voting plus source-only MCC threshold selection"
+                if is_knn
+                else "balanced class weights plus source-only MCC threshold selection"
+            ),
             "decisionThreshold": float(decision_threshold),
+            "modelSelectionStrategy": model_selection["strategy"],
             "thresholdSelection": (
-                f"source-only stratified CV maximizing F{threshold_beta:g}"
+                f"{model_selection['strategy']} maximizing macro MCC"
                 if threshold_was_tuned
                 else "explicit user-provided threshold"
             ),

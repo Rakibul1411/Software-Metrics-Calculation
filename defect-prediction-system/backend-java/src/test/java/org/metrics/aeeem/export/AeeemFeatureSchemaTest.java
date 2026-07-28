@@ -74,4 +74,24 @@ class AeeemFeatureSchemaTest {
             assertEquals("5.5", row.get("CvsExpEntropy"));
         }
     }
+
+    @Test
+    void exporterUsesReferenceDatasetPrecisionWithoutFloatingPointTails() throws Exception {
+        AeeemMetricResult metrics = new AeeemMetricResult("example.DecimalService");
+        metrics.setCvsEntropy(0.1d + 0.2d);
+        metrics.setCvsWEntropy(0.123456789d);
+        metrics.setCvsLogEntropy(-0.0d);
+        Path output = temporaryDirectory.resolve("aeeem-precision.csv");
+
+        AeeemCsvExporter.exportAeeemToCSV(Collections.singletonList(metrics), output);
+
+        try (java.io.Reader reader = Files.newBufferedReader(output)) {
+            CSVRecord row = CSVFormat.DEFAULT.builder().setHeader()
+                    .setSkipHeaderRecord(true).build().parse(reader)
+                    .getRecords().get(0);
+            assertEquals("0.3", row.get("CvsEntropy"));
+            assertEquals("0.123457", row.get("CvsWEntropy"));
+            assertEquals("0", row.get("CvsLogEntropy"));
+        }
+    }
 }

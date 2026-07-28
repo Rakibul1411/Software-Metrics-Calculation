@@ -11,7 +11,6 @@ export class PredictionComponent {
   targetDatasetId = '';
   sourceFiles: File[] = [];
   labelColumn = 'bug';
-  knnValue = 5;
   coralOption = true;
   result: PredictionResult | null = null;
   loading = false;
@@ -35,10 +34,6 @@ export class PredictionComponent {
       this.labelColumn,
       {
         classifierType: 'knn',
-        knnValue: this.knnValue,
-        autoTuneK: false,
-        svmC: 1,
-        autoTuneSvmC: false,
         coralOption: this.coralOption,
         topK: 3,
         thresholdBeta: 2

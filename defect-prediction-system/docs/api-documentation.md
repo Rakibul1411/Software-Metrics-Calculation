@@ -11,6 +11,12 @@ Extract object-oriented metrics from a Java project ZIP or a public GitHub repos
 | `projectZip` | file | one source required | Java project ZIP, maximum 50 MB |
 | `githubUrl` | string | one source required | Public GitHub repository, `tree/branch/folder`, or `blob/branch/file.zip` URL |
 | `datasetFormat` | string | ❌ | `promise` or `aeeem` (default: `promise`) |
+| `aeeemProfile` | string | ❌ | `current`, `jdt`, `pde`, `eq`, `ml`, or `lc` |
+| `aeeemModulePath` | string | ❌ | Repository-relative module; folder URL scope is used when omitted |
+| `aeeemHistoryStart` | date | ❌ | Custom current-profile start in `YYYY-MM-DD` |
+| `aeeemReleaseDate` | date | ❌ | Custom current-profile release date |
+| `aeeemReleaseRef` | string | ❌ | Custom current-profile tag or commit ref |
+| `aeeemMaxSnapshots` | integer | ❌ | Current-profile cap; `0` means unlimited |
 
 Supply exactly one of `projectZip` or `githubUrl`. A form-urlencoded `sourceDirectory` endpoint remains available for trusted local development clients.
 
@@ -22,18 +28,33 @@ Supply exactly one of `projectZip` or `githubUrl`. A form-urlencoded `sourceDire
   "rowCount": 42,
   "extractedColumns": ["wmc", "dit", "noc", ...],
   "csvPreview": ["name,wmc,dit,...", "org.example.Foo,3,2,...", "...all extracted classes..."],
-  "downloadUrl": "/api/metrics/download/abc-123-uuid"
+  "csvDownloadUrl": "/api/metrics/download/abc-123-uuid/csv",
+  "arffDownloadUrl": "/api/metrics/download/abc-123-uuid/arff",
+  "aeeemAnalysis": {
+    "profileId": "jdt",
+    "profileName": "Eclipse JDT Core",
+    "historyStart": "2005-01-01",
+    "releaseDate": "2008-06-17",
+    "snapshotCount": 91,
+    "modulePath": "org.eclipse.jdt.core",
+    "releaseCommit": "8ac82b15173c..."
+  }
 }
 ```
 
-PROMISE output contains `name` and 20 numeric metric features. AEEEM output is the 51-feature AST-derived static subset plus `name`; repository-history, defect-history, and `class` columns are excluded because the generated target is unlabelled.
+PROMISE output contains `name` and 20 numeric metric features. AEEEM output
+contains `name` plus 56 non-defect predictors: 17 final static metrics, 17
+WCHU metrics, 17 LDHH metrics, and five Git changed-line entropy metrics. The
+five issue-tracker defect-history fields and `class` label are excluded because
+the generated target is unlabelled.
 
 ---
 
-### GET /api/metrics/download/{datasetId}
-Download the generated metrics CSV file.
+### GET /api/metrics/download/{datasetId}/{fileFormat}
+Download the generated metrics file. `fileFormat` is `csv` or `arff`; the
+shorter `/api/metrics/download/{datasetId}` form returns CSV.
 
-**Response:** `text/csv` file download.
+**Response:** CSV or ARFF file download.
 
 ---
 

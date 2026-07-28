@@ -29,6 +29,7 @@ import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
+import org.eclipse.jdt.core.dom.AnnotationTypeDeclaration;
 import org.eclipse.jdt.core.dom.BlockComment;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -116,44 +117,15 @@ public class PromiseProjectAnalyzer {
 
     private List<Path> collectJavaFiles(Collection<Path> roots) throws IOException {
         List<Path> files = new ArrayList<>();
+        ProductionSourceSelector selector = new ProductionSourceSelector();
         for (Path root : roots) {
             if (root == null || !Files.isDirectory(root)) {
                 continue;
             }
-            try (Stream<Path> stream = Files.walk(root)) {
-                stream.filter(Files::isRegularFile)
-                        .filter(path -> path.toString().endsWith(".java"))
-                        .filter(this::isProductionSourceFile)
-                        .sorted()
-                        .forEach(files::add);
-            }
+            files.addAll(selector.select(root));
         }
+        files.sort(Path::compareTo);
         return files;
-    }
-
-    private boolean isProductionSourceFile(Path path) {
-        Path fileName = path.getFileName();
-        if (fileName != null && fileName.toString().endsWith("Test.java")) {
-            return false;
-        }
-        for (Path segment : path.toAbsolutePath().normalize()) {
-            String name = segment.toString().toLowerCase(Locale.ROOT);
-            if (isNonProductionSourceSegment(name)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean isNonProductionSourceSegment(String name) {
-        return "test".equals(name)
-                || "tests".equals(name)
-                || "testcase".equals(name)
-                || "testcases".equals(name)
-                || "example".equals(name)
-                || "examples".equals(name)
-                || "sample".equals(name)
-                || "samples".equals(name);
     }
 
     private void parseProject(List<Path> javaFiles, Collection<Path> requestedRoots) throws IOException {
@@ -349,16 +321,29 @@ public class PromiseProjectAnalyzer {
             unit.accept(new ASTVisitor() {
                 @Override
                 public boolean visit(TypeDeclaration node) {
-                    registerType(path, unit, source, commentFreeSource, node);
-                    return true;
+                    registerTopLevelType(path, unit, source, commentFreeSource, node);
+                    return false;
                 }
 
                 @Override
                 public boolean visit(EnumDeclaration node) {
-                    registerType(path, unit, source, commentFreeSource, node);
-                    return true;
+                    registerTopLevelType(path, unit, source, commentFreeSource, node);
+                    return false;
+                }
+
+                @Override
+                public boolean visit(AnnotationTypeDeclaration node) {
+                    registerTopLevelType(path, unit, source, commentFreeSource, node);
+                    return false;
                 }
             });
+        }
+    }
+
+    private void registerTopLevelType(Path sourcePath, CompilationUnit unit, String source,
+                                      char[] commentFreeSource, AbstractTypeDeclaration node) {
+        if (node.getParent() instanceof CompilationUnit) {
+            registerType(sourcePath, unit, source, commentFreeSource, node);
         }
     }
 

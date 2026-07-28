@@ -22,6 +22,7 @@ class PredictionServiceTest {
                 new MockMultipartFile[] { source }, "bug", true, 1, options);
 
         assertEquals("svm", body.getFirst("classifier_type"));
+        assertEquals("svm", body.getFirst("classifier"));
         assertEquals("0.25", body.getFirst("svm_c"));
         assertEquals("true", body.getFirst("auto_tune_svm_c"));
         assertEquals("5", body.getFirst("knn_value"));
@@ -38,6 +39,7 @@ class PredictionServiceTest {
                 "bug", false, 3, options);
 
         assertEquals("knn", body.getFirst("classifier_type"));
+        assertEquals("knn", body.getFirst("classifier"));
         assertEquals("7", body.getFirst("knn_value"));
         assertEquals("true", body.getFirst("auto_tune_k"));
     }

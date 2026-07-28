@@ -56,10 +56,6 @@ export class PredictionApiService {
 
   private appendModelOptions(formData: FormData, options: PredictionRequestOptions): void {
     formData.append('classifierType', options.classifierType);
-    formData.append('knnValue', String(options.knnValue));
-    formData.append('autoTuneK', String(options.autoTuneK));
-    formData.append('svmC', String(options.svmC));
-    formData.append('autoTuneSvmC', String(options.autoTuneSvmC));
     formData.append('coralOption', String(options.coralOption));
     formData.append('topK', String(options.topK));
     formData.append('thresholdBeta', String(options.thresholdBeta ?? 2));

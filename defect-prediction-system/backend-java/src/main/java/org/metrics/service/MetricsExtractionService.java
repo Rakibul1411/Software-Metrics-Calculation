@@ -14,6 +14,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.metrics.aeeem.git.GitHistoryAnalyzer;
+import org.metrics.aeeem.history.AeeemAnalysisOptions;
+import org.metrics.aeeem.history.AeeemAnalysisSummary;
 import org.metrics.aeeem.export.AeeemArffExporter;
 import org.metrics.aeeem.export.AeeemCsvExporter;
 import org.metrics.aeeem.export.AeeemFeatureSchema;
@@ -40,10 +42,12 @@ public class MetricsExtractionService {
         private final List<String> csvPreview;
         private final String csvDownloadUrl;
         private final String arffDownloadUrl;
+        private final AeeemAnalysisSummary aeeemAnalysis;
 
         public ExtractionResult(String targetDatasetId, String datasetFormat, int rowCount,
                                 List<String> extractedColumns, List<String> csvPreview,
-                                String csvDownloadUrl, String arffDownloadUrl) {
+                                String csvDownloadUrl, String arffDownloadUrl,
+                                AeeemAnalysisSummary aeeemAnalysis) {
             this.targetDatasetId = targetDatasetId;
             this.datasetFormat = datasetFormat;
             this.rowCount = rowCount;
@@ -51,6 +55,7 @@ public class MetricsExtractionService {
             this.csvPreview = csvPreview;
             this.csvDownloadUrl = csvDownloadUrl;
             this.arffDownloadUrl = arffDownloadUrl;
+            this.aeeemAnalysis = aeeemAnalysis;
         }
 
         public String getTargetDatasetId() { return targetDatasetId; }
@@ -60,9 +65,19 @@ public class MetricsExtractionService {
         public List<String> getCsvPreview() { return csvPreview; }
         public String getCsvDownloadUrl() { return csvDownloadUrl; }
         public String getArffDownloadUrl() { return arffDownloadUrl; }
+        public AeeemAnalysisSummary getAeeemAnalysis() { return aeeemAnalysis; }
     }
 
     public ExtractionResult extractMetrics(String sourceDirsStr, String datasetFormat, String filterFile) throws IOException {
+        return extractMetrics(sourceDirsStr, datasetFormat, filterFile,
+                AeeemAnalysisOptions.current());
+    }
+
+    public ExtractionResult extractMetrics(
+            String sourceDirsStr,
+            String datasetFormat,
+            String filterFile,
+            AeeemAnalysisOptions aeeemOptions) throws IOException {
         String normalizedFormat = normalizeDatasetFormat(datasetFormat);
         if (sourceDirsStr == null || sourceDirsStr.trim().isEmpty()) {
             throw new IllegalArgumentException("A Java source directory is required.");
@@ -76,8 +91,13 @@ public class MetricsExtractionService {
 
         List<String> columns;
         int rowCount;
+        AeeemAnalysisSummary aeeemAnalysis = null;
         if ("aeeem".equals(normalizedFormat)) {
-            List<AeeemMetricResult> allMetrics = calculateAeeemMetricsForDirectories(sourceDirs);
+            AeeemCalculation aeeemCalculation = calculateAeeemMetricsForDirectories(
+                    sourceDirs,
+                    aeeemOptions == null ? AeeemAnalysisOptions.current() : aeeemOptions);
+            List<AeeemMetricResult> allMetrics = aeeemCalculation.metrics;
+            aeeemAnalysis = aeeemCalculation.summary;
             if (filterFile != null && !filterFile.trim().isEmpty()) {
                 Set<String> predefinedClasses = loadClassNamesFromCSV(filterFile);
                 allMetrics.removeIf(m -> !predefinedClasses.contains(m.getFullyQualifiedName()));
@@ -115,7 +135,7 @@ public class MetricsExtractionService {
         String downloadBaseUrl = "/api/metrics/download/" + targetDatasetId + "/";
 
         return new ExtractionResult(targetDatasetId, normalizedFormat, rowCount, columns, csvPreview,
-                downloadBaseUrl + "csv", downloadBaseUrl + "arff");
+                downloadBaseUrl + "csv", downloadBaseUrl + "arff", aeeemAnalysis);
     }
 
     private String normalizeDatasetFormat(String datasetFormat) {
@@ -158,16 +178,24 @@ public class MetricsExtractionService {
         return PromiseProjectAnalyzer.analyzeDirectories(sourcePaths);
     }
 
-    private List<AeeemMetricResult> calculateAeeemMetricsForDirectories(String[] dirPaths) throws IOException {
+    private AeeemCalculation calculateAeeemMetricsForDirectories(
+            String[] dirPaths,
+            AeeemAnalysisOptions options) throws IOException {
         List<AeeemMetricResult> allMetrics = new ArrayList<>();
+        AeeemAnalysisSummary summary = null;
         GitHistoryAnalyzer analyzer = new GitHistoryAnalyzer();
         for (String dirPath : dirPaths) {
             Path sourcePath = Paths.get(dirPath.trim());
             if (Files.exists(sourcePath) && Files.isDirectory(sourcePath)) {
-                allMetrics.addAll(analyzer.analyze(sourcePath));
+                GitHistoryAnalyzer.AnalysisResult result =
+                        analyzer.analyzeWithSummary(sourcePath, options);
+                allMetrics.addAll(result.getMetrics());
+                if (summary == null) {
+                    summary = result.getSummary();
+                }
             }
         }
-        return allMetrics;
+        return new AeeemCalculation(allMetrics, summary);
     }
 
     private List<String> getPromiseColumns() {
@@ -176,5 +204,17 @@ public class MetricsExtractionService {
 
     private List<String> getAeeemColumns() {
         return AeeemFeatureSchema.columnsWithIdentifier();
+    }
+
+    private static final class AeeemCalculation {
+        private final List<AeeemMetricResult> metrics;
+        private final AeeemAnalysisSummary summary;
+
+        private AeeemCalculation(
+                List<AeeemMetricResult> metrics,
+                AeeemAnalysisSummary summary) {
+            this.metrics = metrics;
+            this.summary = summary;
+        }
     }
 }
