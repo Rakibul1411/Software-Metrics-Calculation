@@ -13,8 +13,10 @@ public class AeeemMetricResult {
     private String superclassName;
     private boolean isInterface;
     private Set<String> dependencies = new HashSet<>();
-    private Set<String> methodNames = new HashSet<>();
+    private Set<String> declaredMethodSignatures = new HashSet<>();
+    private Set<String> inheritableMethodSignatures = new HashSet<>();
     private int declaredAttributeCount;
+    private int inheritableDeclaredAttributeCount;
 
     // ck_oo metrics
     private double ckOoNumberOfPrivateMethods;
@@ -104,10 +106,20 @@ public class AeeemMetricResult {
     public void setInterface(boolean anInterface) { isInterface = anInterface; }
     public Set<String> getDependencies() { return dependencies; }
     public void setDependencies(Set<String> dependencies) { this.dependencies = dependencies; }
-    public Set<String> getMethodNames() { return methodNames; }
-    public void setMethodNames(Set<String> methodNames) { this.methodNames = methodNames; }
+    public Set<String> getDeclaredMethodSignatures() { return declaredMethodSignatures; }
+    public void setDeclaredMethodSignatures(Set<String> signatures) {
+        this.declaredMethodSignatures = signatures;
+    }
+    public Set<String> getInheritableMethodSignatures() { return inheritableMethodSignatures; }
+    public void setInheritableMethodSignatures(Set<String> signatures) {
+        this.inheritableMethodSignatures = signatures;
+    }
     public int getDeclaredAttributeCount() { return declaredAttributeCount; }
     public void setDeclaredAttributeCount(int count) { this.declaredAttributeCount = count; }
+    public int getInheritableDeclaredAttributeCount() { return inheritableDeclaredAttributeCount; }
+    public void setInheritableDeclaredAttributeCount(int count) {
+        this.inheritableDeclaredAttributeCount = count;
+    }
 
     // Getters and Setters for ck_oo
     public double getCkOoNumberOfPrivateMethods() { return ckOoNumberOfPrivateMethods; }

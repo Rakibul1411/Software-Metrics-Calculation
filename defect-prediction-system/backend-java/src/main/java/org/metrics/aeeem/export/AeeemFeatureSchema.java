@@ -86,7 +86,8 @@ public final class AeeemFeatureSchema {
         List<Object> values = new ArrayList<>(FEATURES.size() + 1);
         values.add(metrics.getFullyQualifiedName());
         for (Feature feature : FEATURES) {
-            values.add(feature.value.applyAsDouble(metrics));
+            values.add(AeeemNumericFormatter.format(
+                    feature.value.applyAsDouble(metrics)));
         }
         return values;
     }

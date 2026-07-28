@@ -3,6 +3,9 @@ package org.metrics.common.exception;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.catalina.connector.ClientAbortException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -12,6 +15,12 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(ClientAbortException.class)
+    public void handleClientAbort() {
+    }
 
     @ExceptionHandler({IllegalArgumentException.class, MissingServletRequestParameterException.class})
     public ResponseEntity<Map<String, String>> handleBadRequest(Exception exception) {
@@ -23,14 +32,25 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.PAYLOAD_TOO_LARGE, "The uploaded project archive exceeds the configured size limit.");
     }
 
+    @ExceptionHandler(ExtractionBusyException.class)
+    public ResponseEntity<Map<String, String>> handleExtractionBusy(ExtractionBusyException exception) {
+        return error(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage());
+    }
+
     @ExceptionHandler(java.io.IOException.class)
     public ResponseEntity<Map<String, String>> handleInputFailure(java.io.IOException exception) {
+        LOGGER.warn("Metric extraction input failure", exception);
         return error(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleAllExceptions(Exception e) {
-        return error(HttpStatus.INTERNAL_SERVER_ERROR, "The server could not complete the request.");
+        LOGGER.error("Unhandled metric extraction failure", e);
+        String details = e.getMessage();
+        String message = details == null || details.trim().isEmpty()
+                ? "The server could not complete the request. Check the backend log for the root cause."
+                : "The server could not complete the request: " + details;
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, message);
     }
 
     private ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {

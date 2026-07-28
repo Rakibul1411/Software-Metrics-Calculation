@@ -89,6 +89,8 @@ public class PredictionService {
         }
 
         body.add("label_column", labelColumnName);
+        body.add("classifier", modelOptions.getClassifier().getApiValue());
+        // Retained for compatibility with earlier ML-service versions.
         body.add("classifier_type", modelOptions.getClassifier().getApiValue());
         body.add("knn_value", String.valueOf(modelOptions.getKnnValue()));
         body.add("auto_tune_k", String.valueOf(modelOptions.isAutoTuneK()));
