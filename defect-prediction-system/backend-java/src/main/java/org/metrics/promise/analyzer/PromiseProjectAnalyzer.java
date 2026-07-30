@@ -1,8 +1,6 @@
 package org.metrics.promise.analyzer;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -10,18 +8,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -77,10 +71,18 @@ import org.metrics.promise.calculator.NpmPromiseCalculator;
 import org.metrics.promise.calculator.RfcPromiseCalculator;
 import org.metrics.promise.calculator.WmcPromiseCalculator;
 import org.metrics.promise.model.PromiseMetricResult;
+import org.metrics.jdt.JavaLanguageConfiguration;
+import org.metrics.jdt.JavaParserConfigurationResolver;
+import org.metrics.jdt.JdtProjectEnvironment;
+import org.metrics.jdt.ResolvedJavaProject;
 
 public class PromiseProjectAnalyzer {
 
+    private static final int DEFAULT_BATCH_SIZE = 96;
+    private static final int MAX_DIAGNOSTICS = 50;
+
     private final List<String> diagnostics = new ArrayList<>();
+    private int suppressedDiagnostics;
     private final Map<Path, String> sourceByPath = new LinkedHashMap<>();
     private final Map<Path, CompilationUnit> unitsByPath = new LinkedHashMap<>();
     private final Map<String, TypeInfo> typesByKey = new LinkedHashMap<>();
@@ -111,7 +113,13 @@ public class PromiseProjectAnalyzer {
                 .map(this::toMetricResult)
                 .collect(Collectors.toList());
 
-        diagnostics.forEach(message -> System.err.println("PROMISE metric warning: " + message));
+        diagnostics.forEach(message ->
+                System.err.println("PROMISE metric warning: " + message));
+        if (suppressedDiagnostics > 0) {
+            System.err.println("PROMISE metric warning: "
+                    + suppressedDiagnostics
+                    + " additional diagnostics were suppressed.");
+        }
         return results;
     }
 
@@ -129,25 +137,55 @@ public class PromiseProjectAnalyzer {
     }
 
     private void parseProject(List<Path> javaFiles, Collection<Path> requestedRoots) throws IOException {
-        for (Path file : javaFiles) {
-            sourceByPath.put(file.toAbsolutePath().normalize(), new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
+        Path projectRoot = commonProjectRoot(requestedRoots);
+        ResolvedJavaProject configuration = JavaParserConfigurationResolver.resolve(
+                projectRoot, javaFiles, null);
+        for (String diagnostic : configuration.getDiagnostics()) {
+            diagnostic(diagnostic);
         }
-
+        for (Path file : javaFiles) {
+            JavaLanguageConfiguration fileConfiguration =
+                    configuration.configurationFor(file);
+            sourceByPath.put(file.toAbsolutePath().normalize(),
+                    new String(Files.readAllBytes(file),
+                            fileConfiguration.getCharset()));
+        }
         List<String> sourcePaths = inferSourcePaths(javaFiles, requestedRoots);
-        String sourceVersion = inferCompilerSourceVersion();
-        ASTParser parser = ASTParser.newParser(AST.JLS17);
+        String[] classPath = JdtProjectEnvironment.collectJarClassPath(
+                projectRoot, ignored -> true);
+        for (Map.Entry<JavaLanguageConfiguration, List<Path>> entry
+                : configuration.getFilesByConfiguration().entrySet()) {
+            List<Path> configuredFiles = entry.getValue();
+            int batchSize = configuredBatchSize();
+            for (int start = 0; start < configuredFiles.size(); start += batchSize) {
+                int end = Math.min(configuredFiles.size(), start + batchSize);
+                parseBatch(
+                        configuredFiles.subList(start, end),
+                        entry.getKey(),
+                        classPath,
+                        sourcePaths);
+            }
+        }
+    }
+
+    private void parseBatch(
+            List<Path> javaFiles,
+            JavaLanguageConfiguration configuration,
+            String[] classPath,
+            List<String> sourcePaths) {
+        ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
         parser.setResolveBindings(true);
         parser.setBindingsRecovery(true);
         parser.setStatementsRecovery(true);
-        parser.setEnvironment(classPath(requestedRoots), sourcePaths.toArray(new String[0]), null, true);
-        parser.setCompilerOptions(compilerOptions(sourceVersion));
+        parser.setEnvironment(classPath, sourcePaths.toArray(new String[0]), null, true);
+        parser.setCompilerOptions(configuration.compilerOptions());
 
         String[] fileNames = javaFiles.stream()
                 .map(path -> path.toAbsolutePath().normalize().toString())
                 .toArray(String[]::new);
         String[] encodings = new String[fileNames.length];
-        Arrays.fill(encodings, StandardCharsets.UTF_8.name());
+        Arrays.fill(encodings, configuration.getCharset().name());
 
         parser.createASTs(fileNames, encodings, new String[0], new FileASTRequestor() {
             @Override
@@ -157,6 +195,28 @@ public class PromiseProjectAnalyzer {
                 reportProblems(path, ast);
             }
         }, null);
+    }
+
+    private Path commonProjectRoot(Collection<Path> requestedRoots) {
+        Path result = null;
+        for (Path requestedRoot : requestedRoots) {
+            if (requestedRoot == null || !Files.isDirectory(requestedRoot)) {
+                continue;
+            }
+            Path normalized = requestedRoot.toAbsolutePath().normalize();
+            if (result == null) {
+                result = normalized;
+                continue;
+            }
+            while (result != null && !normalized.startsWith(result)) {
+                result = result.getParent();
+            }
+        }
+        if (result == null) {
+            throw new IllegalArgumentException(
+                    "At least one PROMISE source directory is required.");
+        }
+        return result;
     }
 
     private List<String> inferSourcePaths(List<Path> javaFiles, Collection<Path> requestedRoots) {
@@ -189,124 +249,37 @@ public class PromiseProjectAnalyzer {
     }
 
     private String readPackageName(Path javaFile) {
-        try {
-            ASTParser parser = ASTParser.newParser(AST.JLS17);
-            parser.setKind(ASTParser.K_COMPILATION_UNIT);
-            parser.setSource(new String(Files.readAllBytes(javaFile), StandardCharsets.UTF_8).toCharArray());
-            CompilationUnit unit = (CompilationUnit) parser.createAST(null);
-            PackageDeclaration declaration = unit.getPackage();
-            return declaration == null ? "" : declaration.getName().getFullyQualifiedName();
-        } catch (IOException ex) {
-            diagnostics.add("Could not infer source root for " + javaFile + ": " + ex.getMessage());
-            return "";
-        }
+        ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
+        parser.setKind(ASTParser.K_COMPILATION_UNIT);
+        String source = sourceByPath.get(javaFile.toAbsolutePath().normalize());
+        parser.setSource((source == null ? "" : source).toCharArray());
+        CompilationUnit unit = (CompilationUnit) parser.createAST(null);
+        PackageDeclaration declaration = unit.getPackage();
+        return declaration == null ? ""
+                : declaration.getName().getFullyQualifiedName();
     }
 
-    private String[] classPath(Collection<Path> requestedRoots) throws IOException {
-        Set<String> entries = new LinkedHashSet<>();
-        String value = System.getProperty("java.class.path", "");
-        if (!value.trim().isEmpty()) {
-            entries.addAll(Arrays.asList(value.split(File.pathSeparator)));
+    private int configuredBatchSize() {
+        String configured = System.getProperty("promise.jdt.batchSize");
+        if (configured == null || configured.trim().isEmpty()) {
+            configured = System.getenv("PROMISE_JDT_BATCH_SIZE");
         }
-
-        for (Path root : classpathSearchRoots(requestedRoots)) {
-            if (!Files.isDirectory(root)) {
-                continue;
-            }
-            try (Stream<Path> stream = Files.walk(root)) {
-                stream.filter(Files::isRegularFile)
-                        .filter(path -> path.toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
-                        .map(path -> path.toAbsolutePath().normalize().toString())
-                        .forEach(entries::add);
+        if (configured != null && !configured.trim().isEmpty()) {
+            try {
+                return Math.max(16, Math.min(512,
+                        Integer.parseInt(configured.trim())));
+            } catch (NumberFormatException ignored) {
+                // Use the memory-safe default.
             }
         }
-        return entries.toArray(new String[0]);
-    }
-
-    private Set<Path> classpathSearchRoots(Collection<Path> requestedRoots) {
-        Set<Path> roots = new LinkedHashSet<>();
-        for (Path requestedRoot : requestedRoots) {
-            if (requestedRoot == null) {
-                continue;
-            }
-            Path current = requestedRoot.toAbsolutePath().normalize();
-            roots.add(current);
-            while (current != null && current.getFileName() != null && isSourceLayoutSegment(current.getFileName().toString())) {
-                current = current.getParent();
-                if (current != null) {
-                    roots.add(current);
-                }
-            }
-        }
-        return roots;
-    }
-
-    private boolean isSourceLayoutSegment(String name) {
-        String normalized = name.toLowerCase(Locale.ROOT);
-        return "java".equals(normalized) || "main".equals(normalized) || "src".equals(normalized);
-    }
-
-    private String inferCompilerSourceVersion() {
-        List<String> candidates = Arrays.asList(
-                JavaCore.VERSION_1_4,
-                JavaCore.VERSION_1_5,
-                JavaCore.VERSION_1_8,
-                JavaCore.VERSION_11,
-                JavaCore.VERSION_17
-        );
-
-        String selected = JavaCore.VERSION_17;
-        int bestErrorCount = Integer.MAX_VALUE;
-        for (String candidate : candidates) {
-            int errors = countParserErrors(candidate, bestErrorCount);
-            if (errors <= bestErrorCount) {
-                bestErrorCount = errors;
-                selected = candidate;
-            }
-        }
-        if (bestErrorCount > 0) {
-            diagnostics.add("JDT parser selected Java source level " + selected
-                    + " with " + bestErrorCount + " syntax errors during source-level detection.");
-        }
-        return selected;
-    }
-
-    private int countParserErrors(String sourceVersion, int currentBest) {
-        int errors = 0;
-        for (String source : sourceByPath.values()) {
-            ASTParser parser = ASTParser.newParser(AST.JLS17);
-            parser.setKind(ASTParser.K_COMPILATION_UNIT);
-            parser.setResolveBindings(false);
-            parser.setBindingsRecovery(false);
-            parser.setStatementsRecovery(true);
-            parser.setCompilerOptions(compilerOptions(sourceVersion));
-            parser.setSource(source.toCharArray());
-            CompilationUnit unit = (CompilationUnit) parser.createAST(null);
-            for (IProblem problem : unit.getProblems()) {
-                if (problem.isError()) {
-                    errors++;
-                    if (errors > currentBest) {
-                        return errors;
-                    }
-                }
-            }
-        }
-        return errors;
-    }
-
-    private Map<String, String> compilerOptions(String sourceVersion) {
-        Map<String, String> options = JavaCore.getOptions();
-        options.put(JavaCore.COMPILER_SOURCE, sourceVersion);
-        options.put(JavaCore.COMPILER_COMPLIANCE, sourceVersion);
-        options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, sourceVersion);
-        options.put(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, JavaCore.DISABLED);
-        return options;
+        return DEFAULT_BATCH_SIZE;
     }
 
     private void reportProblems(Path path, CompilationUnit ast) {
         for (IProblem problem : ast.getProblems()) {
             if (problem.isError()) {
-                diagnostics.add(path + ":" + problem.getSourceLineNumber() + " " + problem.getMessage());
+                diagnostic(path + ":" + problem.getSourceLineNumber()
+                        + " " + problem.getMessage());
             }
         }
     }
@@ -351,19 +324,41 @@ public class PromiseProjectAnalyzer {
                               char[] commentFreeSource, AbstractTypeDeclaration node) {
         ITypeBinding binding = node.resolveBinding();
         if (binding == null) {
-            diagnostics.add("Unresolved type binding for " + node.getName().getIdentifier() + " in " + sourcePath);
-            return;
+            diagnostic("Unresolved type binding for "
+                    + node.getName().getIdentifier() + " in " + sourcePath);
         }
 
         String key = typeKey(binding);
         String name = typeName(binding);
-        if (key == null || name == null || name.isEmpty() || typesByKey.containsKey(key)) {
+        if (name == null || name.isEmpty()) {
+            name = fallbackTypeName(unit, node);
+        }
+        if (key == null || key.isEmpty()) {
+            key = name;
+        }
+        if (name == null || name.isEmpty() || key == null || key.isEmpty()) {
+            diagnostic("Could not identify top-level type "
+                    + node.getName().getIdentifier() + " in " + sourcePath);
+            return;
+        }
+        if (typesByKey.containsKey(key) || typesByName.containsKey(name)) {
+            diagnostic("Duplicate type " + name + " in " + sourcePath
+                    + " was ignored; the first production source was retained.");
             return;
         }
 
         TypeInfo info = new TypeInfo(sourcePath, unit, source, commentFreeSource, node, binding, key, name);
         typesByKey.put(key, info);
         typesByName.put(name, info);
+    }
+
+    private String fallbackTypeName(
+            CompilationUnit unit,
+            AbstractTypeDeclaration node) {
+        PackageDeclaration declaration = unit.getPackage();
+        String simpleName = node.getName().getIdentifier();
+        return declaration == null ? simpleName
+                : declaration.getName().getFullyQualifiedName() + "." + simpleName;
     }
 
     private void collectDirectMembers() {
@@ -383,16 +378,19 @@ public class PromiseProjectAnalyzer {
             FieldDeclaration field = (FieldDeclaration) declaration;
             ITypeBinding declaredType = field.getType().resolveBinding();
             if (declaredType == null) {
-                diagnostics.add("Unresolved field type in " + type.name + " at line "
+                diagnostic("Unresolved field type in " + type.name + " at line "
                         + type.unit.getLineNumber(field.getStartPosition()));
             }
             for (VariableDeclarationFragment fragment : (List<VariableDeclarationFragment>) field.fragments()) {
                 IVariableBinding binding = fragment.resolveBinding();
                 if (binding == null) {
-                    diagnostics.add("Unresolved field binding for " + type.name + "." + fragment.getName());
-                    continue;
+                    diagnostic("Unresolved field binding for "
+                            + type.name + "." + fragment.getName());
                 }
-                FieldInfo info = new FieldInfo(binding.getVariableDeclaration().getKey(), field, declaredType);
+                String fieldKey = binding == null
+                        ? type.key + "#" + fragment.getName().getIdentifier()
+                        : binding.getVariableDeclaration().getKey();
+                FieldInfo info = new FieldInfo(fieldKey, field, declaredType);
                 collectReferencedTypeKeys(declaredType, info.referencedTypeKeys);
                 type.fields.add(info);
                 addTypeDependency(type, declaredType);
@@ -400,7 +398,6 @@ public class PromiseProjectAnalyzer {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private void collectMethods(TypeInfo type) {
         boolean hasConstructor = false;
         for (Object declaration : type.node.bodyDeclarations()) {
@@ -411,16 +408,21 @@ public class PromiseProjectAnalyzer {
             MethodDeclaration method = (MethodDeclaration) declaration;
             IMethodBinding binding = method.resolveBinding();
             if (binding == null) {
-                diagnostics.add("Unresolved method binding for " + type.name + "." + method.getName());
-                continue;
+                diagnostic("Unresolved method binding for "
+                        + type.name + "." + method.getName());
             }
 
-            MethodInfo info = new MethodInfo(method, binding.getMethodDeclaration(), false);
-            info.signature = methodKey(binding);
+            IMethodBinding declarationBinding = binding == null
+                    ? null : binding.getMethodDeclaration();
+            MethodInfo info = new MethodInfo(method, declarationBinding, false);
+            info.signature = binding == null
+                    ? syntacticMethodKey(type, method) : methodKey(binding);
             info.complexity = CyclomaticComplexityPromiseCalculator.calculate(method);
             info.loc = LocPromiseCalculator.countSourceLines(type, method);
             info.publicMethod = isPublicMethod(type, method, binding);
-            info.parameterTypes.addAll(parameterTypeKeys(binding));
+            if (binding != null) {
+                info.parameterTypes.addAll(parameterTypeKeys(binding));
+            }
             type.methods.add(info);
 
             if (method.isConstructor()) {
@@ -437,10 +439,24 @@ public class PromiseProjectAnalyzer {
     }
 
     private boolean isPublicMethod(TypeInfo type, MethodDeclaration method, IMethodBinding binding) {
-        if (Modifier.isPublic(method.getModifiers()) || Modifier.isPublic(binding.getModifiers())) {
+        if (Modifier.isPublic(method.getModifiers())
+                || (binding != null && Modifier.isPublic(binding.getModifiers()))) {
             return true;
         }
         return type.isInterface() && !Modifier.isPrivate(method.getModifiers());
+    }
+
+    private String syntacticMethodKey(TypeInfo type, MethodDeclaration method) {
+        StringBuilder result = new StringBuilder(type.key).append('#');
+        result.append(method.isConstructor()
+                ? "<init>" : method.getName().getIdentifier()).append('(');
+        for (int index = 0; index < method.parameters().size(); index++) {
+            if (index > 0) {
+                result.append(',');
+            }
+            result.append('?');
+        }
+        return result.append(')').toString();
     }
 
     private List<String> parameterTypeKeys(IMethodBinding binding) {
@@ -481,7 +497,7 @@ public class PromiseProjectAnalyzer {
             public boolean visit(MethodInvocation node) {
                 IMethodBinding binding = node.resolveMethodBinding();
                 if (binding == null) {
-                    diagnostics.add("Unresolved method call " + node.getName() + " in " + type.name
+                    diagnostic("Unresolved method call " + node.getName() + " in " + type.name
                             + " at line " + type.unit.getLineNumber(node.getStartPosition()));
                 } else {
                     methodInfo.invokedMethods.add(binding.getMethodDeclaration());
@@ -496,7 +512,7 @@ public class PromiseProjectAnalyzer {
             public boolean visit(SuperMethodInvocation node) {
                 IMethodBinding binding = node.resolveMethodBinding();
                 if (binding == null) {
-                    diagnostics.add("Unresolved super method call " + node.getName() + " in " + type.name
+                    diagnostic("Unresolved super method call " + node.getName() + " in " + type.name
                             + " at line " + type.unit.getLineNumber(node.getStartPosition()));
                 } else {
                     methodInfo.invokedMethods.add(binding.getMethodDeclaration());
@@ -511,7 +527,7 @@ public class PromiseProjectAnalyzer {
             public boolean visit(ClassInstanceCreation node) {
                 IMethodBinding constructor = node.resolveConstructorBinding();
                 if (constructor == null) {
-                    diagnostics.add("Unresolved constructor call in " + type.name + " at line "
+                    diagnostic("Unresolved constructor call in " + type.name + " at line "
                             + type.unit.getLineNumber(node.getStartPosition()));
                 } else {
                     methodInfo.invokedMethods.add(constructor.getMethodDeclaration());
@@ -529,7 +545,7 @@ public class PromiseProjectAnalyzer {
                     methodInfo.invokedMethods.add(binding.getMethodDeclaration());
                     addInvokedMethodKey(methodInfo, binding);
                 } else {
-                    diagnostics.add("Unresolved this-constructor call in " + type.name + " at line "
+                    diagnostic("Unresolved this-constructor call in " + type.name + " at line "
                             + type.unit.getLineNumber(node.getStartPosition()));
                 }
                 return true;
@@ -543,7 +559,7 @@ public class PromiseProjectAnalyzer {
                     addInvokedMethodKey(methodInfo, binding);
                     addMethodDependency(type, binding);
                 } else {
-                    diagnostics.add("Unresolved super-constructor call in " + type.name + " at line "
+                    diagnostic("Unresolved super-constructor call in " + type.name + " at line "
                             + type.unit.getLineNumber(node.getStartPosition()));
                 }
                 return true;
@@ -585,8 +601,11 @@ public class PromiseProjectAnalyzer {
         }
 
         ITypeBinding declaringClass = variable.getDeclaringClass();
-        if (sameType(type.binding, declaringClass) && !Modifier.isStatic(variable.getModifiers())) {
-            methodInfo.accessedInstanceFields.add(variable.getKey());
+        if (sameType(type.binding, declaringClass)) {
+            methodInfo.accessedFields.add(variable.getKey());
+            if (!Modifier.isStatic(variable.getModifiers())) {
+                methodInfo.accessedInstanceFields.add(variable.getKey());
+            }
         }
         addTypeDependency(type, declaringClass);
         addTypeDependency(type, variable.getType());
@@ -610,7 +629,8 @@ public class PromiseProjectAnalyzer {
 
     private void collectInheritedCall(TypeInfo type, MethodInfo caller, IMethodBinding calledMethod) {
         ITypeBinding declaringClass = calledMethod.getDeclaringClass();
-        if (declaringClass == null || sameType(type.binding, declaringClass)) {
+        if (type.binding == null || declaringClass == null
+                || sameType(type.binding, declaringClass)) {
             return;
         }
         if (isAncestor(type.binding, declaringClass)) {
@@ -675,8 +695,12 @@ public class PromiseProjectAnalyzer {
 
     private void calculateProjectLevelRelationships() {
         for (TypeInfo type : typesByName.values()) {
-            type.superclassKey = typeKey(type.binding.getSuperclass());
-            type.interfaceKeys.addAll(interfaceKeys(type.binding));
+            if (type.binding != null) {
+                type.superclassKey = typeKey(type.binding.getSuperclass());
+                type.interfaceKeys.addAll(interfaceKeys(type.binding));
+            } else {
+                type.superclassKey = syntacticSuperclassKey(type);
+            }
             addInheritanceDependencies(type);
             type.outgoingTypeKeys.remove(type.key);
         }
@@ -708,6 +732,9 @@ public class PromiseProjectAnalyzer {
 
     private Set<String> interfaceKeys(ITypeBinding binding) {
         Set<String> keys = new HashSet<>();
+        if (binding == null) {
+            return keys;
+        }
         for (ITypeBinding iface : binding.getInterfaces()) {
             String key = typeKey(iface);
             if (key != null) {
@@ -716,6 +743,31 @@ public class PromiseProjectAnalyzer {
             keys.addAll(interfaceKeys(iface));
         }
         return keys;
+    }
+
+    private String syntacticSuperclassKey(TypeInfo type) {
+        if (!(type.node instanceof TypeDeclaration)) {
+            return null;
+        }
+        TypeDeclaration declaration = (TypeDeclaration) type.node;
+        if (declaration.getSuperclassType() == null) {
+            return type.isInterface() ? null : "java.lang.Object";
+        }
+        ITypeBinding resolved = declaration.getSuperclassType().resolveBinding();
+        String key = typeKey(resolved);
+        if (key != null) {
+            return key;
+        }
+        String writtenName = declaration.getSuperclassType().toString();
+        if (typesByName.containsKey(writtenName)) {
+            return typesByName.get(writtenName).key;
+        }
+        String packageName = type.unit.getPackage() == null ? ""
+                : type.unit.getPackage().getName().getFullyQualifiedName();
+        String qualified = packageName.isEmpty()
+                ? writtenName : packageName + "." + writtenName;
+        return typesByName.containsKey(qualified)
+                ? typesByName.get(qualified).key : writtenName;
     }
 
     private PromiseMetricResult toMetricResult(TypeInfo type) {
@@ -747,7 +799,6 @@ public class PromiseProjectAnalyzer {
         return result;
     }
 
-    @SuppressWarnings("unchecked")
     private char[] stripComments(String source, CompilationUnit unit) {
         char[] chars = source.toCharArray();
         for (Object object : unit.getCommentList()) {
@@ -766,6 +817,9 @@ public class PromiseProjectAnalyzer {
     }
 
     private boolean isAncestor(ITypeBinding child, ITypeBinding possibleAncestor) {
+        if (child == null || possibleAncestor == null) {
+            return false;
+        }
         String ancestorKey = typeKey(possibleAncestor);
         if (ancestorKey == null) {
             return false;
@@ -795,7 +849,7 @@ public class PromiseProjectAnalyzer {
         try {
             return binding.getErasure();
         } catch (RuntimeException ex) {
-            diagnostics.add("Could not resolve type erasure: " + ex.getMessage());
+            diagnostic("Could not resolve type erasure: " + ex.getMessage());
             return binding;
         }
     }
@@ -838,7 +892,7 @@ public class PromiseProjectAnalyzer {
         IMethodBinding declaration = binding.getMethodDeclaration();
         String owner = typeKey(declaration.getDeclaringClass());
         if (owner == null) {
-            diagnostics.add("Unresolved declaring type for method " + binding.getName());
+            diagnostic("Unresolved declaring type for method " + binding.getName());
             return null;
         }
         return owner + "#" + methodSubsignature(declaration);
@@ -860,6 +914,14 @@ public class PromiseProjectAnalyzer {
         }
         builder.append(')');
         return builder.toString();
+    }
+
+    private void diagnostic(String message) {
+        if (diagnostics.size() < MAX_DIAGNOSTICS) {
+            diagnostics.add(message);
+        } else {
+            suppressedDiagnostics++;
+        }
     }
 
     public static class TypeInfo {
@@ -915,7 +977,10 @@ public class PromiseProjectAnalyzer {
         }
 
         public boolean isInterface() {
-            return binding.isInterface();
+            return binding == null
+                    ? node instanceof TypeDeclaration
+                        && ((TypeDeclaration) node).isInterface()
+                    : binding.isInterface();
         }
     }
 
@@ -938,6 +1003,7 @@ public class PromiseProjectAnalyzer {
         public final boolean implicit;
         public final boolean constructor;
         public final String name;
+        public final Set<String> accessedFields = new HashSet<>();
         public final Set<String> accessedInstanceFields = new HashSet<>();
         public final Set<IMethodBinding> invokedMethods = new HashSet<>();
         public final Set<String> invokedMethodKeys = new HashSet<>();
@@ -954,7 +1020,10 @@ public class PromiseProjectAnalyzer {
             this.binding = binding;
             this.implicit = implicit;
             this.constructor = node != null && node.isConstructor();
-            this.name = binding == null ? "<init>" : binding.getName();
+            this.name = binding != null
+                    ? binding.getName()
+                    : node == null || node.isConstructor()
+                        ? "<init>" : node.getName().getIdentifier();
         }
 
         static MethodInfo implicitDefaultConstructor(TypeInfo owner) {

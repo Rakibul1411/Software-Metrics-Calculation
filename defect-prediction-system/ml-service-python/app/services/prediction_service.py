@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from fastapi import UploadFile
 
-from app.services.coral_service import CoralService
+from app.services.shallow_coral_service import ShallowCoralService
 from app.services.knn_service import KnnService
 from app.services.metrics_service import MetricsService
 from app.services.preprocessing_service import PreprocessingService
@@ -34,9 +34,19 @@ class PredictionService:
     ]
 
     SUPPORTED_CLASSIFIERS = {"knn", "svm"}
+    LABEL_COLUMN_CANDIDATES = (
+        "class",
+        "bug",
+        "bugs",
+        "defect",
+        "defects",
+        "defective",
+        "label",
+        "is_buggy",
+    )
 
     def __init__(self) -> None:
-        self.coral = CoralService(
+        self.coral = ShallowCoralService(
             regularization=1.0,
             eigenvalue_floor=1e-12,
         )
@@ -232,11 +242,9 @@ class PredictionService:
 
         target_df = self._read_dataset(target_file)
         label_column = label_column.strip().lower()
-        if label_column not in target_df.columns:
-            raise ValueError(
-                f"Label column '{label_column}' was not found in the target dataset. "
-                f"Available columns: {', '.join(target_df.columns)}"
-            )
+        self._require_label_column(
+            target_df, label_column, "the labelled target dataset"
+        )
 
         target_df = self._remove_non_data_rows(target_df, label_column)
         feature_cols = self._feature_columns(
@@ -434,11 +442,9 @@ class PredictionService:
             source_df = self._read_dataset(source_file)
             filename = source_file.filename or "source.csv"
 
-            if label_column not in source_df.columns:
-                raise ValueError(
-                    f"Label column '{label_column}' was not found in {filename}. "
-                    f"Available columns: {', '.join(source_df.columns)}"
-                )
+            self._require_label_column(
+                source_df, label_column, f"source dataset '{filename}'"
+            )
 
             missing_features = [
                 column for column in feature_cols
@@ -509,11 +515,9 @@ class PredictionService:
         for source_file in source_files:
             source_df = self._read_dataset(source_file)
             filename = source_file.filename or "source.csv"
-            if label_column not in source_df.columns:
-                raise ValueError(
-                    f"Label column '{label_column}' was not found in {filename}. "
-                    f"Available columns: {', '.join(source_df.columns)}"
-                )
+            self._require_label_column(
+                source_df, label_column, f"source dataset '{filename}'"
+            )
             missing = [
                 column for column in feature_cols if column not in source_df.columns
             ]
@@ -721,7 +725,7 @@ class PredictionService:
             ),
             "thresholdBeta": float(threshold_beta),
             "coralEnabled": bool(coral_option),
-            "coralType": "shallow/linear CORAL",
+            "coralType": ShallowCoralService.ALGORITHM_NAME,
             "targetLabelUsage": (
                 "not used for training, adaptation, hyperparameter tuning, or "
                 "threshold selection"
@@ -1137,6 +1141,46 @@ class PredictionService:
             )
 
         return normalized
+
+    @classmethod
+    def _require_label_column(
+        cls,
+        dataframe: pd.DataFrame,
+        label_column: str,
+        dataset_name: str,
+    ) -> None:
+        if label_column in dataframe.columns:
+            return
+        display_name = dataset_name[:1].upper() + dataset_name[1:]
+
+        detected = next(
+            (
+                candidate
+                for candidate in cls.LABEL_COLUMN_CANDIDATES
+                if candidate in dataframe.columns
+            ),
+            None,
+        )
+        if detected is not None:
+            raise ValueError(
+                f"{display_name} does not contain label column "
+                f"'{label_column}'. Detected '{detected}' as the label column. "
+                f"Set Label column to '{detected}' and try again."
+            )
+
+        preview = ", ".join(str(column) for column in dataframe.columns[:6])
+        remaining = max(0, len(dataframe.columns) - 6)
+        available = (
+            preview
+            if remaining == 0
+            else f"{preview}, and {remaining} more metric columns"
+        )
+        raise ValueError(
+            f"{display_name} does not contain label column "
+            f"'{label_column}', and no common label column was detected. Add a "
+            "label containing defect counts or clean/buggy values, then enter "
+            f"its exact column name. Columns start with: {available}."
+        )
 
     @staticmethod
     def _binary_labels(

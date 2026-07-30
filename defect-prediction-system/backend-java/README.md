@@ -2,6 +2,10 @@
 
 Spring Boot application providing REST APIs to extract object-oriented metrics from Java source code and run defect predictions.
 
+The backend requires JDK 17. Eclipse JDT 3.37 runs on that JDK while target
+projects may still be parsed as Java 1.3, 1.4, 1.5, or another metadata-selected
+language level.
+
 ## Structure
 
 ```
@@ -17,15 +21,13 @@ backend-java/
 │   │   ├── FileStorageService.java
 │   │   ├── GitHubCloneService.java
 │   │   └── ZipExtractionService.java
-│   ├── client/
-│   │   └── PythonPredictionClient.java     ← Connects to FastAPI ML service
 │   ├── common/
-│   │   ├── dto/                            ← DTOs for request/response
-│   │   ├── enums/                          ← DatasetType (PROMISE/AEEEM)
+│   │   ├── dto/                            ← Prediction options
+│   │   ├── enums/                          ← File format and classifier
 │   │   ├── exception/                      ← GlobalExceptionHandler
-│   │   ├── validation/                     ← Feature schema validator
-│   │   └── csv/                            ← CsvWriterService
+│   │   └── export/                         ← Shared ARFF exporter
 │   ├── promise/                            ← PROMISE metrics domain
+│   ├── jdt/                                ← shared language/config resolver
 │   └── aeeem/                              ← AEEEM metrics domain
 │       ├── calculator/                     ← 17 self-contained JDT source metrics
 │       ├── git/                            ← snapshots, numstat, and rename tracking
@@ -38,22 +40,20 @@ backend-java/
 │   └── metric-profiles/
 │       ├── promise-metrics.json
 │       └── aeeem-static-metrics.json
-└── storage/
-    ├── uploads/
-    ├── extracted-projects/
-    ├── generated-datasets/
-    └── prediction-results/
+└── storage/                                ← Runtime-created uploads/extractions
 ```
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/metrics/extract` | Extract metrics from a source directory |
-| `GET` | `/api/metrics/download/{datasetId}` | Download generated CSV |
+| `POST` | `/api/metrics/extract` | Extract metrics from ZIP/GitHub input |
+| `GET` | `/api/metrics/download/{datasetId}/{format}` | Download CSV or ARFF |
 | `POST` | `/api/prediction/run` | Run defect prediction via Python service |
 
 ## Build & Run
+
+Requirements: JDK 17 and Maven 3.8 or later.
 
 ```bash
 mvn clean package
@@ -64,6 +64,24 @@ mvn spring-boot:run
 ```
 
 Server listens on port `8080` by default.
+
+## Historical Java source resolution
+
+Each source module is resolved independently in this order:
+
+1. nearest `.settings/org.eclipse.jdt.core.prefs`;
+2. Maven compiler properties/plugin configuration;
+3. Ant `build.xml`, `common-build.xml`, and property files;
+4. AEEEM benchmark fallback, when a benchmark profile is selected;
+5. oldest source level with the fewest JDT syntax errors.
+
+Only JARs contained in the target project are added to its classpath. The
+Spring/JDT backend classpath is not leaked into historical binding resolution.
+PROMISE and AEEEM parsing both use bounded groups; set
+`PROMISE_JDT_BATCH_SIZE` or `AEEEM_JDT_BATCH_SIZE` from 16 through 512.
+
+PROMISE accepts one project-release archive per extraction. Uploading a
+collection that contains multiple nested release archives is rejected.
 
 For large AEEEM repositories:
 
@@ -85,10 +103,26 @@ configurable defaults:
 | Profile | History interval | Final release | Scheduled snapshots |
 |---|---|---|---:|
 | JDT | 2005-01-01 → 2008-06-17 | `R3_4` | 91 |
-| EQ | 2005-01-01 → 2008-06-25 | Equinox 3.4 commit at/before the end date | 91 |
+| EQ | 2005-01-01 → 2008-06-25 | `R3_4` / `bundles/org.eclipse.osgi` | 91 |
 | PDE | 2005-01-01 → 2008-09-11 | `R3_4_1` | 97 |
 | LC | 2005-01-01 → 2008-10-08 | `releases/lucene/2.4.0` | 99 |
 | ML | 2005-01-17 → 2009-03-17 | `R_3_1_0` | 98 |
+
+Benchmark repository mapping is fixed and validated before cloning:
+
+| Profile | Repository |
+|---|---|
+| JDT | `eclipse-jdt/eclipse.jdt.core` |
+| PDE | `eclipse-pde/eclipse.pde` |
+| EQ | `eclipse-equinox/equinox.framework` |
+| ML | `eclipse-mylyn/org.eclipse.mylyn` |
+| LC | `apache/lucene` |
+
+Exact release refs are preferred. When a migrated mirror does not expose the
+legacy tag, the final first-parent commit on or before the fixed release date
+is used and the response records a compatibility warning. If a mirror begins
+after the requested benchmark start, every available commit is used and the
+response explicitly marks the shortened historical coverage.
 
 | Environment variable | Default | Purpose |
 |---|---:|---|

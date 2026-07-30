@@ -1,6 +1,7 @@
 package org.metrics.aeeem.git;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -77,6 +78,98 @@ class BiWeeklySnapshotGeneratorTest {
                 snapshots.get(snapshots.size() - 1).getDate());
         assertEquals(git(null, "rev-parse", "R3_4").trim(),
                 snapshots.get(snapshots.size() - 1).getCommit());
+    }
+
+    @Test
+    void fallsBackToReleaseDateWhenLegacyTagIsMissing() throws Exception {
+        git(null, "init");
+        git(null, "config", "user.email", "metrics@example.com");
+        git(null, "config", "user.name", "Metrics Test");
+        Path source = repository.resolve("ui/org.eclipse.pde.ui/src/demo/View.java");
+        Files.createDirectories(source.getParent());
+
+        Files.write(source, "class HistoryStart {}".getBytes(StandardCharsets.UTF_8));
+        git(null, "add", ".");
+        git("2004-12-31T00:00:00Z", "commit", "-m", "history");
+
+        Files.write(source, "class Release {}".getBytes(StandardCharsets.UTF_8));
+        git(null, "add", ".");
+        git("2008-09-10T00:00:00Z", "commit", "-m", "release without migrated tag");
+
+        AeeemAnalysisOptions options = AeeemAnalysisOptions.fromRequest(
+                "pde", null, null, null, null, null, null);
+        BiWeeklySnapshotGenerator.Selection selection =
+                new BiWeeklySnapshotGenerator(26)
+                        .generateSelection(repository, "HEAD", options);
+
+        assertEquals("release-date fallback", selection.getReleaseResolution());
+        assertTrue(selection.getWarnings().get(0).contains("R3_4_1"));
+        assertEquals(git(null, "rev-parse", "HEAD").trim(),
+                selection.getSnapshots().get(
+                        selection.getSnapshots().size() - 1).getCommit());
+    }
+
+    @Test
+    void fallsBackWhenLegacyTagIsDisconnectedFromSelectedLineage() throws Exception {
+        git(null, "init");
+        git(null, "config", "user.email", "metrics@example.com");
+        git(null, "config", "user.name", "Metrics Test");
+        Path source = repository.resolve("src/main/java/demo/Task.java");
+        Files.createDirectories(source.getParent());
+
+        Files.write(source, "class Initial {}".getBytes(StandardCharsets.UTF_8));
+        git(null, "add", ".");
+        git("2005-06-17T00:00:00Z", "commit", "-m", "initial import");
+        Files.write(source, "class Release {}".getBytes(StandardCharsets.UTF_8));
+        git(null, "add", ".");
+        git("2009-03-16T00:00:00Z", "commit", "-m", "release");
+        String mainLineage = git(null, "rev-parse", "--abbrev-ref", "HEAD").trim();
+
+        git(null, "checkout", "--orphan", "legacy-tag-only");
+        Files.deleteIfExists(source);
+        git(null, "add", "-A");
+        git("2009-03-10T00:00:00Z", "commit", "-m", "empty migrated tag");
+        git(null, "tag", "R_3_1_0");
+        git(null, "checkout", mainLineage);
+
+        AeeemAnalysisOptions options = AeeemAnalysisOptions.fromRequest(
+                "ml", null, null, null, null, null, null);
+        BiWeeklySnapshotGenerator.Selection selection =
+                new BiWeeklySnapshotGenerator(26)
+                        .generateSelection(repository, "HEAD", options);
+
+        assertEquals("release-date fallback", selection.getReleaseResolution());
+        assertEquals(git(null, "rev-parse", "HEAD").trim(),
+                selection.getSnapshots().get(
+                        selection.getSnapshots().size() - 1).getCommit());
+    }
+
+    @Test
+    void usesAvailableHistoryWhenMirrorStartsAfterBenchmarkWindow() throws Exception {
+        git(null, "init");
+        git(null, "config", "user.email", "metrics@example.com");
+        git(null, "config", "user.name", "Metrics Test");
+        Path source = repository.resolve("src/demo/Task.java");
+        Files.createDirectories(source.getParent());
+
+        Files.write(source, "class InitialImport {}".getBytes(StandardCharsets.UTF_8));
+        git(null, "add", ".");
+        git("2005-06-17T00:00:00Z", "commit", "-m", "initial Mylyn import");
+
+        Files.write(source, "class Release {}".getBytes(StandardCharsets.UTF_8));
+        git(null, "add", ".");
+        git("2009-03-16T00:00:00Z", "commit", "-m", "release without migrated tag");
+
+        AeeemAnalysisOptions options = AeeemAnalysisOptions.fromRequest(
+                "ml", null, null, null, null, null, null);
+        BiWeeklySnapshotGenerator.Selection selection =
+                new BiWeeklySnapshotGenerator(26)
+                        .generateSelection(repository, "HEAD", options);
+
+        assertEquals(LocalDate.of(2005, 6, 17),
+                selection.getSnapshots().get(0).getDate());
+        assertTrue(selection.getWarnings().stream()
+                .anyMatch(value -> value.contains("Partial historical coverage")));
     }
 
     private String git(String date, String... arguments) throws Exception {

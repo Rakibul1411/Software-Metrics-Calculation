@@ -1,9 +1,13 @@
-/.idea
 .idea/
 .DS_Store
 backend-java/output/
 backend-java/storage/uploads/
 backend-java/storage/extracted-projects/
-.idea/
-source code/
-source code and dataset/
+backend-java/storage/generated-datasets/
+frontend-angular/node_modules/
+frontend-angular/dist/
+frontend-angular/.angular/
+ml-service-python/.venv/
+ml-service-python/venv/
+**/__pycache__/
+*.pyc

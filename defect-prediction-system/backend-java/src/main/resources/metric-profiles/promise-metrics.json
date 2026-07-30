@@ -1,7 +1,7 @@
 {
   "schema": "promise",
-  "version": "1.0",
-  "description": "PROMISE dataset feature schema - 21 numeric metrics",
+  "version": "1.1",
+  "description": "PROMISE/Jureczko-compatible class schema - 20 numeric predictors",
   "columns": [
     "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce", "npm",
     "lcom3", "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc",

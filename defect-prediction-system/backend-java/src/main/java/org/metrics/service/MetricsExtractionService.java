@@ -22,6 +22,7 @@ import org.metrics.aeeem.export.AeeemFeatureSchema;
 import org.metrics.aeeem.model.AeeemMetricResult;
 import org.metrics.common.enums.DatasetFileFormat;
 import org.metrics.promise.analyzer.PromiseProjectAnalyzer;
+import org.metrics.promise.analyzer.PromiseInputValidator;
 import org.metrics.promise.export.PromiseArffExporter;
 import org.metrics.promise.export.PromiseCsvExporter;
 import org.metrics.promise.export.PromiseFeatureSchema;
@@ -121,7 +122,10 @@ public class MetricsExtractionService {
         if (rowCount == 0) {
             Files.deleteIfExists(csvOutput);
             Files.deleteIfExists(arffOutput);
-            throw new IllegalArgumentException("No Java classes were found in the supplied project.");
+            throw new IllegalArgumentException(filterFile == null || filterFile.trim().isEmpty()
+                    ? "No Java classes were found in the supplied project."
+                    : "No class in the predefined dataset matched this project release. "
+                      + "Check that the labelled CSV belongs to the uploaded release.");
         }
 
         List<String> csvPreview = new ArrayList<>();
@@ -175,6 +179,7 @@ public class MetricsExtractionService {
                 sourcePaths.add(sourcePath);
             }
         }
+        PromiseInputValidator.requireSingleRelease(sourcePaths);
         return PromiseProjectAnalyzer.analyzeDirectories(sourcePaths);
     }
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 
-class CoralService:
+class ShallowCoralService:
     """
     Shallow/linear CORrelation ALignment (CORAL).
 
@@ -20,6 +20,8 @@ class CoralService:
     The caller should center/standardize source and target domains before
     calling ``align``.
     """
+
+    ALGORITHM_NAME = "shallow/linear CORAL"
 
     def __init__(
         self,
@@ -48,9 +50,41 @@ class CoralService:
         if target.shape[0] < 2:
             raise ValueError("CORAL requires at least two target rows.")
 
+        coral_transform = self.transformation_matrix(source, target)
+        aligned_source = source @ coral_transform
+
+        if not np.isfinite(aligned_source).all():
+            raise ValueError(
+                "CORAL produced NaN or infinite values. Check the input features."
+            )
+
+        return aligned_source
+
+    def transformation_matrix(
+        self,
+        X_source: np.ndarray,
+        X_target: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Return the closed-form shallow CORAL whitening/re-coloring matrix.
+
+        This is Algorithm 1 from Sun, Feng, and Saenko. It is a matrix
+        transformation only: there is no neural network, gradient, learned
+        representation, or CORAL loss.
+        """
+        source = self._validate_matrix(X_source, "source")
+        target = self._validate_matrix(X_target, "target")
+        if source.shape[1] != target.shape[1]:
+            raise ValueError(
+                "Source and target must have the same number of feature columns."
+            )
+        if source.shape[0] < 2 or target.shape[0] < 2:
+            raise ValueError(
+                "Shallow CORAL requires at least two source and two target rows."
+            )
+
         feature_count = source.shape[1]
         identity = np.eye(feature_count, dtype=np.float64)
-
         covariance_source = self._covariance(source) + self.regularization * identity
         covariance_target = self._covariance(target) + self.regularization * identity
 
@@ -62,16 +96,7 @@ class CoralService:
             covariance_target,
             power=0.5,
         )
-
-        coral_transform = source_inverse_sqrt @ target_sqrt
-        aligned_source = source @ coral_transform
-
-        if not np.isfinite(aligned_source).all():
-            raise ValueError(
-                "CORAL produced NaN or infinite values. Check the input features."
-            )
-
-        return aligned_source
+        return source_inverse_sqrt @ target_sqrt
 
     @staticmethod
     def _covariance(values: np.ndarray) -> np.ndarray:
