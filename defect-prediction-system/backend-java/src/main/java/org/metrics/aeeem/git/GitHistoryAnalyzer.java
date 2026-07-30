@@ -42,8 +42,10 @@ public final class GitHistoryAnalyzer {
         Path repository = findRepository(suppliedRoot);
         verifyRepository(repository);
         String branch = selectMainLineage(repository, options.getBranch());
+        BiWeeklySnapshotGenerator.Selection selection =
+                snapshotGenerator.generateSelection(repository, branch, options);
         List<BiWeeklySnapshotGenerator.Snapshot> snapshots =
-                snapshotGenerator.generate(repository, branch, options);
+                selection.getSnapshots();
         if (snapshots.size() < 2) {
             throw new IllegalArgumentException(
                     "AEEEM history metrics require at least two commits on the main/master lineage.");
@@ -56,6 +58,9 @@ public final class GitHistoryAnalyzer {
                 + options.getProfile().getDisplayName() + ".");
         System.out.println("AEEEM repository scope: "
                 + (options.isScoped() ? options.getModulePath() : "<repository root>") + ".");
+        for (String warning : selection.getWarnings()) {
+            System.out.println("AEEEM compatibility note: " + warning);
+        }
         if (options.isBenchmarkProfile()
                 && snapshots.size() != options.getProfile().getReferenceSnapshotCount()) {
             System.out.println("AEEEM benchmark note: the selected Git mirror produced "
@@ -85,7 +90,10 @@ public final class GitHistoryAnalyzer {
                 worktree = snapshotGenerator.createWorktree(repository, snapshot);
                 Path sourceScope = resolveSourceScope(worktree, options.getModulePath());
                 List<AeeemMetricResult> metrics =
-                        AeeemJavaSourceParser.parseProject(worktree, sourceScope);
+                        AeeemJavaSourceParser.parseProject(
+                                worktree,
+                                sourceScope,
+                                options.getProfile());
                 AeeemProjectMetricsCalculator.apply(metrics);
                 Map<String, AeeemMetricResult> snapshotMetrics = byName(metrics);
                 metricsByTree.put(treeIdentity, snapshotMetrics);
@@ -102,7 +110,13 @@ public final class GitHistoryAnalyzer {
             throw new IllegalArgumentException(
                     "No production Java classes were found at the selected AEEEM release"
                             + (options.isScoped()
-                            ? " inside module '" + options.getModulePath() + "'." : "."));
+                            ? " inside module '" + options.getModulePath() + "'."
+                            : ".")
+                            + " The selected historical ref may be a disconnected migration "
+                            + "tag or the GitHub mirror may not contain the original benchmark "
+                            + "source tree. Use the verified profile URL; the resolver will use "
+                            + "the final first-parent release-date commit when a legacy tag is "
+                            + "not on that repository lineage.");
         }
         WchuCalculator.apply(history, finalSnapshot);
         LdhhCalculator.apply(history, finalSnapshot);
@@ -115,13 +129,28 @@ public final class GitHistoryAnalyzer {
         System.out.println("AEEEM snapshots generated: " + snapshots.size());
         System.out.println("AEEEM final classes analyzed: " + finalSnapshot.size());
         System.out.println("AEEEM final features: 56");
+        List<String> analysisWarnings = new ArrayList<>(selection.getWarnings());
+        int referenceRows = options.getProfile().getReferenceRowCount();
+        if (options.isBenchmarkProfile() && referenceRows > 0
+                && finalSnapshot.size() != referenceRows) {
+            analysisWarnings.add(
+                    "Entity coverage differs from the published AEEEM dataset: this "
+                            + "migrated Git source produced " + finalSnapshot.size()
+                            + " top-level production classes; the predefined "
+                            + options.getProfile().getId().toUpperCase()
+                            + " file contains " + referenceRows
+                            + " rows. Do not treat the rows or metric values as an exact "
+                            + "one-to-one reproduction.");
+        }
         AeeemAnalysisSummary summary = new AeeemAnalysisSummary(
                 options,
                 snapshots.get(0).getDate().toString(),
                 snapshots.get(snapshots.size() - 1).getDate().toString(),
                 snapshots.get(snapshots.size() - 1).getCommit(),
                 snapshots.size(),
-                branch);
+                branch,
+                selection.getReleaseResolution(),
+                analysisWarnings);
         return new AnalysisResult(new ArrayList<>(finalSnapshot.values()), summary);
     }
 

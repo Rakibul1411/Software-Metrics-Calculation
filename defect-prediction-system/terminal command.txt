@@ -1,9 +1,0 @@
-#Backend
-mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
-
-#ML Backend
-source venv/bin/activate
-python3 -m uvicorn app.main:app --reload --port 8000
-
-#Frontend
-ng s

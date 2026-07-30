@@ -27,8 +27,8 @@ public final class LcomPromiseCalculator {
     }
 
     private static boolean sharesAnyField(MethodInfo first, MethodInfo second) {
-        for (String field : first.accessedInstanceFields) {
-            if (second.accessedInstanceFields.contains(field)) {
+        for (String field : first.accessedFields) {
+            if (second.accessedFields.contains(field)) {
                 return true;
             }
         }

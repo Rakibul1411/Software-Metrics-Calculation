@@ -37,10 +37,19 @@ Supply exactly one of `projectZip` or `githubUrl`. A form-urlencoded `sourceDire
     "releaseDate": "2008-06-17",
     "snapshotCount": 91,
     "modulePath": "org.eclipse.jdt.core",
-    "releaseCommit": "8ac82b15173c..."
+    "releaseCommit": "8ac82b15173c...",
+    "releaseResolution": "release ref R3_4",
+    "warnings": []
   }
 }
 ```
+
+Benchmark profiles accept only their mapped historical project. The UI supplies
+the verified repository automatically. A missing migrated release tag uses the
+last first-parent commit on or before the profile release date; the response
+then includes `releaseResolution: "release-date fallback"` and an explanatory
+warning. A mirror whose available history starts late is also reported in
+`warnings`.
 
 PROMISE output contains `name` and 20 numeric metric features. AEEEM output
 contains `name` plus 56 non-defect predictors: 17 final static metrics, 17
@@ -68,7 +77,7 @@ Run defect prediction using a target dataset and labelled historical datasets.
 | `sourceFiles` | file[] | ✅ | One or more labelled source dataset CSVs |
 | `labelColumn` | string | ❌ | Column for defect labels (default: `bug`) |
 | `knnValue` | int | ❌ | KNN neighbors (default: `5`) |
-| `coralOption` | boolean | ❌ | Apply CORAL domain adaptation (default: `true`) |
+| `coralOption` | boolean | ❌ | Apply closed-form shallow/linear CORAL (default: `true`) |
 
 **Response:**
 ```json
@@ -93,9 +102,12 @@ Evaluate the model without metric extraction by training on labelled source CSVs
 | `sourceFiles` | file[] | ✅ | One or more labelled source metrics CSVs |
 | `labelColumn` | string | ❌ | Label column present in both source and target (default: `bug`) |
 | `knnValue` | int | ❌ | KNN neighbors (default: `5`) |
-| `coralOption` | boolean | ❌ | Apply CORAL domain adaptation (default: `true`) |
+| `coralOption` | boolean | ❌ | Apply closed-form shallow/linear CORAL (default: `true`) |
 
-The response includes accuracy, precision, recall, F1, confusion-matrix counts, and per-class actual/predicted labels.
+The response includes accuracy, precision, recall, F1, ROC AUC when defined,
+confusion-matrix counts, and per-class actual/predicted labels. Shallow CORAL
+uses target features but never target labels; labels are read only for the final
+evaluation.
 
 ---
 
@@ -111,7 +123,7 @@ Direct ML endpoint called internally by the Java backend.
 | `source_files` | file[] | Labelled historical source CSVs |
 | `label_column` | string | Column for defect labels |
 | `knn_value` | int | KNN neighbors |
-| `coral_option` | bool | Whether to apply CORAL |
+| `coral_option` | bool | Whether to apply shallow/linear CORAL |
 
 **Response:** Same as `/api/prediction/run` above.
 

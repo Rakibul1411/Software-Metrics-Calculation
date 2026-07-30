@@ -3,6 +3,7 @@ package org.metrics.controller;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 
@@ -51,6 +52,9 @@ public class MetricsController {
     public ResponseEntity<MetricsExtractionService.ExtractionResult> extractMetrics(
             @RequestParam(value = "projectZip", required = false) MultipartFile projectZip,
             @RequestParam(value = "githubUrl", required = false) String githubUrl,
+            @RequestParam(value = "projectFiles", required = false) MultipartFile[] projectFiles,
+            @RequestParam(value = "projectFilePaths", required = false) List<String> projectFilePaths,
+            @RequestParam(value = "labelFilterCsv", required = false) MultipartFile labelFilterCsv,
             @RequestParam(value = "datasetFormat", defaultValue = "promise") String datasetFormat,
             @RequestParam(value = "aeeemProfile", defaultValue = "current") String aeeemProfile,
             @RequestParam(value = "aeeemHistoryStart", required = false) String aeeemHistoryStart,
@@ -61,19 +65,32 @@ public class MetricsController {
             throws IOException {
         boolean hasZip = projectZip != null && !projectZip.isEmpty();
         boolean hasGitHubUrl = githubUrl != null && !githubUrl.trim().isEmpty();
-        if (hasZip == hasGitHubUrl) {
-            throw new IllegalArgumentException("Provide either one project archive or one GitHub repository URL.");
+        boolean hasFolder = projectFiles != null && projectFiles.length > 0;
+        if ((hasZip ? 1 : 0) + (hasGitHubUrl ? 1 : 0) + (hasFolder ? 1 : 0) != 1) {
+            throw new IllegalArgumentException("Provide exactly one project source: "
+                    + "an archive, a project folder, or a GitHub repository URL.");
         }
 
         boolean aeeemSlotAcquired = acquireAeeemSlot(datasetFormat);
         Path uploadedFile = null;
         Path sourceDirectory = null;
         Path cleanupDirectory = null;
+        Path classFilterFile = null;
         AeeemAnalysisOptions aeeemOptions = AeeemAnalysisOptions.fromRequest(
                 aeeemProfile, null, aeeemModulePath, aeeemHistoryStart,
                 aeeemReleaseDate, aeeemReleaseRef, aeeemMaxSnapshots);
         try {
-            if (hasZip) {
+            if (labelFilterCsv != null && !labelFilterCsv.isEmpty()) {
+                classFilterFile = fileStorageService.storeClassFilterFile(labelFilterCsv);
+            }
+            if (hasFolder) {
+                if (isAeeem(datasetFormat)) {
+                    throw new IllegalArgumentException(
+                            "AEEEM extraction requires repository history; use a GitHub repository URL instead of a folder upload.");
+                }
+                sourceDirectory = fileStorageService.storeProjectFolder(projectFiles, projectFilePaths);
+                cleanupDirectory = sourceDirectory;
+            } else if (hasZip) {
                 uploadedFile = fileStorageService.storeUploadedFile(projectZip);
                 sourceDirectory = zipExtractionService.extractArchiveFile(uploadedFile);
                 cleanupDirectory = sourceDirectory;
@@ -88,6 +105,10 @@ public class MetricsController {
             } else {
                 GitHubCloneService.GitHubTarget target =
                         gitHubCloneService.parseTarget(githubUrl);
+                if (isAeeem(datasetFormat)) {
+                    aeeemOptions.getProfile().requireRecommendedRepository(
+                            target.getRepositoryUrl());
+                }
                 sourceDirectory = gitHubCloneService.cloneRepository(
                         target, isAeeem(datasetFormat));
                 cleanupDirectory = sourceDirectory;
@@ -111,11 +132,14 @@ public class MetricsController {
                 }
             }
             return ResponseEntity.ok(metricsExtractionService.extractMetrics(
-                    sourceDirectory.toString(), datasetFormat, null, aeeemOptions));
+                    sourceDirectory.toString(), datasetFormat,
+                    classFilterFile == null ? null : classFilterFile.toString(),
+                    aeeemOptions));
         } finally {
             FileStorageService.deleteRecursively(
                     cleanupDirectory == null ? sourceDirectory : cleanupDirectory);
             FileStorageService.deleteRecursively(uploadedFile);
+            FileStorageService.deleteRecursively(classFilterFile);
             releaseAeeemSlot(aeeemSlotAcquired);
         }
     }

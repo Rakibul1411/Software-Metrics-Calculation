@@ -37,10 +37,16 @@ final class ProductionSourceSelector {
                     .collect(Collectors.toList());
         }
 
-        boolean hasConventionalMainSources = allFiles.stream()
+        List<Path> benchmarkScopes = benchmarkSourceScopes(root);
+        boolean hasBenchmarkScope = !benchmarkScopes.isEmpty();
+        boolean hasConventionalMainSources = !hasBenchmarkScope && allFiles.stream()
                 .anyMatch(this::isUnderMainSourceRoot);
         List<Path> selected = new ArrayList<>();
         for (Path file : allFiles) {
+            if (hasBenchmarkScope && benchmarkScopes.stream()
+                    .noneMatch(file.toAbsolutePath().normalize()::startsWith)) {
+                continue;
+            }
             if (hasConventionalMainSources && !isUnderMainSourceRoot(file)) {
                 continue;
             }
@@ -51,6 +57,54 @@ final class ProductionSourceSelector {
         }
         selected.sort(Path::compareTo);
         return selected;
+    }
+
+    /**
+     * Historical PROMISE releases often contain contrib, scratchpad, transport,
+     * or example modules next to the product measured by the labelled dataset.
+     */
+    private List<Path> benchmarkSourceScopes(Path root) throws IOException {
+        List<Path> directScopes = directBenchmarkSourceScopes(root);
+        if (!directScopes.isEmpty()) {
+            return directScopes;
+        }
+
+        List<List<Path>> nestedMatches;
+        try (Stream<Path> stream = Files.walk(root, 2)) {
+            nestedMatches = stream
+                    .filter(Files::isDirectory)
+                    .filter(path -> !path.equals(root))
+                    .map(this::directBenchmarkSourceScopes)
+                    .filter(scopes -> !scopes.isEmpty())
+                    .collect(Collectors.toList());
+        }
+        if (nestedMatches.size() > 1) {
+            throw new IllegalArgumentException(
+                    "The upload contains more than one nested PROMISE release. "
+                    + "Analyze one project release at a time.");
+        }
+        return nestedMatches.isEmpty()
+                ? new ArrayList<>()
+                : nestedMatches.get(0);
+    }
+
+    private List<Path> directBenchmarkSourceScopes(Path root) {
+        String name = root.getFileName() == null ? ""
+                : root.getFileName().toString().toLowerCase(Locale.ROOT);
+        List<Path> candidates = new ArrayList<>();
+        if (name.startsWith("lucene-solr-releases-lucene-")
+                || name.startsWith("poi-rel_")
+                || name.startsWith("velocity-")
+                || name.startsWith("log4j-")
+                || name.startsWith("log4j-v_")) {
+            candidates.add(root.resolve("src/java"));
+        } else if (name.startsWith("synapse-")) {
+            candidates.add(root.resolve("modules/core/src/main/java"));
+        }
+        return candidates.stream()
+                .map(path -> path.toAbsolutePath().normalize())
+                .filter(Files::isDirectory)
+                .collect(Collectors.toList());
     }
 
     private boolean isUnderMainSourceRoot(Path file) {
@@ -78,7 +132,9 @@ final class ProductionSourceSelector {
     private boolean excludedFromPromiseRelease(Path file) throws IOException {
         List<String> segments = segments(file);
 
-        if (isApacheAntSource(segments) && excludedFromAntCoreArtifact(segments)) {
+        if (isApacheAntSource(segments)
+                && !segments.contains("apache-ant-1.7.0")
+                && excludedFromAntCoreArtifact(segments)) {
             return true;
         }
 
@@ -160,6 +216,15 @@ final class ProductionSourceSelector {
                     return index + 3;
                 }
                 return index + 2;
+            }
+            if ("src".equals(segments.get(index))
+                    && "java".equals(segments.get(index + 1))) {
+                return index + 2;
+            }
+        }
+        for (int index = 0; index < segments.size(); index++) {
+            if ("src".equals(segments.get(index))) {
+                return index + 1;
             }
         }
         return -1;
