@@ -20,6 +20,31 @@ class PredictionLabelTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsupported values"):
             PredictionService._binary_labels(pd.Series(["maybe"]), "bug")
 
+    def test_missing_label_message_suggests_detected_class_column(self):
+        dataframe = pd.DataFrame({
+            "ck_oo_wmc": [1, 2],
+            "class": ["clean", "buggy"],
+        })
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "Detected 'class'.*Set Label column to 'class'"):
+            PredictionService._require_label_column(
+                dataframe, "bug", "source dataset 'PDE.arff'"
+            )
+
+    def test_missing_label_message_does_not_dump_every_metric_column(self):
+        dataframe = pd.DataFrame({
+            **{f"metric_{index}": [index] for index in range(20)}
+        })
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "no common label column was detected.*14 more metric columns"):
+            PredictionService._require_label_column(
+                dataframe, "class", "source dataset 'custom.csv'"
+            )
+
     def test_aeeem_arff_is_read_with_declared_columns_and_labels(self):
         source = UploadFile(filename="LC.arff", file=BytesIO(
             b"@relation lc\n@attribute ck_oo_wmc numeric\n"

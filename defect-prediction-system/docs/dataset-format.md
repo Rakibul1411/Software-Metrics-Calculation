@@ -2,8 +2,36 @@
 
 ## PROMISE target format
 
-The PROMISE extractor produces `name` plus 20 object-oriented source metrics.
-Generated targets never contain the labelled training column `bug`.
+The PROMISE extractor produces `name` plus 20 CKJM-style object-oriented
+metrics. Generated targets never contain the labelled training column `bug`.
+Historical PROMISE CSVs store a defect count in `bug`; the prediction service
+maps `bug > 0` to the buggy class and `bug = 0` to the clean class.
+
+The ordered columns are:
+
+```text
+name, wmc, dit, noc, cbo, rfc, lcom, ca, ce, npm, lcom3, loc,
+dam, moa, mfa, cam, ic, cbm, amc, max_cc, avg_cc
+```
+
+Important implementation choices verified against the supplied PROMISE data:
+
+- `CBO` is the unique union of incoming and outgoing in-project type coupling;
+  `Ca` and `Ce` retain their separate directions.
+- `CAM` includes the class's own type and includes constructors in the method
+  average.
+- `LCOM` and `LCOM3` include accesses to all class-owned attributes, including
+  static attributes.
+- ordinary and abstract/interface methods have cyclomatic complexity base 1;
+  constructors retain the CKJM dataset convention of base 0.
+- `max_cc` and `avg_cc` are computed over the declared method/constructor
+  complexities used for the class.
+
+This is a source/JDT implementation of the dataset schema. The historic data
+was produced using CKJM/compiled bytecode, so exact value reproduction requires
+the original compiled artifacts, dependency classpath, class-selection manifest,
+and tool version. Schema compatibility must not be described as an exact CKJM
+reproduction.
 
 ## AEEEM non-defect target format
 

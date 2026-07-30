@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -42,19 +43,41 @@ public final class BiWeeklySnapshotGenerator {
             Path repository,
             String branch,
             AeeemAnalysisOptions options) throws IOException {
-        String releaseCommit = resolveReleaseCommit(repository, branch, options);
+        return generateSelection(repository, branch, options).getSnapshots();
+    }
+
+    Selection generateSelection(
+            Path repository,
+            String branch,
+            AeeemAnalysisOptions options) throws IOException {
+        List<String> warnings = new ArrayList<>();
+        ResolvedRelease release = resolveReleaseCommit(repository, branch, options);
+        if (release.warning != null) {
+            warnings.add(release.warning);
+        }
         String timeline = GitCommandRunner.run(repository, "log", "--first-parent",
-                "--reverse", "--date-order", "--format=%H|%ct", releaseCommit);
+                "--reverse", "--date-order", "--format=%H|%ct", release.commit);
         List<CommitPoint> commits = parseTimeline(timeline);
         if (commits.isEmpty()) {
-            return java.util.Collections.emptyList();
+            return new Selection(Collections.emptyList(), release.resolution, warnings);
         }
 
         List<Snapshot> snapshots = new ArrayList<>();
-        CommitPoint first = firstSample(commits, options.getHistoryStart());
+        CommitPoint oldest = commits.get(0);
+        LocalDate requestedStart = options.getHistoryStart();
+        LocalDate effectiveStart = requestedStart;
+        if (requestedStart != null && oldest.date.isAfter(requestedStart)) {
+            effectiveStart = oldest.date;
+            warnings.add(
+                    "Partial historical coverage: this GitHub mirror begins on "
+                            + oldest.date + ", after the benchmark start "
+                            + requestedStart + ". Metrics use all available history from "
+                            + oldest.date + "; they are not an exact reproduction of the "
+                            + "original SCM window.");
+        }
+        CommitPoint first = firstSample(commits, effectiveStart);
         CommitPoint head = commits.get(commits.size() - 1);
-        LocalDate startDate = options.getHistoryStart() == null
-                ? first.date : options.getHistoryStart();
+        LocalDate startDate = effectiveStart == null ? first.date : effectiveStart;
         LocalDate releaseDate = options.getReleaseDate() == null
                 ? head.date : options.getReleaseDate();
         if (head.date.isAfter(releaseDate)) {
@@ -74,11 +97,12 @@ public final class BiWeeklySnapshotGenerator {
 
         Snapshot last = snapshots.get(snapshots.size() - 1);
         if (!last.commit.equals(head.commit)) {
-            Snapshot release = new Snapshot(head.commit, releaseDate, head.date);
+            Snapshot releaseSnapshot =
+                    new Snapshot(head.commit, releaseDate, head.date);
             if (options.isBenchmarkProfile() && snapshots.size() > 1) {
-                snapshots.set(snapshots.size() - 1, release);
+                snapshots.set(snapshots.size() - 1, releaseSnapshot);
             } else {
-                snapshots.add(release);
+                snapshots.add(releaseSnapshot);
             }
         } else if (!last.date.equals(releaseDate)) {
             snapshots.set(snapshots.size() - 1,
@@ -88,13 +112,13 @@ public final class BiWeeklySnapshotGenerator {
         int limit = options.getMaximumSnapshots() == null
                 ? maximumSnapshots : options.getMaximumSnapshots().intValue();
         if (limit > 0 && snapshots.size() > limit) {
-            return new ArrayList<>(snapshots.subList(
+            snapshots = new ArrayList<>(snapshots.subList(
                     snapshots.size() - limit, snapshots.size()));
         }
-        return snapshots;
+        return new Selection(snapshots, release.resolution, warnings);
     }
 
-    private String resolveReleaseCommit(
+    private ResolvedRelease resolveReleaseCommit(
             Path repository,
             String branch,
             AeeemAnalysisOptions options) throws IOException {
@@ -105,30 +129,113 @@ public final class BiWeeklySnapshotGenerator {
                     "refs/heads/" + options.getReleaseRef(),
                     "refs/remotes/origin/" + options.getReleaseRef()}) {
                 try {
-                    return GitCommandRunner.run(repository, "rev-parse", "--verify",
+                    String commit = GitCommandRunner.run(
+                            repository, "rev-parse", "--verify",
                             candidate + "^{commit}");
+                    LocalDate commitDate = commitDate(repository, commit);
+                    if (options.getReleaseDate() == null
+                            || !commitDate.isAfter(options.getReleaseDate())) {
+                        if (options.isBenchmarkProfile()
+                                && !isAncestorOfLineage(repository, commit, branch)) {
+                            continue;
+                        }
+                        if (options.isBenchmarkProfile()
+                                && !containsJavaSource(repository, commit, options)) {
+                            continue;
+                        }
+                        return new ResolvedRelease(
+                                commit, "release ref " + options.getReleaseRef(), null);
+                    }
                 } catch (IOException ignored) {
                 }
             }
+            if (options.getReleaseDate() != null) {
+                String commit = commitOnOrBefore(
+                        repository, branch, options.getReleaseDate());
+                return new ResolvedRelease(
+                        commit,
+                        "release-date fallback",
+                        "Legacy release ref '" + options.getReleaseRef()
+                                + "' is not available in this GitHub mirror. The final "
+                                + "first-parent commit on or before "
+                                + options.getReleaseDate() + " was used instead.");
+            }
             throw new IllegalArgumentException(
-                    "The selected repository does not contain required AEEEM release ref '"
-                            + options.getReleaseRef() + "' for "
-                            + options.getProfile().getDisplayName() + ".");
+                    "The selected repository does not contain AEEEM release ref '"
+                            + options.getReleaseRef() + "' and no release date fallback "
+                            + "was configured.");
         }
         if (options.getReleaseDate() != null) {
-            String commit = GitCommandRunner.run(repository, "rev-list", "-1",
-                    "--first-parent",
-                    "--before=" + options.getReleaseDate().plusDays(1) + "T00:00:00Z",
-                    branch);
-            if (commit.trim().isEmpty()) {
-                throw new IllegalArgumentException(
-                        "The selected repository has no commit on or before AEEEM release date "
-                                + options.getReleaseDate() + ".");
-            }
-            return commit.trim();
+            return new ResolvedRelease(
+                    commitOnOrBefore(repository, branch, options.getReleaseDate()),
+                    "release date " + options.getReleaseDate(),
+                    null);
         }
-        return GitCommandRunner.run(repository, "rev-parse", "--verify",
-                branch + "^{commit}");
+        return new ResolvedRelease(
+                GitCommandRunner.run(repository, "rev-parse", "--verify",
+                        branch + "^{commit}"),
+                "repository HEAD",
+                null);
+    }
+
+    private boolean isAncestorOfLineage(
+            Path repository,
+            String commit,
+            String branch) throws IOException {
+        try {
+            GitCommandRunner.run(repository, "merge-base", "--is-ancestor", commit, branch);
+            return true;
+        } catch (IOException exception) {
+            return false;
+        }
+    }
+
+    private boolean containsJavaSource(
+            Path repository,
+            String commit,
+            AeeemAnalysisOptions options) throws IOException {
+        String tree = GitCommandRunner.run(
+                repository, "ls-tree", "-r", "--name-only", commit);
+        String module = options.getModulePath();
+        for (String rawPath : tree.split("\\R")) {
+            String path = rawPath.replace('\\', '/');
+            if (!path.toLowerCase(java.util.Locale.ROOT).endsWith(".java")) {
+                continue;
+            }
+            if (module == null || module.isEmpty()
+                    || path.equals(module) || path.startsWith(module + "/")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String commitOnOrBefore(
+            Path repository,
+            String branch,
+            LocalDate releaseDate) throws IOException {
+        String commit = GitCommandRunner.run(repository, "rev-list", "-1",
+                "--first-parent",
+                "--before=" + releaseDate.plusDays(1) + "T00:00:00Z",
+                branch);
+        if (commit.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "The selected repository has no commit on or before AEEEM release date "
+                            + releaseDate + ". Use the recommended historical repository "
+                            + "for this profile.");
+        }
+        return commit.trim();
+    }
+
+    private LocalDate commitDate(Path repository, String commit) throws IOException {
+        String timestamp = GitCommandRunner.run(
+                repository, "show", "-s", "--format=%ct", commit);
+        try {
+            return Instant.ofEpochSecond(Long.parseLong(timestamp.trim()))
+                    .atZone(ZoneOffset.UTC).toLocalDate();
+        } catch (NumberFormatException exception) {
+            throw new IOException("Git returned an invalid release timestamp.", exception);
+        }
     }
 
     private CommitPoint firstSample(
@@ -232,6 +339,47 @@ public final class BiWeeklySnapshotGenerator {
         private CommitPoint(String commit, LocalDate date) {
             this.commit = commit;
             this.date = date;
+        }
+    }
+
+    static final class Selection {
+        private final List<Snapshot> snapshots;
+        private final String releaseResolution;
+        private final List<String> warnings;
+
+        private Selection(
+                List<Snapshot> snapshots,
+                String releaseResolution,
+                List<String> warnings) {
+            this.snapshots = Collections.unmodifiableList(
+                    new ArrayList<>(snapshots));
+            this.releaseResolution = releaseResolution;
+            this.warnings = Collections.unmodifiableList(
+                    new ArrayList<>(warnings));
+        }
+
+        List<Snapshot> getSnapshots() {
+            return snapshots;
+        }
+
+        String getReleaseResolution() {
+            return releaseResolution;
+        }
+
+        List<String> getWarnings() {
+            return warnings;
+        }
+    }
+
+    private static final class ResolvedRelease {
+        private final String commit;
+        private final String resolution;
+        private final String warning;
+
+        private ResolvedRelease(String commit, String resolution, String warning) {
+            this.commit = commit;
+            this.resolution = resolution;
+            this.warning = warning;
         }
     }
 

@@ -9,6 +9,8 @@ export interface AeeemAnalysisSummary {
   modulePath: string;
   referenceSnapshotCount: number;
   referenceRowCount: number;
+  releaseResolution?: string;
+  warnings?: string[];
 }
 
 export interface MetricsPreview {

@@ -67,8 +67,10 @@ public final class ProductionSourceSelector {
                 || "package-info.java".equals(lowerName) || isTestClassFileName(fileName)) {
             return false;
         }
+        int sourceRootEnd = sourceRootEnd(parts);
         for (int index = 0; index < parts.length - 1; index++) {
-            if (isExcludedSegment(parts[index])) {
+            if (isExcludedSegment(parts[index])
+                    && (sourceRootEnd < 0 || index < sourceRootEnd)) {
                 return false;
             }
         }
@@ -84,12 +86,43 @@ public final class ProductionSourceSelector {
         } catch (IllegalArgumentException exception) {
             relative = normalized;
         }
-        for (Path segment : relative) {
-            if (isExcludedSegment(segment.toString())) {
+        String[] parts = new String[relative.getNameCount()];
+        for (int index = 0; index < relative.getNameCount(); index++) {
+            parts[index] = relative.getName(index).toString();
+        }
+        int sourceRootEnd = sourceRootEnd(parts);
+        for (int index = 0; index < parts.length; index++) {
+            if (isExcludedSegment(parts[index])
+                    && (sourceRootEnd < 0 || index < sourceRootEnd)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Returns the first package-directory index after a conventional
+     * production source root. Exclusion names before this point identify test
+     * modules (for example {@code src/test/java}); the same words after it are
+     * legal Java package names (for example {@code src/main/java/a/test/b}).
+     */
+    private static int sourceRootEnd(String[] parts) {
+        for (int index = 0; index < parts.length; index++) {
+            String value = parts[index].toLowerCase(Locale.ROOT);
+            if ("src".equals(value) && index + 2 < parts.length
+                    && "main".equalsIgnoreCase(parts[index + 1])
+                    && "java".equalsIgnoreCase(parts[index + 2])) {
+                return index + 3;
+            }
+            if ("src".equals(value) && index + 1 < parts.length
+                    && "java".equalsIgnoreCase(parts[index + 1])) {
+                return index + 2;
+            }
+            if ("source".equals(value) || "src".equals(value)) {
+                return index + 1;
+            }
+        }
+        return -1;
     }
 
     private static boolean isExcludedSegment(String segment) {

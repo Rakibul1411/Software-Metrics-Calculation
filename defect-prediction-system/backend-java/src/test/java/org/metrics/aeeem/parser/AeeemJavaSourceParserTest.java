@@ -12,6 +12,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metrics.aeeem.model.AeeemMetricResult;
+import org.metrics.aeeem.history.AeeemBenchmarkProfile;
 
 class AeeemJavaSourceParserTest {
 
@@ -115,6 +116,12 @@ class AeeemJavaSourceParserTest {
                 "src/main/java/demo/Contest.java"));
         assertTrue(ProductionSourceSelector.isProductionJavaPath(
                 "src/main/java/demo/Testament.java"));
+        assertFalse(ProductionSourceSelector.isProductionJavaPath(
+                "src/test/java/demo/ProductionLooking.java"));
+        assertTrue(ProductionSourceSelector.isProductionJavaPath(
+                "src/main/java/demo/test/ProductionLooking.java"));
+        assertTrue(ProductionSourceSelector.isProductionJavaPath(
+                "src/java/demo/tests/ProductionLooking.java"));
     }
 
     @Test
@@ -146,6 +153,27 @@ class AeeemJavaSourceParserTest {
         assertEquals(1d, nested.getCkOoNumberOfMethods(), 1.0e-12);
         assertFalse(metrics.stream()
                 .anyMatch(metric -> metric.getFullyQualifiedName().endsWith(".Local")));
+    }
+
+    @Test
+    void benchmarkProfilesExportOnlyTopLevelDatasetEntities() throws Exception {
+        Path source = project.resolve("src/demo/Outer.java");
+        Files.createDirectories(source.getParent());
+        Files.write(source, ("package demo;\n"
+                + "public class Outer {\n"
+                + "  static class Nested { }\n"
+                + "}\n").getBytes(StandardCharsets.UTF_8));
+
+        List<AeeemMetricResult> current =
+                AeeemJavaSourceParser.parseProject(project);
+        List<AeeemMetricResult> benchmark =
+                AeeemJavaSourceParser.parseProject(
+                        project, project, AeeemBenchmarkProfile.JDT);
+
+        assertEquals(2, current.size());
+        assertEquals(1, benchmark.size());
+        assertEquals("demo.Outer",
+                benchmark.get(0).getFullyQualifiedName());
     }
 
     private static AeeemMetricResult byName(List<AeeemMetricResult> metrics, String name) {

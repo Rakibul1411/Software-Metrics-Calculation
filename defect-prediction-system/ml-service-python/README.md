@@ -2,8 +2,23 @@
 
 This folder contains the Python FastAPI microservice responsible for:
 - Preprocessing and normalizing metrics.
-- Correlation Alignment (CORAL) domain adaptation.
-- K-Nearest Neighbors (KNN) defect classification.
+- Closed-form shallow/linear Correlation Alignment (CORAL) domain adaptation.
+- K-Nearest Neighbors (KNN) and linear-SVM defect classification.
+- Labelled-target evaluation with accuracy, precision, recall, F1, ROC AUC,
+  and confusion-matrix counts.
+
+The implementation follows the original linear CORAL whitening/re-colouring
+transformation:
+
+```text
+Cs = cov(Xs) + I
+Ct = cov(Xt) + I
+A  = Cs^(-1/2) Ct^(1/2)
+Xs* = Xs A
+```
+
+It is deliberately not Deep CORAL: there is no neural network, trainable
+representation, gradient, or CORAL loss.
 
 ## Run locally (Python 3.11-3.14)
 
@@ -20,5 +35,5 @@ Keep this terminal running while using prediction. Verify the service at
 
 ## Structure
 - `app/api/`: API Routes
-- `app/services/`: Services for CORAL, KNN, and Preprocessing
+- `app/services/`: preprocessing, shallow CORAL, KNN, SVM, prediction, and evaluation
 - `app/validation/`: Feature schema verification

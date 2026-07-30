@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 from sklearn.model_selection import RepeatedStratifiedKFold
 
-from app.services.coral_service import CoralService
+from app.services.shallow_coral_service import ShallowCoralService
 from app.services.knn_service import KnnService
 from app.services.metrics_service import MetricsService
 from app.services.preprocessing_service import PreprocessingService
@@ -24,7 +24,7 @@ class ProjectValidationService:
 
     def __init__(
         self,
-        coral: CoralService | None = None,
+        coral: ShallowCoralService | None = None,
         preprocessing: PreprocessingService | None = None,
         knn: KnnService | None = None,
         svm: SvmService | None = None,
@@ -32,7 +32,7 @@ class ProjectValidationService:
         random_state: int = 42,
         single_source_repeats: int = 3,
     ) -> None:
-        self.coral = coral or CoralService()
+        self.coral = coral or ShallowCoralService()
         self.preprocessing = preprocessing or PreprocessingService()
         self.knn = knn or KnnService()
         self.svm = svm or SvmService()
@@ -398,9 +398,11 @@ class ProjectValidationService:
             )
 
         warnings.append(
-            "Only one source project was supplied. Hyperparameters were tuned "
-            "with source-internal repeated stratified validation; this is not "
-            "cross-project performance validation."
+            "Only one labelled source project was uploaded. K/C and the decision "
+            "threshold were tuned inside that same source using repeated stratified "
+            "validation. Predictions can still be generated, but this does not "
+            "measure cross-project performance. Upload at least two labelled source "
+            "projects, or use Evaluate with a labelled target to report performance."
         )
         return folds
 

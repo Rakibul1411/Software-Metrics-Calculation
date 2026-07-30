@@ -30,6 +30,32 @@ class AeeemAnalysisOptionsTest {
     }
 
     @Test
+    void benchmarkProfilesSupplyTheMeasuredRepositoryModules() {
+        assertEquals("ui/org.eclipse.pde.ui",
+                AeeemAnalysisOptions.fromRequest(
+                        "pde", null, null, null, null, null, null)
+                        .getModulePath());
+        assertEquals("bundles/org.eclipse.osgi",
+                AeeemAnalysisOptions.fromRequest(
+                        "eq", null, null, null, null, null, null)
+                        .getModulePath());
+    }
+
+    @Test
+    void benchmarkProfilesExposeAndValidateTheirHistoricalRepositories() {
+        AeeemBenchmarkProfile profile = AeeemBenchmarkProfile.PDE;
+        assertEquals("https://github.com/eclipse-pde/eclipse.pde",
+                profile.getRecommendedRepositoryUrl());
+        assertEquals("https://github.com/eclipse-equinox/equinox.framework",
+                AeeemBenchmarkProfile.EQ.getRecommendedRepositoryUrl());
+        profile.requireRecommendedRepository(
+                "https://github.com/eclipse-pde/eclipse.pde.git/");
+        assertThrows(IllegalArgumentException.class,
+                () -> profile.requireRecommendedRepository(
+                        "https://github.com/eclipse-jdt/eclipse.jdt.core"));
+    }
+
+    @Test
     void rejectsUnsafeModulePathsAndInvalidCustomDates() {
         assertThrows(IllegalArgumentException.class,
                 () -> AeeemAnalysisOptions.fromRequest(
