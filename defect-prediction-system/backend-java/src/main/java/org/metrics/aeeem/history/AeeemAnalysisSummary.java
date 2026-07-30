@@ -1,5 +1,9 @@
 package org.metrics.aeeem.history;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * User-facing provenance for a generated AEEEM target dataset.
  */
@@ -15,6 +19,8 @@ public final class AeeemAnalysisSummary {
     private final String modulePath;
     private final int referenceSnapshotCount;
     private final int referenceRowCount;
+    private final String releaseResolution;
+    private final List<String> warnings;
 
     public AeeemAnalysisSummary(
             AeeemAnalysisOptions options,
@@ -22,7 +28,9 @@ public final class AeeemAnalysisSummary {
             String releaseDate,
             String releaseCommit,
             int snapshotCount,
-            String branch) {
+            String branch,
+            String releaseResolution,
+            List<String> warnings) {
         this.profileId = options.getProfile().getId();
         this.profileName = options.getProfile().getDisplayName();
         this.historyStart = historyStart;
@@ -34,6 +42,9 @@ public final class AeeemAnalysisSummary {
         this.referenceSnapshotCount =
                 options.getProfile().getReferenceSnapshotCount();
         this.referenceRowCount = options.getProfile().getReferenceRowCount();
+        this.releaseResolution = releaseResolution;
+        this.warnings = Collections.unmodifiableList(
+                warnings == null ? Collections.emptyList() : new ArrayList<>(warnings));
     }
 
     public String getProfileId() {
@@ -74,5 +85,13 @@ public final class AeeemAnalysisSummary {
 
     public int getReferenceRowCount() {
         return referenceRowCount;
+    }
+
+    public String getReleaseResolution() {
+        return releaseResolution;
+    }
+
+    public List<String> getWarnings() {
+        return warnings;
     }
 }

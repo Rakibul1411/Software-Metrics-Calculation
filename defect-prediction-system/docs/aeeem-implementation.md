@@ -16,8 +16,9 @@ metric equations.
    follow the repository's default `origin/HEAD` for a root URL.
 2. In current-project mode, use the configured recent window ending at HEAD.
    In benchmark mode, use the selected dataset's published start and release.
-3. Select one first-parent revision at every 14-day boundary and use the exact
-   release ref where the profile supplies one.
+3. Select one first-parent revision at every 14-day boundary. Prefer the exact
+   release ref; when a migrated mirror lacks it, resolve the final commit on or
+   before the fixed release date and record the fallback in provenance.
 4. Parse only the selected module in each distinct revision with JDT and calculate the 17 CK/OO
    source metrics.
 5. Export the final revision's source metrics as `ck_oo_*`.
@@ -54,9 +55,19 @@ contain class names. Their row counts and the paper's time periods are:
 | `ml` | Mylyn 3.1 | 2005-01-17 to 2009-03-17 | 98 | 1,862 |
 | `lc` | Apache Lucene 2.4.0 | 2005-01-01 to 2008-10-08 | 99 | 691 |
 
-JDT uses release tag `R3_4`, PDE uses `R3_4_1`, Mylyn uses
-`R_3_1_0`, and Lucene uses `releases/lucene/2.4.0`. Equinox falls
-back to the last first-parent commit on or before its release date.
+The verified repositories are:
+
+| Profile | Repository | Release resolution |
+|---|---|---|
+| JDT | `eclipse-jdt/eclipse.jdt.core` | exact `R3_4` |
+| PDE | `eclipse-pde/eclipse.pde` | `R3_4_1` when available, otherwise release-date fallback |
+| EQ | `eclipse-equinox/equinox.framework` | exact `R3_4`; scope `bundles/org.eclipse.osgi` |
+| ML | `eclipse-mylyn/org.eclipse.mylyn` | exact `R_3_1_0` |
+| LC | `apache/lucene` | `releases/lucene/2.4.0` when available, otherwise release-date fallback |
+
+`eclipse-equinox/equinox` is not the framework repository and does not contain
+the required 2008 `bundles/org.eclipse.osgi` tree. The correct EQ input is
+`eclipse-equinox/equinox.framework`.
 
 The public `eclipse-jdt/eclipse.jdt.core` Git mirror retains migrated history
 back to 2001. Its master lineage contains the 2005-01-01 commits
@@ -67,10 +78,13 @@ back to 2001. Its master lineage contains the 2005-01-01 commits
 therefore has the history and release revision needed for the paper's
 2005-01-01 to 2008-06-17 window.
 
-The extractor validates repository coverage. If a modern mirror starts after
-the selected profile's history date or lacks its release ref, extraction stops
-with a clear error instead of silently calculating a shorter, mostly-zero
-history.
+The extractor validates repository identity and coverage before analysis. A
+wrong project is rejected with the matching verified URL. Missing migrated
+tags use the release-date rule above. If the correct mirror begins after the
+paper's requested start date, analysis begins at the oldest available commit
+and the response carries a partial-coverage warning. This applies to the
+current Mylyn GitHub mirror, whose first commit is 2005-06-17 while the paper
+requests 2005-01-17.
 
 Folder scope is applied before parsing and to Git pathspecs. The full set of
 production classes inside that folder remains available for NOC, FanIn,

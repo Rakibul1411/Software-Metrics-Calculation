@@ -15,9 +15,14 @@ public final class MfaPromiseCalculator {
     public static double calculate(TypeInfo type) {
         Set<String> declared = type.methods.stream()
                 .filter(method -> !method.constructor)
-                .map(method -> PromiseBindingUtil.methodSubsignature(method.binding))
+                .map(method -> method.binding == null
+                        ? method.signature
+                        : PromiseBindingUtil.methodSubsignature(method.binding))
                 .collect(Collectors.toSet());
 
+        if (type.binding == null) {
+            return 0.0;
+        }
         Set<String> inherited = inheritedMethodSubsignatures(type.binding);
         inherited.removeAll(declared);
         int total = declared.size() + inherited.size();

@@ -23,8 +23,16 @@ public final class PromiseFeatureSchema {
         return Arrays.<Object>asList(
                 metrics.getFullyQualifiedName(), metrics.getWmc(), metrics.getDit(), metrics.getNoc(),
                 metrics.getCbo(), metrics.getRfc(), metrics.getLcom(), metrics.getCa(), metrics.getCe(),
-                metrics.getNpm(), metrics.getLcom3(), metrics.getLoc(), metrics.getDam(), metrics.getMoa(),
-                metrics.getMfa(), metrics.getCam(), metrics.getIc(), metrics.getCbm(), metrics.getAmc(),
-                metrics.getMaxCc(), metrics.getAvgCc());
+                metrics.getNpm(),
+                PromiseNumericFormatter.formatRatio(metrics.getLcom3()),
+                metrics.getLoc(),
+                PromiseNumericFormatter.formatRatio(metrics.getDam()),
+                metrics.getMoa(),
+                PromiseNumericFormatter.formatRatio(metrics.getMfa()),
+                PromiseNumericFormatter.formatRatio(metrics.getCam()),
+                metrics.getIc(), metrics.getCbm(),
+                PromiseNumericFormatter.formatRatio(metrics.getAmc()),
+                metrics.getMaxCc(),
+                PromiseNumericFormatter.formatAverageComplexity(metrics.getAvgCc()));
     }
 }

@@ -17,5 +17,9 @@ This document describes the workflow of the Defect Prediction System:
    `name` plus 56 predictors.
 8. The user uploads a labeled historical dataset.
 9. The Java backend forwards metrics data to the Python FastAPI service.
-10. The Python service optionally applies CORAL and trains KNN or linear SVM.
+10. The Python service optionally applies closed-form shallow/linear CORAL
+    (covariance whitening and re-colouring) and trains KNN or linear SVM.
 11. Bug/clean predictions are mapped back to Java classes and returned to the UI.
+
+No neural network, CORAL loss, gradient optimisation, or Deep CORAL layer is
+present in this workflow.

@@ -22,8 +22,14 @@ public final class CyclomaticComplexityPromiseCalculator {
     }
 
     public static int calculate(MethodDeclaration method) {
-        if (method.getBody() == null) {
+        // PROMISE stores constructor-only classes with CC 0. For ordinary
+        // methods, including abstract/interface methods, McCabe complexity has
+        // a base path of 1 ("number of different paths plus one").
+        if (method.isConstructor()) {
             return 0;
+        }
+        if (method.getBody() == null) {
+            return 1;
         }
         ComplexityVisitor visitor = new ComplexityVisitor();
         method.getBody().accept(visitor);
@@ -31,7 +37,7 @@ public final class CyclomaticComplexityPromiseCalculator {
     }
 
     private static class ComplexityVisitor extends ASTVisitor {
-        int complexity = 0;
+        int complexity = 1;
 
         @Override
         public boolean visit(TypeDeclaration node) {

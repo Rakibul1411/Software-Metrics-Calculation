@@ -72,6 +72,17 @@ class PromiseProjectAnalyzerTest {
         write("src/main/java/fixture/Marker.java",
                 "package fixture;\n" +
                 "public @interface Marker { }\n");
+        write("src/main/java/fixture/Action.java",
+                "package fixture;\n" +
+                "public interface Action { void execute(); }\n");
+        write("src/main/java/fixture/StaticOnly.java",
+                "package fixture;\n" +
+                "public class StaticOnly {\n" +
+                "private static int shared;\n" +
+                "public StaticOnly() { }\n" +
+                "public void first() { shared++; }\n" +
+                "public void second() { shared++; }\n" +
+                "}\n");
 
         List<PromiseMetricResult> results = PromiseProjectAnalyzer.analyzeDirectories(
                 java.util.Collections.singletonList(project));
@@ -97,19 +108,33 @@ class PromiseProjectAnalyzerTest {
         assertEquals(0.50, child.getDam(), 0.001);
         assertEquals(3, child.getMoa());
         assertEquals(0.33, child.getMfa(), 0.01);
-        assertEquals(0.25, child.getCam(), 0.001);
+        assertEquals(0.40, child.getCam(), 0.001);
         assertEquals(1, child.getIc());
         assertEquals(1, child.getCbm());
         assertEquals(1.00, child.getAmc(), 0.001);
-        assertEquals(3, child.getMaxCc());
-        assertEquals(0.60, child.getAvgCc(), 0.001);
+        assertEquals(4, child.getMaxCc());
+        assertEquals(1.40, child.getAvgCc(), 0.001);
 
         PromiseMetricResult base = byName.get("fixture.Base");
         assertEquals(1, base.getNoc());
         assertEquals(1, base.getDit());
         assertEquals(1, base.getCe());
         assertEquals(1, base.getCa());
-        assertEquals(1, base.getCbo());
+        assertEquals(2, base.getCbo());
+
+        PromiseMetricResult action = byName.get("fixture.Action");
+        assertEquals(1, action.getWmc());
+        assertEquals(1, action.getMaxCc());
+        assertEquals(1.0, action.getAvgCc(), 0.001);
+        assertEquals(1.0, action.getCam(), 0.001);
+
+        PromiseMetricResult staticOnly = byName.get("fixture.StaticOnly");
+        assertEquals(3, staticOnly.getWmc());
+        assertEquals(1, staticOnly.getLcom());
+        assertEquals(0.5, staticOnly.getLcom3(), 0.001);
+        assertEquals(1.0, staticOnly.getCam(), 0.001);
+        assertEquals(1, staticOnly.getMaxCc());
+        assertEquals(2.0 / 3.0, staticOnly.getAvgCc(), 0.001);
 
         assertFalse(results.isEmpty());
     }
@@ -120,6 +145,8 @@ class PromiseProjectAnalyzerTest {
                 "package org.example; public class Core { }");
         write("jakarta-ant-1.3/src/main/org/example/Secondary.java",
                 "package org.example; class Secondary { } class Additional { }");
+        write("jakarta-ant-1.3/src/main/org/example/test/Support.java",
+                "package org.example.test; public class Support { }");
         write("jakarta-ant-1.3/src/main/org/apache/tools/ant/taskdefs/SendEmail.java",
                 "package org.apache.tools.ant.taskdefs; public class SendEmail { }");
         write("jakarta-ant-1.3/src/main/org/apache/tools/ant/taskdefs/optional/OptionalTask.java",
@@ -144,7 +171,76 @@ class PromiseProjectAnalyzerTest {
                 "org.apache.tools.ant.util.regexp.Regexp",
                 "org.example.Additional",
                 "org.example.Core",
-                "org.example.Secondary"), names);
+                "org.example.Secondary",
+                "org.example.test.Support"), names);
+    }
+
+    @Test
+    void selectsTheMeasuredCoreScopesForMultiModulePromiseReleases()
+            throws Exception {
+        Path lucene = project.resolve("lucene-solr-releases-lucene-2.4.0");
+        write("lucene-solr-releases-lucene-2.4.0/"
+                        + "lucene-solr-releases-lucene-2.4.0/"
+                        + "src/java/org/apache/lucene/Core.java",
+                "package org.apache.lucene; public class Core { }");
+        write("lucene-solr-releases-lucene-2.4.0/"
+                        + "lucene-solr-releases-lucene-2.4.0/"
+                        + "contrib/demo/src/java/org/apache/lucene/Extra.java",
+                "package org.apache.lucene; public class Extra { }");
+
+        List<PromiseMetricResult> luceneResults =
+                PromiseProjectAnalyzer.analyzeDirectories(
+                        java.util.Collections.singletonList(lucene));
+        assertEquals(List.of("org.apache.lucene.Core"), luceneResults.stream()
+                .map(PromiseMetricResult::getFullyQualifiedName)
+                .collect(Collectors.toList()));
+
+        Path synapse = project.resolve("synapse-1.2");
+        write("synapse-1.2/synapse-1.2/"
+                        + "modules/core/src/main/java/demo/SynapseCore.java",
+                "package demo; public class SynapseCore { }");
+        write("synapse-1.2/synapse-1.2/"
+                        + "modules/transports/src/main/java/demo/Transport.java",
+                "package demo; public class Transport { }");
+
+        List<PromiseMetricResult> synapseResults =
+                PromiseProjectAnalyzer.analyzeDirectories(
+                        java.util.Collections.singletonList(synapse));
+        assertEquals(List.of("demo.SynapseCore"), synapseResults.stream()
+                .map(PromiseMetricResult::getFullyQualifiedName)
+                .collect(Collectors.toList()));
+    }
+
+    @Test
+    void rejectsACollectionOfNestedPromiseReleaseArchives() throws Exception {
+        Files.write(project.resolve("ant-1.3.zip"), new byte[] {1});
+        Files.write(project.resolve("camel-1.0.tar.gz"), new byte[] {2});
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> PromiseInputValidator.requireSingleRelease(
+                        java.util.Collections.singletonList(project)));
+    }
+
+    @Test
+    void acceptsAReleaseThatBundlesTestFixtureArchives() throws Exception {
+        write("apache-ant-1.7.0/src/main/org/apache/tools/ant/Main.java",
+                "package org.apache.tools.ant; public class Main { }");
+        Files.createDirectories(project.resolve(
+                "apache-ant-1.7.0/src/etc/testcases/taskdefs/zip"));
+        Files.write(project.resolve(
+                "apache-ant-1.7.0/src/etc/testcases/taskdefs/zip/zipgroupfileset1.zip"),
+                new byte[] {1});
+        Files.write(project.resolve(
+                "apache-ant-1.7.0/src/etc/testcases/taskdefs/zip/zipgroupfileset2.zip"),
+                new byte[] {2});
+        Files.createDirectories(project.resolve("apache-ant-1.7.0/docs/manual"));
+        Files.write(project.resolve(
+                "apache-ant-1.7.0/docs/manual/tutorial-writing-tasks-src.zip"),
+                new byte[] {3});
+
+        PromiseInputValidator.requireSingleRelease(
+                java.util.Collections.singletonList(project));
     }
 
     private void write(String relativePath, String source) throws Exception {
