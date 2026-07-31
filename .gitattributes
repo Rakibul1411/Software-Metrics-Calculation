@@ -1,1 +1,5 @@
 *.csv filter=lfs diff=lfs merge=lfs -text
+
+# The final application's curated sample datasets are small and must remain
+# available even when the repository's GitHub LFS quota is exhausted.
+DefectLab-Updated-Component-Based/sample-data/** -filter -diff -merge text
