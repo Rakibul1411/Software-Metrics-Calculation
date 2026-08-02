@@ -59,19 +59,20 @@ class GitHubCloneServiceTest {
     }
 
     @Test
-    void aeeemCloneDownloadsHistoricalBlobsBeforeAnalysis() throws Exception {
+    void aeeemCloneStartsBloblessAndRetainsARegularCloneFallback() throws Exception {
         GitHubCloneService service = new GitHubCloneService();
         List<List<String>> attempts = service.cloneAttempts(
                 "https://github.com/eclipse-jdt/eclipse.jdt.core",
                 Paths.get("storage/extracted-projects/test-clone"),
                 true);
 
-        assertFalse(attempts.isEmpty());
+        assertEquals(2, attempts.size());
+        assertTrue(attempts.get(0).contains("--filter=blob:none"));
+        assertTrue(attempts.get(0).contains("--single-branch"));
+        assertFalse(attempts.get(1).contains("--filter=blob:none"));
         for (List<String> attempt : attempts) {
-            assertFalse(attempt.contains("--filter=blob:none"));
             assertFalse(attempt.contains("--depth"));
             assertTrue(attempt.contains("--no-checkout"));
         }
-        assertTrue(attempts.get(0).contains("--single-branch"));
     }
 }

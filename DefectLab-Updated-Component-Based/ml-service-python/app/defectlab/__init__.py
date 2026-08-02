@@ -1,1 +1,1 @@
-"""DefectLab pipeline: registry-driven validation, transformation, CORAL and KNN."""
+"""DefectLab pipeline: validation, transformation, optional CORAL and KNN."""

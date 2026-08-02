@@ -107,13 +107,12 @@ The current UI exposes:
 
 - labeled source;
 - manual target, predefined target, or both;
-- KNN/SVM;
-- manual K for KNN;
-- C and kernel for SVM;
+- KNN with user-selected K from 1 through 5;
+- a dataset-alignment checkbox;
 - decision threshold.
 
-The preparation pipeline is automatic. The UI does not show preprocessing
-variants or log/CORAL checkboxes.
+Log preprocessing is automatic. The UI lets the user enable or disable shallow
+CORAL dataset alignment.
 
 A dual-target response contains two saved runs sharing one group ID.
 
@@ -123,7 +122,7 @@ The reports area:
 
 - lists grouped and individual runs;
 - loads ranked predictions;
-- filters defective rows;
+- filters Buggy rows;
 - switches between manual/predefined targets;
 - shows evaluation and comparison summaries;
 - downloads the manual labeled CSV; and

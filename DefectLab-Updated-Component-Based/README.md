@@ -2,7 +2,7 @@
 
 DefectLab is an end-to-end cross-project software defect prediction system for
 Java projects. It extracts PROMISE or AEEEM software metrics, stores dataset
-metadata in PostgreSQL/Neon, trains a manually configured KNN or SVM model,
+metadata in PostgreSQL/Neon, trains a user-configured KNN model,
 predicts defect risk for another project or release, evaluates predictions
 against labeled benchmarks, compares calculated metrics with benchmark data,
 and generates reproducible CSV and PDF artifacts.
@@ -57,7 +57,7 @@ prediction. Every execution creates a new immutable run and new artifacts.
 |---|---|---|
 | Frontend | Angular 19, TypeScript, CSS | User workflow, forms, filtering, dashboards, and report views |
 | Main API | Spring Boot 2.7, Java 17 | Authentication, validation, extraction, orchestration, persistence, and reports |
-| ML service | FastAPI, pandas, NumPy, scikit-learn | Preprocessing, CORAL, KNN/SVM, prediction, evaluation, and comparison |
+| ML service | FastAPI, pandas, NumPy, scikit-learn | Preprocessing, optional CORAL, KNN prediction, evaluation, and comparison |
 | Database | PostgreSQL 14+ or Neon | Users and workflow metadata |
 | File storage | Local directory or Docker volume | Metrics, prediction CSVs, metadata sidecars, and PDF reports |
 | Source analysis | Eclipse JDT plus Git-history analyzers | PROMISE and AEEEM extraction |
@@ -123,12 +123,14 @@ PROMISE and AEEEM cannot be mixed in one prediction or metric comparison.
 
 | Role | Requirement | Purpose |
 |---|---|---|
-| Source | Must contain actual labels | Trains KNN or SVM |
+| Source | Must contain actual labels | Trains KNN with K=1–5 |
 | Manual target | Must have type `MANUAL` | Receives predicted labels without changing its original file |
 | Predefined target | Must have type `PREDEFINED` and actual labels | Receives predictions and post-prediction evaluation |
 
-At least one target is required. A request may include both targets. Source and
-target must have different dataset identities and the same metric family.
+At least one target is required. A request may include both targets. Every
+source/target pair must use the same metric family. A MANUAL target must be a
+different dataset record; a labeled PREDEFINED dataset may also evaluate the
+model when the same record is selected as the source.
 
 ## Complete A-to-Z workflow
 
@@ -211,12 +213,10 @@ In **Predictions**, select:
 
 1. one labeled source dataset;
 2. a MANUAL target, a PREDEFINED target, or both;
-3. KNN or SVM;
-4. the manual model setting; and
-5. a decision threshold between 0 and 1.
+3. whether to apply shallow CORAL dataset alignment; and
+4. a decision threshold between 0 and 1.
 
-KNN accepts `K = 1..5`. SVM accepts `C > 0` up to `1000` and one of `RBF`,
-`LINEAR`, `POLY`, or `SIGMOID`.
+The model is KNN with a user-selected `K` from 1 through 5.
 
 ### 8. Validate the request
 
@@ -224,11 +224,14 @@ Before contacting FastAPI, Spring Boot verifies:
 
 - the source contains actual labels;
 - at least one target is selected;
-- source and target IDs/identities differ;
+- a MANUAL target uses a different record from the source;
 - every selected dataset uses the same family;
 - the manual target has type `MANUAL`;
 - the predefined target has type `PREDEFINED`; and
 - the predefined target contains actual labels.
+
+Selecting the source itself as the PREDEFINED target is supported, but reports
+training-set performance rather than an independent cross-project evaluation.
 
 The ML service independently validates headers, feature schemas, numeric
 values, labels, row counts, model settings, and threshold.
@@ -246,31 +249,21 @@ Every prediction uses the same deterministic preparation flow:
 7. remove zero-variance source features from both source and target;
 8. fit `StandardScaler` on the source only;
 9. transform source and target with the source-fitted scaler; and
-10. align source covariance to target with shallow/linear CORAL.
+10. optionally align source covariance to target with shallow/linear CORAL.
 
-The preparation flow is fixed rather than user-selectable. Log transformation
-and CORAL are normal, automatic parts of the pipeline.
+Log transformation is fixed. CORAL alignment is controlled by the dataset
+alignment checkbox for each run.
 
 Target labels are never used in imputation, transformation, CORAL, model
 training, or prediction. This prevents target-label leakage.
 
-### 10. Train the selected model
+### 10. Train the model
 
 #### KNN
 
 - Uses the user-selected K from 1 through 5.
 - Uses uniform weights and Euclidean distance.
 - Does not auto-select K.
-- If an even K produces an exact vote tie at threshold `0.5`, the nearest
-  neighbor decides the label.
-
-#### SVM
-
-- Uses the user-selected C and kernel.
-- Uses `gamma = scale`.
-- Uses balanced class weights.
-- Uses the configured random seed for reproducibility.
-- Produces a continuous defect probability/score.
 
 ### 11. Score and rank every target record
 
@@ -278,7 +271,7 @@ FastAPI returns one record per target row with:
 
 - class identifier;
 - defect score/probability;
-- thresholded predicted label (`0` clean, `1` defective);
+- thresholded predicted label (`0` Clean, `1` Buggy);
 - risk rank; and
 - `HIGH`, `MEDIUM`, or `LOW` risk band.
 
@@ -340,7 +333,7 @@ available identifiers and labels.
 From the Angular application, the user can:
 
 - list individual runs or grouped dual-target runs;
-- filter predicted defective rows;
+- filter predicted Buggy rows;
 - change the displayed row limit;
 - inspect model settings and warnings;
 - inspect evaluation and comparison results;
@@ -387,8 +380,8 @@ Schema validation
   -> registered log1p transforms
   -> zero-variance removal
   -> source-fitted standardization
-  -> shallow CORAL alignment
-  -> KNN or SVM
+  -> optional shallow CORAL alignment
+  -> KNN with K=1–5
   -> defect probability
   -> thresholded label
   -> descending risk ranking
@@ -398,7 +391,7 @@ Reproducibility is provided by saving:
 
 - source and target dataset IDs;
 - model name;
-- manual K or C/kernel;
+- selected K and the dataset-alignment choice;
 - threshold;
 - random seed;
 - family and preparation metadata;
@@ -563,26 +556,32 @@ scripts/run-dev.sh
 ```
 
 The script starts FastAPI, Spring Boot, and Angular together and stops the child
-processes when the script exits.
+processes when the script exits. Development mode watches all three services:
+
+- Java source/config changes are incrementally compiled and trigger Spring Boot
+  DevTools to restart the application context;
+- Python files under `ml-service-python/app` restart FastAPI through Uvicorn;
+- Angular uses its normal Vite watch mode.
 
 ### 4. Start services separately
 
 FastAPI:
 
 ```bash
-cd ml-service-python
-ML_SERVICE_TOKEN='replace-with-the-same-value' \
-  venv/bin/python -m uvicorn app.main:app --reload --port 8000
+ML_SERVICE_TOKEN='replace-with-the-same-value' scripts/run-python-dev.sh
 ```
 
 Spring Boot:
 
 ```bash
-cd backend-java
 export ML_SERVICE_BASE_URL='http://localhost:8000'
 export ML_SERVICE_TOKEN='replace-with-the-same-value'
-mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
+scripts/run-java-dev.sh
 ```
+
+Both commands stay running and restart their service after relevant file
+changes. Java uses the native Spring Boot DevTools restart mechanism; no Node.js
+watcher is involved.
 
 Angular:
 
@@ -626,8 +625,8 @@ The bundled sample data supports a quick PROMISE workflow:
 5. Choose a labeled Ant release such as Ant 1.3 or 1.7 as the source.
 6. Choose the uploaded Ant 1.6 file as the manual target.
 7. Choose bundled Ant 1.6 as the predefined target.
-8. Select KNN with a K from 1 to 5, or select SVM and configure C/kernel.
-9. Set the decision threshold.
+8. Check or uncheck dataset alignment.
+9. Select K from 1 to 5 and set the decision threshold.
 10. Run prediction.
 11. Open the grouped report to compare the manual and predefined target runs.
 12. Download the labeled manual CSV and PDF reports.
@@ -702,23 +701,14 @@ KNN dual-target request:
   "predefinedTargetDatasetId": 21,
   "modelName": "KNN",
   "k": 3,
+  "coral": true,
   "threshold": 0.5,
   "seed": 42
 }
 ```
 
-SVM request fields replace `k` with:
-
-```json
-{
-  "modelName": "SVM",
-  "c": 1.0,
-  "kernel": "RBF"
-}
-```
-
-Omit either target ID for a single-target run. The preparation pipeline is
-automatic and is not an API option.
+Omit either target ID for a single-target run. Set `coral` to `false` to train
+without dataset alignment.
 
 ### Metric comparisons
 
@@ -928,11 +918,6 @@ reconstructed from a source-only archive. Use a public GitHub repository.
 
 K must be between 1 and 5 and cannot exceed the number of source rows.
 
-### SVM run is rejected
-
-The source must contain both clean and defective classes. C must be greater than
-zero and at most 1000, and the kernel must be supported.
-
 ### A metric is `null`
 
 Some evaluation metrics are undefined for a single-class target or another
@@ -955,10 +940,10 @@ This is expected. AEEEM analysis is serialized to avoid excessive memory use.
 - GitHub analysis supports public repositories only.
 - PROMISE and AEEEM feature families cannot be mixed.
 - AEEEM full extraction requires Git history.
-- One standard preparation pipeline always applies log transformation,
-  source-fitted scaling, and shallow CORAL.
+- Every run applies log transformation and source-fitted scaling; shallow CORAL
+  is optional through the dataset-alignment checkbox.
 - Preprocessing does not use target labels.
-- K and SVM C/kernel are manual settings; the system does not auto-tune them.
+- K is selected manually from 1 to 5; the system does not auto-tune it.
 - Original metric files are immutable during prediction.
 - Every rerun creates a separate saved result.
 - MANUAL targets receive a new labeled CSV artifact; PREDEFINED targets do not.

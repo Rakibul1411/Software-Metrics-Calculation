@@ -133,11 +133,11 @@ export class DefectLabApiService {
 
   predictions(
     id: number,
-    defectiveOnly = false,
+    buggyOnly = false,
     limit = 500
   ): Observable<PredictionRow[]> {
     const params = new HttpParams()
-      .set('defectiveOnly', String(defectiveOnly))
+      .set('buggyOnly', String(buggyOnly))
       .set('limit', String(limit));
     return this.http.get<PredictionRow[]>(
       `${this.api}/predictions/${id}/predictions`,

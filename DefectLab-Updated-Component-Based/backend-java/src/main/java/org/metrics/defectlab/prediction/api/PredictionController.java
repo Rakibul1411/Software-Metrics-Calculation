@@ -68,11 +68,11 @@ public class PredictionController {
     public ResponseEntity<List<Map<String, Object>>> predictions(
             @PathVariable("id") Long id,
             @RequestParam(value = "limit", defaultValue = "500") int limit,
-            @RequestParam(value = "defectiveOnly", defaultValue = "false")
-            boolean defectiveOnly,
+            @RequestParam(value = "buggyOnly", defaultValue = "false")
+            boolean buggyOnly,
             HttpServletRequest request) {
         return ResponseEntity.ok(predictionService.predictions(
-                currentUser.requireUserId(request), id, limit, defectiveOnly));
+                currentUser.requireUserId(request), id, limit, buggyOnly));
     }
 
     @GetMapping("/{id}/prediction.csv")

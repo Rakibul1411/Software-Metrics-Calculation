@@ -45,6 +45,10 @@ class SchemaSqlContractTest {
         assertTrue(sql.contains("comparison_group_id"));
         assertTrue(sql.contains("prediction_file_path"));
         assertTrue(sql.contains("comparison_report_file_path"));
-        assertTrue(sql.contains("model_config->>'modelname' in ('knn', 'svm')"));
+        assertTrue(sql.contains("model_config->>'modelname' = 'knn'"));
+        assertTrue(sql.contains("model_config ? 'k'"));
+        assertTrue(sql.contains("(model_config->>'k')::integer between 1 and 5"));
+        assertTrue(sql.contains("ck_prediction_model\n    check"));
+        assertTrue(sql.contains("not valid"));
     }
 }

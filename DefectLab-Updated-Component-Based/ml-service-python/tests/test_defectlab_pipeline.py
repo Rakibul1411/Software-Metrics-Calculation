@@ -117,13 +117,23 @@ class TestValidation:
 
 
 class TestPipeline:
-    def test_standard_pipeline_always_applies_log_and_coral(self):
+    def test_standard_pipeline_applies_log_and_coral_by_default(self):
         source = prepare(promise_rows(30))
         target = prepare(promise_rows(15))
         outcome = pipeline.run(source, target)
 
         assert outcome.log_applied is True
         assert outcome.coral_applied is True
+
+    def test_dataset_alignment_can_be_disabled(self):
+        source = prepare(promise_rows(30))
+        target = prepare(promise_rows(15, scale=1.4))
+        outcome = pipeline.run(source, target, apply_coral=False)
+
+        assert outcome.log_applied is True
+        assert outcome.coral_applied is False
+        assert outcome.covariance_distance_before is not None
+        assert outcome.covariance_distance_after is None
 
     def test_run_ranks_every_target_row_descending(self):
         source = prepare(promise_rows(40))
@@ -139,31 +149,21 @@ class TestPipeline:
         )
         assert [row["riskRank"] for row in outcome.predictions] == list(range(1, 21))
 
-    def test_manual_k_is_used_without_auto_selection(self):
+    @pytest.mark.parametrize("selected_k", [1, 2, 3, 4, 5])
+    def test_knn_uses_user_selected_k(self, selected_k):
         source = prepare(promise_rows(40))
         target = prepare(promise_rows(20))
-        outcome = pipeline.run(source, target, fixed_k=4)
-        assert outcome.selected_k == 4
-        assert outcome.k_candidates == [4]
+        outcome = pipeline.run(source, target, k=selected_k)
+        assert outcome.selected_k == selected_k
+        assert outcome.k_candidates == [selected_k]
         assert outcome.k_scores == {}
 
-    def test_svm_uses_manual_c_and_returns_ranked_probabilities(self):
-        source = prepare(promise_rows(40))
-        target = prepare(promise_rows(12, scale=1.2))
-        outcome = pipeline.run(
-            source, target, model_name="SVM",
-            svm_c=10.0, svm_kernel="rbf",
-        )
-        assert outcome.model_name == "SVM"
-        assert outcome.svm_c == 10.0
-        assert outcome.selected_k is None
-        assert len(outcome.predictions) == 12
-
-    def test_manual_k_must_be_between_one_and_five(self):
+    @pytest.mark.parametrize("invalid_k", [0, 6])
+    def test_k_outside_supported_range_is_rejected(self, invalid_k):
         source = prepare(promise_rows(20))
         target = prepare(promise_rows(10))
         with pytest.raises(SchemaError):
-            pipeline.run(source, target, fixed_k=6)
+            pipeline.run(source, target, k=invalid_k)
 
     def test_coral_reduces_covariance_distance(self):
         source = prepare(promise_rows(60))

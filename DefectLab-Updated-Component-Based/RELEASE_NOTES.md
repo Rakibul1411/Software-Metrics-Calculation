@@ -20,10 +20,9 @@ codebase while preserving the working defect-prediction algorithms.
 
 - PROMISE and AEEEM extraction
 - KNN with user-selected K from 1 through 5
-- SVM with user-selected C and kernel
-- One standard pipeline with log transformation, source-fitted
-  standardization, and shallow linear CORAL
-- Independent immutable runs for different K/C values
+- Log transformation and source-fitted standardization
+- User-selectable shallow linear CORAL dataset alignment
+- Independent immutable runs for different alignment/threshold settings
 - Class-wise and aggregate comparison, evaluation, CSV export, and reports
 
 ## Verification

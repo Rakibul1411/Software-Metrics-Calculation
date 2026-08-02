@@ -40,19 +40,17 @@ This is the step-by-step record of the corrected component-based rebuild.
 
 ## Step 5 — Prediction pipeline
 
-- Added deterministic KNN with manual K=1–5.
-- Added nearest-neighbor tie-break for even K.
-- Added SVM with manual C and kernel.
+- Added deterministic KNN with user-selected K=1–5.
 - Added imputation, log1p, standard scaling, shallow CORAL, thresholding,
   and risk ranking.
-- Consolidated preprocessing into one fixed standard pipeline; the UI and API
-  no longer expose pipeline variants or log/CORAL switches.
+- Kept log preprocessing fixed and added a CORAL dataset-alignment checkbox.
 - Protected the internal FastAPI API with a service token.
 
 ## Step 6 — Run persistence and comparison
 
-- Validated labeled source, manual target, predefined target, family, and
-  distinct dataset identity.
+- Validated labeled source, manual target, predefined target, and family.
+  MANUAL targets must differ from the source; labeled PREDEFINED targets may
+  reuse it for training-set evaluation.
 - Saved a new labeled CSV only for a manual target; predefined targets retain
   their original benchmark file.
 - Created one immutable `prediction_runs` row per target.
@@ -94,7 +92,7 @@ This is the step-by-step record of the corrected component-based rebuild.
 
 - Verified the Angular TypeScript application contract.
 - Passed all 76 Maven backend tests.
-- Passed all 31 Python tests, including manual KNN, SVM, and shallow CORAL.
+- Passed the Python pipeline tests, including configurable KNN and optional shallow CORAL.
 - Audited source/package inputs for obsolete persistence references and
   documented that production credentials must come from environment variables.
 - Passed the exact table/entity, package-path, legacy-endpoint, and no-gradient

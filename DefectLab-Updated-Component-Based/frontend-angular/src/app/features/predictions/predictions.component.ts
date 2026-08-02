@@ -37,6 +37,7 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
               <option [ngValue]="null">Choose source</option>
               <option *ngFor="let item of sourceOptions" [ngValue]="item.id">
                 {{ item.displayName }} · {{ item.datasetFamily }} · {{ item.datasetType }}
+                · LABELED · {{ datasetScope(item) }}
               </option>
             </select>
           </label>
@@ -48,6 +49,7 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
               <option [ngValue]="null">No manual target</option>
               <option *ngFor="let item of manualOptions" [ngValue]="item.id">
                 {{ item.displayName }} · {{ item.datasetFamily }} · MANUAL
+                · {{ datasetScope(item) }}
               </option>
             </select>
           </label>
@@ -58,37 +60,38 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
               <option [ngValue]="null">No predefined target</option>
               <option *ngFor="let item of predefinedOptions" [ngValue]="item.id">
                 {{ item.displayName }} · {{ item.datasetFamily }} · PREDEFINED
+                · {{ datasetScope(item) }}
               </option>
             </select>
           </label>
 
           <div class="dl-form-row">
             <label class="dl-field"><span>Model</span>
-              <select [(ngModel)]="modelName" name="modelName">
-                <option value="KNN">K-Nearest Neighbors</option>
-                <option value="SVM">Support Vector Machine</option>
-              </select>
+              <input type="text" value="K-Nearest Neighbors" disabled>
             </label>
-            <label class="dl-field" *ngIf="modelName === 'KNN'"><span>K</span>
+            <label class="dl-field"><span>K</span>
               <select [(ngModel)]="k" name="k">
-                <option *ngFor="let value of [1,2,3,4,5]" [ngValue]="value">{{ value }}</option>
+                <option *ngFor="let value of [1,2,3,4,5]" [ngValue]="value">
+                  {{ value }}
+                </option>
               </select>
-            </label>
-            <label class="dl-field" *ngIf="modelName === 'SVM'"><span>C</span>
-              <input type="number" min="0.1" max="1000" step="0.1" [(ngModel)]="c" name="c">
             </label>
           </div>
 
           <div class="dl-form-row">
-            <label class="dl-field" *ngIf="modelName === 'SVM'"><span>Kernel</span>
-              <select [(ngModel)]="kernel" name="kernel">
-                <option value="RBF">RBF</option><option value="LINEAR">Linear</option>
-                <option value="POLY">Polynomial</option><option value="SIGMOID">Sigmoid</option>
-              </select>
-            </label>
             <label class="dl-field"><span>Threshold</span>
               <input type="number" min="0.05" max="0.95" step="0.05"
                      [(ngModel)]="threshold" name="threshold">
+            </label>
+          </div>
+
+          <div class="dl-choice-group dl-alignment-choice">
+            <label>
+              <input type="checkbox" [(ngModel)]="coral" name="coral">
+              <span>
+                <strong>Apply dataset alignment</strong>
+                <small>Use shallow CORAL to align source features with the target before training.</small>
+              </span>
             </label>
           </div>
 
@@ -126,17 +129,18 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
         <h2>Saved prediction runs</h2>
         <p>Dual-target results share one comparison group ID.</p>
       </div><button class="dl-btn dl-btn-ghost dl-btn-sm" type="button" (click)="load()">Refresh</button></div>
-      <div class="dl-table-wrap" *ngIf="runs.length; else emptyRuns">
+      <div class="dl-table-wrap dl-prediction-runs-scroll"
+           *ngIf="runs.length; else emptyRuns">
         <table class="dl-table">
           <thead><tr><th>Run</th><th>Group</th><th>Target</th><th>Type</th>
-            <th>Model</th><th>Defective</th><th>Created</th><th></th></tr></thead>
+            <th>Model</th><th>Buggy</th><th>Created</th><th></th></tr></thead>
           <tbody><tr *ngFor="let item of runs">
             <td class="dl-mono">#{{ item.id }}</td>
             <td class="dl-mono">{{ item.comparisonGroupId || '—' }}</td>
             <td>{{ item.targetDataset.displayName }}</td>
             <td>{{ item.targetDataset.datasetType }}</td>
             <td>{{ item.modelConfig.modelName }} · {{ setting(item) }}</td>
-            <td class="dl-num">{{ item.summary.predictedDefective }}</td>
+            <td class="dl-num">{{ item.summary.predictedBuggy }}</td>
             <td>{{ item.createdAt | date:'medium' }}</td>
             <td><button class="dl-btn dl-btn-ghost dl-btn-sm" type="button"
                         (click)="open(item)">Inspect</button></td>
@@ -165,17 +169,23 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
       </div>
 
       <div *ngIf="predictionLoading" class="dl-loading"><span class="dl-spinner"></span>Loading…</div>
-      <div class="dl-table-wrap dl-scroll-y" *ngIf="predictions.length">
-        <table class="dl-table">
-          <thead><tr><th>Rank</th><th>File / identifier</th><th>Probability</th>
-            <th>Predicted</th><th *ngIf="run.targetDataset.datasetType === 'PREDEFINED'">Actual</th></tr></thead>
+      <div class="dl-table-wrap dl-prediction-detail-scroll" *ngIf="predictions.length">
+        <table class="dl-table dl-prediction-detail-table">
+          <thead><tr><th class="dl-num dl-col-rank">Rank</th>
+            <th class="dl-col-identifier">File / identifier</th>
+            <th class="dl-num dl-col-probability">Probability</th>
+            <th class="dl-prediction-status">Predicted</th>
+            <th class="dl-prediction-status"
+                *ngIf="run.targetDataset.datasetType === 'PREDEFINED'">Actual</th></tr></thead>
           <tbody><tr *ngFor="let row of predictions">
-            <td class="dl-num">{{ row.riskRank }}</td>
-            <td class="dl-mono">{{ row.classIdentifier }}</td>
-            <td class="dl-num">{{ row.defectProbability | number:'1.4-4' }}</td>
-            <td>{{ row.predictedLabel === 1 ? 'Defective' : 'Non-defective' }}</td>
-            <td *ngIf="run.targetDataset.datasetType === 'PREDEFINED'">
-              {{ row.actualLabel === 1 ? 'Defective' : 'Non-defective' }}
+            <td class="dl-num dl-col-rank">{{ row.riskRank }}</td>
+            <td class="dl-mono dl-col-identifier">{{ row.classIdentifier }}</td>
+            <td class="dl-num dl-col-probability">{{ row.defectProbability | number:'1.4-4' }}</td>
+            <td class="dl-prediction-status">
+              {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}</td>
+            <td class="dl-prediction-status"
+                *ngIf="run.targetDataset.datasetType === 'PREDEFINED'">
+              {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
             </td>
           </tr></tbody>
         </table>
@@ -190,10 +200,9 @@ export class PredictionsComponent implements OnInit {
   datasetFamily: DatasetFamily = 'PROMISE';
   manualId: number | null = null;
   predefinedId: number | null = null;
-  modelName: 'KNN' | 'SVM' = 'KNN';
+  readonly modelName = 'KNN';
   k = 3;
-  c = 1;
-  kernel = 'RBF';
+  coral = true;
   threshold = 0.5;
   busy = false;
   error = '';
@@ -207,15 +216,10 @@ export class PredictionsComponent implements OnInit {
   ngOnInit(): void { this.load(); }
 
   get sourceOptions(): DatasetSummary[] {
-    const manual = this.datasets.find(item => item.id === this.manualId);
-    const predefined = this.datasets.find(item => item.id === this.predefinedId);
-    return this.uniqueByIdentity(this.datasets.filter(item =>
-      item.hasActualLabel &&
+    return this.datasets.filter(item =>
+      item.hasActualLabel === true &&
       item.datasetFamily === this.datasetFamily &&
-      item.id !== this.manualId &&
-      item.id !== this.predefinedId &&
-      (!manual || !this.sameIdentity(item, manual)) &&
-      (!predefined || !this.sameIdentity(item, predefined))));
+      item.id !== this.manualId);
   }
 
   get selectedSource(): DatasetSummary | undefined {
@@ -224,22 +228,19 @@ export class PredictionsComponent implements OnInit {
 
   get manualOptions(): DatasetSummary[] {
     const source = this.selectedSource;
-    return this.uniqueByIdentity(this.datasets.filter(item =>
+    return this.datasets.filter(item =>
       item.datasetType === 'MANUAL' &&
       item.datasetFamily === this.datasetFamily &&
       item.id !== this.sourceId &&
-      (!source || !this.sameIdentity(item, source)) &&
-      (!source || item.datasetFamily === source.datasetFamily)));
+      (!source || item.datasetFamily === source.datasetFamily));
   }
 
   get predefinedOptions(): DatasetSummary[] {
     const source = this.selectedSource;
-    return this.uniqueByIdentity(this.datasets.filter(item =>
+    return this.datasets.filter(item =>
       item.datasetType === 'PREDEFINED' && item.hasActualLabel &&
       item.datasetFamily === this.datasetFamily &&
-      item.id !== this.sourceId &&
-      (!source || !this.sameIdentity(item, source)) &&
-      (!source || item.datasetFamily === source.datasetFamily)));
+      (!source || item.datasetFamily === source.datasetFamily));
   }
 
   load(): void {
@@ -264,7 +265,6 @@ export class PredictionsComponent implements OnInit {
     const source = this.selectedSource;
     if (!source) return;
     if (this.manualId === source.id) this.manualId = null;
-    if (this.predefinedId === source.id) this.predefinedId = null;
 
     const manual = this.datasets.find(item => item.id === this.manualId);
     if (manual && manual.datasetFamily !== source.datasetFamily) {
@@ -289,31 +289,8 @@ export class PredictionsComponent implements OnInit {
     }
   }
 
-  private uniqueByIdentity(items: DatasetSummary[]): DatasetSummary[] {
-    const seen = new Set<string>();
-    return items.filter(item => {
-      const key = this.identityKey(item);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }
-
-  private sameIdentity(left: DatasetSummary, right: DatasetSummary): boolean {
-    return this.identityKey(left) === this.identityKey(right);
-  }
-
-  private identityKey(item: DatasetSummary): string {
-    return [
-      item.datasetFamily,
-      item.datasetType,
-      this.normalizeIdentityPart(item.projectName),
-      this.normalizeIdentityPart(item.projectVersion)
-    ].join('|');
-  }
-
-  private normalizeIdentityPart(value: string | null | undefined): string {
-    return (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  datasetScope(item: DatasetSummary): string {
+    return item.systemDataset ? 'BUNDLED' : 'YOUR DATA';
   }
 
   canRun(): boolean {
@@ -329,14 +306,11 @@ export class PredictionsComponent implements OnInit {
       manualTargetDatasetId: this.manualId,
       predefinedTargetDatasetId: this.predefinedId,
       modelName: this.modelName,
+      k: this.k,
+      coral: this.coral,
       threshold: this.threshold,
       seed: 42
     };
-    if (this.modelName === 'KNN') payload['k'] = this.k;
-    else {
-      payload['c'] = this.c;
-      payload['kernel'] = this.kernel;
-    }
     this.api.runPrediction(payload).subscribe({
       next: result => {
         this.created = result;
@@ -352,8 +326,7 @@ export class PredictionsComponent implements OnInit {
   }
 
   setting(run: PredictionRunSummary): string {
-    return run.modelConfig.modelName === 'KNN'
-      ? `K=${run.modelConfig.k}` : `C=${run.modelConfig.c}, ${run.modelConfig.kernel}`;
+    return `K=${run.modelConfig.k}`;
   }
 
   metric(value: { value: number | null }): string {

@@ -151,14 +151,17 @@ public class GitHubCloneService {
     List<List<String>> cloneAttempts(GitHubTarget target, Path targetPath, boolean fullHistory) {
         List<List<String>> attempts = new ArrayList<>();
         if (fullHistory) {
-            // AEEEM later calculates numstat for historical ranges. A partial
-            // blobless clone would fetch missing blobs during that calculation,
-            // allowing a transient GitHub error to destroy an otherwise
-            // completed multi-snapshot extraction.
-            attempts.add(cloneCommand(target, targetPath, true));
-            attempts.add(cloneCommand(target, targetPath, false));
+            // AEEEM needs the complete commit graph, but it does not need every
+            // historical blob before analysis starts. Large repositories such
+            // as eclipse.jdt.core cannot reliably transfer all blobs inside the
+            // clone deadline. Git fetches the required source blobs on demand
+            // while the selected snapshots are materialised.
+            attempts.add(cloneCommand(target, targetPath, true, true));
+            // Keep a regular clone for Git servers that do not support partial
+            // clone filtering.
+            attempts.add(cloneCommand(target, targetPath, false, false));
         } else {
-            List<String> command = cloneCommand(target, targetPath, true);
+            List<String> command = cloneCommand(target, targetPath, true, false);
             command.add(command.size() - 2, "--depth");
             command.add(command.size() - 2, "1");
             attempts.add(command);
@@ -166,11 +169,18 @@ public class GitHubCloneService {
         return attempts;
     }
 
-    private List<String> cloneCommand(GitHubTarget target, Path targetPath, boolean singleBranch) {
+    private List<String> cloneCommand(
+            GitHubTarget target,
+            Path targetPath,
+            boolean singleBranch,
+            boolean blobless) {
         List<String> command = new ArrayList<>(Arrays.asList(
                 "git", "-c", "http.version=HTTP/1.1", "clone"));
         if (singleBranch) {
             command.add("--single-branch");
+        }
+        if (blobless) {
+            command.add("--filter=blob:none");
         }
         command.add("--no-checkout");
         if (target.getBranch() != null) {

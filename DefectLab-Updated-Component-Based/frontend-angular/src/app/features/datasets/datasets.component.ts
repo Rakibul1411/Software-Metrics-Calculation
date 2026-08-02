@@ -94,7 +94,7 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
         </div>
         <div class="dl-step-overview">
           <div class="dl-step"><span class="dl-step-order">S</span><div>
-            <strong>Labeled source</strong><p>Trains KNN or SVM. Any project in the same family.</p>
+            <strong>Labeled source</strong><p>Trains KNN with K=1–5. Any project in the same family.</p>
           </div></div>
           <div class="dl-step"><span class="dl-step-order">M</span><div>
             <strong>Manual target</strong><p>MANUAL metrics from source/GitHub.</p>
@@ -138,7 +138,8 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
       </div>
       <div *ngIf="loading" class="dl-loading"><span class="dl-spinner"></span>Loading datasets…</div>
       <div *ngIf="loadError" class="dl-alert dl-alert-error">{{ loadError }}</div>
-      <div class="dl-table-wrap" *ngIf="filtered.length; else empty">
+      <div class="dl-table-wrap dl-dataset-storage-scroll"
+           *ngIf="filtered.length; else empty">
         <table class="dl-table">
           <thead>
             <tr><th>Project</th><th>Family</th><th>Origin</th><th>Label</th>

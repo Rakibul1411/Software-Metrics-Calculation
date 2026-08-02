@@ -42,6 +42,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, exception.getMessage());
     }
 
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Map<String, String>> handleConflict(ConflictException exception) {
+        return error(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
     @ExceptionHandler(org.metrics.defectlab.prediction.infrastructure.MlServiceClient.MlServiceException.class)
     public ResponseEntity<Map<String, String>> handleMlValidation(RuntimeException exception) {
         return error(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
@@ -66,11 +71,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleAllExceptions(Exception e) {
         LOGGER.error("Unhandled metric extraction failure", e);
-        String details = e.getMessage();
-        String message = details == null || details.trim().isEmpty()
-                ? "The server could not complete the request. Check the backend log for the root cause."
-                : "The server could not complete the request: " + details;
-        return error(HttpStatus.INTERNAL_SERVER_ERROR, message);
+        return error(HttpStatus.INTERNAL_SERVER_ERROR,
+                "The server could not complete the request. Check the backend log for details.");
     }
 
     private ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {

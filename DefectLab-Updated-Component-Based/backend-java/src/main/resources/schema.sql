@@ -155,8 +155,18 @@ CREATE TABLE IF NOT EXISTS prediction_runs (
     CONSTRAINT ck_prediction_different
         CHECK (source_dataset_id <> target_dataset_id),
     CONSTRAINT ck_prediction_model
-        CHECK (model_config->>'modelName' IN ('KNN', 'SVM'))
+        CHECK (model_config->>'modelName' = 'KNN'
+            AND model_config ? 'k'
+            AND (model_config->>'k')::INTEGER BETWEEN 1 AND 5)
 )@@
+-- Preserve immutable historical runs while enforcing the current contract for
+-- every new insert on databases created by an earlier release.
+ALTER TABLE prediction_runs DROP CONSTRAINT IF EXISTS ck_prediction_model@@
+ALTER TABLE prediction_runs ADD CONSTRAINT ck_prediction_model
+    CHECK (model_config->>'modelName' = 'KNN'
+        AND model_config ? 'k'
+        AND (model_config->>'k')::INTEGER BETWEEN 1 AND 5) NOT VALID@@
+
 CREATE INDEX IF NOT EXISTS ix_prediction_runs_user
     ON prediction_runs(user_id, created_at DESC)@@
 CREATE INDEX IF NOT EXISTS ix_prediction_runs_group

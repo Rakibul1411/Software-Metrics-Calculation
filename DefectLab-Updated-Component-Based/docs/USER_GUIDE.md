@@ -41,12 +41,12 @@ Select three compatible datasets:
 
 The predefined dropdown narrows automatically after choosing a manual target.
 
-For KNN, choose K manually from 1–5. For SVM, choose C and kernel. The decision
-threshold can also be adjusted. Log1p and CORAL run automatically as part of
-the standard preparation pipeline.
+Choose K from 1 to 5 and whether to apply dataset alignment, then adjust the
+decision threshold if needed. Log1p runs automatically; shallow CORAL runs only
+when the alignment checkbox is checked.
 
-Running again with another K/C is safe: the old result and original target stay
-unchanged.
+Running again with another alignment or threshold setting is safe: the old
+result and original target stay unchanged.
 
 ## Ranked results
 

@@ -6,8 +6,8 @@ Required order:
     -> missing/invalid handling
     -> log1p on registered non-negative features
     -> source-fitted StandardScaler
-    -> shallow CORAL (source -> target)
-    -> manually configured KNN or SVM
+    -> optional shallow CORAL (source -> target)
+    -> KNN with user-selected K from 1 to 5
     -> probability, label and risk ranking
 
 Target labels are never read during imputation, transformation, CORAL, fitting,
@@ -23,7 +23,6 @@ import numpy as np
 import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
-from sklearn.svm import SVC
 
 from app.defectlab.preparation import PreparedFrame, SchemaError
 from app.services.shallow_coral_service import ShallowCoralService
@@ -38,7 +37,6 @@ class PipelineOutcome:
     features: list[str]
     removed_constant_features: list[str]
     selected_k: int | None
-    svm_c: float | None
     k_candidates: list[int]
     k_scores: dict[int, float]
     threshold: float
@@ -57,7 +55,6 @@ class PipelineOutcome:
             "features": self.features,
             "removedConstantFeatures": self.removed_constant_features,
             "selectedK": self.selected_k,
-            "svmC": self.svm_c,
             "kCandidates": self.k_candidates,
             "kScores": {str(k): v for k, v in self.k_scores.items()},
             "threshold": self.threshold,
@@ -112,20 +109,13 @@ def run(
     threshold: float = DEFAULT_THRESHOLD,
     seed: int = DEFAULT_SEED,
     coral_regularization: float = 1.0,
-    model_name: str = "KNN",
-    fixed_k: int | None = None,
-    svm_c: float = 1.0,
-    svm_kernel: str = "rbf",
-    svm_gamma: str = "scale",
+    apply_coral: bool = True,
+    k: int = 3,
 ) -> PipelineOutcome:
     if source.labels is None:
         raise SchemaError("The source dataset must be labelled.")
     if not 0.0 < threshold < 1.0:
         raise SchemaError("The decision threshold must be between 0 and 1.")
-    model_key = (model_name or "KNN").strip().upper()
-    if model_key not in {"KNN", "SVM"}:
-        raise SchemaError("Model must be KNN or SVM.")
-
     feature_order = _align_features(source, target)
     source_features = source.features.loc[:, feature_order].astype("float64")
     target_features = target.features.loc[:, feature_order].astype("float64")
@@ -157,55 +147,31 @@ def run(
 
     distance_before: float | None = None
     distance_after: float | None = None
-    coral = ShallowCoralService(regularization=coral_regularization)
     distance_before = _covariance_distance(scaled_source, scaled_target)
-    scaled_source = coral.align(scaled_source, scaled_target)
-    distance_after = _covariance_distance(scaled_source, scaled_target)
+    if apply_coral:
+        coral = ShallowCoralService(regularization=coral_regularization)
+        scaled_source = coral.align(scaled_source, scaled_target)
+        distance_after = _covariance_distance(scaled_source, scaled_target)
 
     labels = np.asarray(source.labels, dtype=int)
-    selected_k: int | None = None
-    selected_c: float | None = None
+    selected_k = int(k)
     k_scores: dict[int, float] = {}
-    usable_candidates: list[int] = []
-    predicted_labels: np.ndarray
-    if model_key == "KNN":
-        selected_k = 3 if fixed_k is None else int(fixed_k)
-        if selected_k < 1 or selected_k > 5:
-            raise SchemaError("K must be selected manually from 1 to 5.")
-        if selected_k > len(labels):
-            raise SchemaError(
-                f"K={selected_k} is larger than the {len(labels)} source rows."
-            )
-        usable_candidates = [selected_k]
+    if selected_k < 1 or selected_k > 5:
+        raise SchemaError("K must be selected from 1 to 5.")
+    if selected_k > len(labels):
+        raise SchemaError(
+            f"K={selected_k} is larger than the {len(labels)} source rows."
+        )
+    usable_candidates = [selected_k]
 
-        model = KNeighborsClassifier(
-            n_neighbors=selected_k, weights="uniform", metric="minkowski", p=2
-        )
-        model.fit(scaled_source, labels)
-        scores = _buggy_probability(model, scaled_target)
-        predicted_labels = _knn_labels_with_tie_break(
-            model, scaled_target, labels, scores, threshold
-        )
-    else:
-        if len(np.unique(labels)) < 2:
-            raise SchemaError("SVM requires both clean and buggy rows in the source.")
-        kernel = (svm_kernel or "rbf").strip().lower()
-        if kernel not in {"linear", "rbf", "poly", "sigmoid"}:
-            raise SchemaError("SVM kernel must be linear, RBF, poly or sigmoid.")
-        if svm_c <= 0:
-            raise SchemaError("SVM C must be greater than 0.")
-        selected_c = float(svm_c)
-        model = SVC(
-            C=selected_c,
-            kernel=kernel,
-            gamma=svm_gamma or "scale",
-            probability=True,
-            class_weight="balanced",
-            random_state=seed,
-        )
-        model.fit(scaled_source, labels)
-        scores = _buggy_probability(model, scaled_target)
-        predicted_labels = (scores >= threshold).astype(int)
+    model = KNeighborsClassifier(
+        n_neighbors=selected_k, weights="uniform", metric="minkowski", p=2
+    )
+    model.fit(scaled_source, labels)
+    scores = _buggy_probability(model, scaled_target)
+    predicted_labels = _knn_labels_with_tie_break(
+        model, scaled_target, labels, scores, threshold
+    )
 
     order = np.argsort(-scores, kind="stable")
     predictions: list[dict] = []
@@ -224,16 +190,15 @@ def run(
 
     return PipelineOutcome(
         family=source.profile.family,
-        model_name=model_key,
+        model_name="KNN",
         features=list(source_features.columns),
         removed_constant_features=removed,
         selected_k=selected_k,
-        svm_c=selected_c,
         k_candidates=usable_candidates,
         k_scores=k_scores,
         threshold=threshold,
         seed=seed,
-        coral_applied=True,
+        coral_applied=apply_coral,
         log_applied=True,
         covariance_distance_before=distance_before,
         covariance_distance_after=distance_after,
@@ -243,7 +208,7 @@ def run(
 
 
 def _buggy_probability(
-    model: KNeighborsClassifier | SVC, features: np.ndarray
+    model: KNeighborsClassifier, features: np.ndarray
 ) -> np.ndarray:
     """Returns the model's class-1 probability in a consistent shape."""
     probabilities = model.predict_proba(features)
