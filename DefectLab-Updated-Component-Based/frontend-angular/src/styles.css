@@ -5,7 +5,7 @@
      body    Inter          — UI prose, labels, controls
      heading Manrope        — titles only
      mono    JetBrains Mono — every identifier and number (metric values, class
-                              names, column names, K/C, thresholds, file paths)
+                              names, column names, K, thresholds, file paths)
 
    The mono family is the point of the system: this is a metrics workbench, and
    digits that line up in a column are readable as data rather than as text.

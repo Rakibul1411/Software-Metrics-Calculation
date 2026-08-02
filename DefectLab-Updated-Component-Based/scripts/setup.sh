@@ -36,3 +36,4 @@ fi
 )
 
 echo "Setup complete. Start PostgreSQL, then run: scripts/run-dev.sh"
+echo "Java Spring DevTools and Python Uvicorn auto-reload are included."

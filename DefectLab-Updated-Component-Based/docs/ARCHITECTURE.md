@@ -84,8 +84,8 @@ gets UUID artifact names and one new `prediction_runs` row per target.
 - missing-value imputation;
 - log1p transforms for registered features;
 - standard scaling;
-- shallow CORAL alignment;
-- manual KNN/SVM fitting;
+- optional shallow CORAL alignment;
+- KNN fitting with user-selected K=1–5;
 - ranked probabilities and deterministic tie-breaking;
 - evaluation and metric-distribution comparison.
 
@@ -114,10 +114,9 @@ reproducibility.
 
 ## Current prediction contract
 
-The current implementation has one fixed preparation pipeline. Registered
-log1p transformations, source-fitted standardization, and shallow CORAL are
-always applied. The user configures only the model, K or C/kernel, threshold,
-and seed.
+The current implementation always applies registered log1p transformations and
+source-fitted standardization. The user chooses whether shallow CORAL dataset
+alignment runs; the user selects K from 1 to 5. Threshold and seed are stored per run.
 
 A manual target produces a new labeled CSV plus PDF/JSON report artifacts. A
 predefined target produces PDF/JSON report artifacts and post-prediction

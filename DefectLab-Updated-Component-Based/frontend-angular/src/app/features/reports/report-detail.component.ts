@@ -87,9 +87,9 @@ interface MatchedPredictionRow {
             <article class="dl-data-card"><span>Total files</span>
               <strong>{{ run.summary.totalRecords }}</strong></article>
             <article class="dl-data-card"><span>Predicted buggy files</span>
-              <strong>{{ run.summary.predictedDefective }}</strong></article>
+              <strong>{{ run.summary.predictedBuggy }}</strong></article>
             <article class="dl-data-card"><span>Predicted clean files</span>
-              <strong>{{ run.summary.predictedNonDefective }}</strong></article>
+              <strong>{{ run.summary.predictedClean }}</strong></article>
           </div>
         </ng-container>
         <ng-template #noManual>
@@ -197,7 +197,7 @@ interface MatchedPredictionRow {
         <h2>MANUAL prediction compared with PREDEFINED actual label</h2>
         <p>
           Files are joined by normalized identifier. Correct/Wrong is determined
-          against the PREDEFINED dataset's actual defect label.
+          against the PREDEFINED dataset's actual Buggy/Clean label.
         </p>
       </div></div>
 
@@ -375,9 +375,7 @@ export class ReportDetailComponent implements OnInit {
 
   modelSetting(run: PredictionRunSummary): string {
     const config = run.modelConfig;
-    return config.modelName === 'KNN'
-      ? `KNN · K=${config.k}`
-      : `SVM · C=${config.c} · ${config.kernel}`;
+    return `KNN · K=${config.k}`;
   }
 
   enabled(value: boolean): string {

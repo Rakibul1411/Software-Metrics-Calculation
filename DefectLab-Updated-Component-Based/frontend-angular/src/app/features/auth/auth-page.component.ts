@@ -22,7 +22,7 @@ import { SessionService } from '../../core/services/session.service';
         <p>
           Extract PROMISE or AEEEM metrics from Java source, validate the schema
           against a feature registry, then rank target classes with source-fitted
-          scaling, shallow CORAL, and manually configured KNN or SVM.
+          scaling, optional shallow CORAL alignment, and user-configured KNN.
         </p>
         <div class="dl-auth-points">
           <div class="dl-auth-point">
@@ -31,7 +31,7 @@ import { SessionService } from '../../core/services/session.service';
           </div>
           <div class="dl-auth-point">
             <b>Reproducible</b>
-            <span>Every run stores its three datasets, manual K/C, threshold, pipeline and seed.</span>
+            <span>Every run stores its datasets, alignment choice, threshold, pipeline and seed.</span>
           </div>
           <div class="dl-auth-point">
             <b>Honest metrics</b>

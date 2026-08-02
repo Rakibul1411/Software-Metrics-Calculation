@@ -19,6 +19,19 @@ def _bad_request(exception: Exception) -> HTTPException:
     return HTTPException(status_code=422, detail=str(exception))
 
 
+def _boolean_value(value: Any, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().lower()
+    if normalized in {"true", "1"}:
+        return True
+    if normalized in {"false", "0"}:
+        return False
+    raise SchemaError("coral must be a boolean value.")
+
+
 @router.get("/health")
 def health() -> dict:
     return {"status": "ok", "service": "defectlab-ml"}
@@ -75,6 +88,9 @@ def predict(payload: dict[str, Any]) -> dict:
     store them and evaluate afterwards.
     """
     try:
+        model_name = str(payload.get("modelName", "KNN")).strip().upper()
+        if model_name != "KNN":
+            raise SchemaError("Only KNN is supported.")
         source = prepare(payload.get("sourceRows") or [], payload.get("family"),
                          require_labels=True)
         target = prepare(payload.get("targetRows") or [], payload.get("family"))
@@ -84,12 +100,8 @@ def predict(payload: dict[str, Any]) -> dict:
             threshold=float(payload.get("threshold", pipeline.DEFAULT_THRESHOLD)),
             seed=int(payload.get("seed", pipeline.DEFAULT_SEED)),
             coral_regularization=float(payload.get("coralRegularization", 1.0)),
-            model_name=str(payload.get("modelName", "KNN")),
-            fixed_k=int(payload.get("k", 3))
-            if str(payload.get("modelName", "KNN")).upper() == "KNN" else None,
-            svm_c=float(payload.get("c", 1.0)),
-            svm_kernel=str(payload.get("kernel", "rbf")),
-            svm_gamma=str(payload.get("gamma", "scale")).lower(),
+            apply_coral=_boolean_value(payload.get("coral"), True),
+            k=int(payload.get("k", 3)),
         )
     except SchemaError as exception:
         raise _bad_request(exception) from exception

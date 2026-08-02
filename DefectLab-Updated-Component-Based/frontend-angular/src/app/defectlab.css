@@ -2226,7 +2226,10 @@ article.dl-data-card small {
 .dl-scroll-y { max-height: 460px; overflow-y: auto; }
 
 .dl-report-predictions-scroll,
-.dl-comparison-result-scroll {
+.dl-comparison-result-scroll,
+.dl-dataset-storage-scroll,
+.dl-prediction-runs-scroll,
+.dl-prediction-detail-scroll {
   position: relative;
   max-height: 460px;
   overflow-x: auto;
@@ -2235,12 +2238,36 @@ article.dl-data-card small {
 }
 
 .dl-report-predictions-scroll .dl-table thead th,
-.dl-comparison-result-scroll .dl-table thead th {
+.dl-comparison-result-scroll .dl-table thead th,
+.dl-dataset-storage-scroll .dl-table thead th,
+.dl-prediction-runs-scroll .dl-table thead th,
+.dl-prediction-detail-scroll .dl-table thead th {
   position: sticky;
   top: 0;
   z-index: 2;
   background: var(--dl-surface-muted);
   box-shadow: 0 1px 0 var(--dl-line);
+}
+
+.dl-prediction-detail-table .dl-col-rank {
+  width: 11%;
+  min-width: 72px;
+}
+
+.dl-prediction-detail-table .dl-col-identifier {
+  width: 29%;
+  min-width: 190px;
+  text-align: left;
+}
+
+.dl-prediction-detail-table .dl-col-probability {
+  width: 18%;
+  min-width: 130px;
+}
+
+.dl-prediction-detail-table .dl-prediction-status {
+  min-width: 150px;
+  text-align: center;
 }
 
 @media (max-width: 900px) {
@@ -2850,6 +2877,16 @@ app-account > * + * {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.dl-prediction-form > .dl-alignment-choice {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dl-alignment-choice label > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .dl-prediction-form > .dl-choice-group label {

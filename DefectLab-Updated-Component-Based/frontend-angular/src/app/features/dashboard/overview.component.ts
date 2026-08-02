@@ -182,7 +182,7 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
                   <small>{{ run.modelConfig.modelName }} · {{ modelSetting(run.modelConfig) }}</small>
                 </span>
                 <span class="dl-wallet-asset-value">
-                  <strong>{{ run.summary.predictedDefective }}</strong>
+                  <strong>{{ run.summary.predictedBuggy }}</strong>
                   <small>buggy classes</small>
                 </span>
               </a>
@@ -202,7 +202,7 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
           <i></i>
           <div><span>02</span><strong>Store</strong><small>Metric datasets</small></div>
           <i></i>
-          <div><span>03</span><strong>Predict</strong><small>Manual K/C</small></div>
+          <div><span>03</span><strong>Predict</strong><small>KNN · K=1–5</small></div>
           <i></i>
           <div><span>04</span><strong>Report</strong><small>Compare results</small></div>
         </section>
@@ -234,8 +234,8 @@ export class OverviewComponent implements OnInit {
     return value === 'MANUAL' ? 'Manual extraction' : 'Predefined';
   }
 
-  modelSetting(config: { modelName: string; k?: number; c?: number }): string {
-    return config.modelName === 'KNN' ? `K=${config.k}` : `C=${config.c}`;
+  modelSetting(config: { k: number }): string {
+    return `K=${config.k}`;
   }
 
   percent(value: number, total: number): number {

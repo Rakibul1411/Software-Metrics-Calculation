@@ -24,3 +24,4 @@ ml-service-python/.env
 **/__pycache__/
 *.pyc
 sample-data/
+tmp/

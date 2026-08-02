@@ -38,8 +38,7 @@ AEEEM data without identifiers uses aggregate statistics. PROMISE data with a
 ## `prediction_runs`
 
 Stores one source/target result per row. `model_config` contains `modelName`
-(`KNN` or `SVM`), K/C/kernel settings, and the applied standard-pipeline
-metadata. MANUAL targets store a
+(`KNN`), the selected K, the dataset-alignment choice, and pipeline metadata. MANUAL targets store a
 labeled CSV path; PREDEFINED targets keep `prediction_file_path` null. Every row
 stores a non-null PDF report path.
 
@@ -47,9 +46,8 @@ A dual-target request inserts two rows with the same `comparison_group_id`.
 Rows are inserted only after prediction, CSV (when applicable), PDF, and result
 metadata files have all been generated.
 
-The JSONB model configuration records KNN/SVM settings, threshold, seed, family,
-and the applied standard-pipeline metadata. It does not expose a selectable
-pipeline mode.
+The JSONB model configuration records the selected KNN K, threshold, seed, family,
+and whether dataset alignment was applied.
 
 ## Ownership
 

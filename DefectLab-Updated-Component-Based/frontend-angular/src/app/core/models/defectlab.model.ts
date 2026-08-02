@@ -57,10 +57,8 @@ export interface EvaluationMetrics {
 }
 
 export interface ModelConfig {
-  modelName: 'KNN' | 'SVM';
-  k?: number;
-  c?: number;
-  kernel?: string;
+  modelName: 'KNN';
+  k: number;
   threshold: number;
   logTransform: boolean;
   coral: boolean;
@@ -70,8 +68,8 @@ export interface ModelConfig {
 
 export interface PredictionSummary {
   totalRecords: number;
-  predictedDefective: number;
-  predictedNonDefective: number;
+  predictedBuggy: number;
+  predictedClean: number;
 }
 
 export interface PredictionRow {

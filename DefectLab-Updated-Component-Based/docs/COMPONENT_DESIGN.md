@@ -83,7 +83,7 @@ org.metrics.defectlab
 |---|---|---|
 | `analysis` | Java archive/GitHub acquisition, PROMISE/AEEEM extraction | User sessions, prediction fitting, database entities |
 | `dataset` | Dataset validation, file registration, preview, download | Model fitting |
-| `prediction` | Source/target selection, KNN/SVM request, immutable run result | Metric extraction |
+| `prediction` | Source/target selection, KNN request, immutable run result | Metric extraction |
 | `auth` | User account, BCrypt, HTTP session | Dataset or ML rules |
 | `report` | Read-only report rendering | New model execution |
 | `shared` | Cross-cutting configuration and error/database contracts | Feature-specific business flow |
@@ -111,7 +111,7 @@ sequenceDiagram
     participant ML as FastAPI
     participant DB as PostgreSQL
 
-    UI->>API: Run with source, targets, model, K/C, threshold
+    UI->>API: Run with source, targets, alignment, threshold
     API->>DS: Validate and load three datasets
     API->>ML: Standard pipeline, fit, predict
     ML-->>API: Ranked predictions and evaluation

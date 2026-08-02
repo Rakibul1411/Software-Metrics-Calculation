@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 import org.metrics.defectlab.dataset.domain.DatasetQuality;
@@ -17,7 +18,9 @@ import org.metrics.defectlab.dataset.infrastructure.DatasetFileParser;
 import org.metrics.defectlab.dataset.persistence.MetricDatasetRepository;
 import org.metrics.defectlab.comparison.persistence.MetricComparisonRepository;
 import org.metrics.defectlab.prediction.persistence.PredictionRunRepository;
+import org.metrics.defectlab.shared.exception.ConflictException;
 import org.metrics.defectlab.shared.exception.NotFoundException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +29,12 @@ import org.springframework.web.multipart.MultipartFile;
 public class DatasetService {
 
     private static final long MAX_DATASET_BYTES = 50L * 1024L * 1024L;
+    private static final Set<String> BUGGY_LABELS = Set.of(
+            "buggy", "defective", "defect", "true", "yes");
+    private static final Set<String> CLEAN_LABELS = Set.of(
+            "clean", "nonbuggy", "nondefective", "false", "no");
+    private static final Set<String> MISSING_LABELS = Set.of(
+            "", "?", "na", "nan", "none", "null");
 
     private final MetricDatasetRepository datasetRepository;
     private final PredictionRunRepository predictionRunRepository;
@@ -126,27 +135,78 @@ public class DatasetService {
         }
 
         boolean labeled = profile.findLabelColumn(table.getHeaders())
-                .map(column -> hasUsableLabels(table, column))
+                .map(column -> hasCompleteUsableLabels(table, column))
                 .orElse(false);
-        return datasetRepository.save(new MetricDataset(
-                userId,
-                profile.getFamily(),
-                cleanProjectName(projectName, "dataset"),
-                cleanVersion(projectVersion),
-                datasetType,
-                labeled,
-                table.getRowCount(),
-                profile.getFeatures().size(),
-                stored.toAbsolutePath().normalize().toString()));
+        String cleanedProjectName = cleanProjectName(projectName, "dataset");
+        String cleanedProjectVersion = cleanVersion(projectVersion);
+        if (datasetRepository
+                .existsByUserIdAndDatasetFamilyAndProjectNameAndProjectVersionAndDatasetType(
+                        userId, profile.getFamily(), cleanedProjectName,
+                        cleanedProjectVersion, datasetType)) {
+            throw duplicateDataset(profile.getFamily(), cleanedProjectName,
+                    cleanedProjectVersion, datasetType);
+        }
+        try {
+            return datasetRepository.saveAndFlush(new MetricDataset(
+                    userId,
+                    profile.getFamily(),
+                    cleanedProjectName,
+                    cleanedProjectVersion,
+                    datasetType,
+                    labeled,
+                    table.getRowCount(),
+                    profile.getFeatures().size(),
+                    stored.toAbsolutePath().normalize().toString()));
+        } catch (DataIntegrityViolationException exception) {
+            // The pre-check gives a useful fast response. The database remains
+            // authoritative when two identical uploads arrive concurrently.
+            throw duplicateDataset(profile.getFamily(), cleanedProjectName,
+                    cleanedProjectVersion, datasetType);
+        }
     }
 
-    private boolean hasUsableLabels(DatasetTable table, String labelColumn) {
+    private ConflictException duplicateDataset(
+            MetricDataset.Family family,
+            String projectName,
+            String projectVersion,
+            MetricDataset.Type datasetType) {
+        return new ConflictException(
+                "Dataset already exists: " + family + " / " + projectName + " / "
+                + projectVersion + " / " + datasetType
+                + ". Use the existing dataset or delete it before uploading a replacement.");
+    }
+
+    private boolean hasCompleteUsableLabels(DatasetTable table, String labelColumn) {
+        if (table.getRowCount() == 0) {
+            return false;
+        }
         for (String raw : table.column(labelColumn)) {
-            if (raw != null && !raw.trim().isEmpty() && !"?".equals(raw.trim())) {
-                return true;
+            if (!isUsableLabel(raw)) {
+                return false;
             }
         }
-        return false;
+        return true;
+    }
+
+    private boolean isUsableLabel(String raw) {
+        if (raw == null) {
+            return false;
+        }
+        String text = raw.trim();
+        String normalized = text.toLowerCase(Locale.ROOT)
+                .replace("_", "").replace("-", "").replace(" ", "");
+        if (MISSING_LABELS.contains(normalized)) {
+            return false;
+        }
+        if (BUGGY_LABELS.contains(normalized) || CLEAN_LABELS.contains(normalized)) {
+            return true;
+        }
+        try {
+            double numeric = Double.parseDouble(text);
+            return Double.isFinite(numeric) && numeric >= 0;
+        } catch (NumberFormatException exception) {
+            return false;
+        }
     }
 
     @Transactional(readOnly = true)

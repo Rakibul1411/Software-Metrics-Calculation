@@ -107,7 +107,7 @@ pipeline alternatives.
 `GET /api/predictions/{id}/predictions` accepts:
 
 - `limit`, default `500`, bounded by the backend;
-- `defectiveOnly`, default `false`.
+- `buggyOnly`, default `false`.
 
 ### KNN request
 
@@ -118,20 +118,7 @@ pipeline alternatives.
   "predefinedTargetDatasetId": 21,
   "modelName": "KNN",
   "k": 3,
-  "threshold": 0.5,
-  "seed": 42
-}
-```
-
-### SVM request
-
-```json
-{
-  "sourceDatasetId": 10,
-  "predefinedTargetDatasetId": 21,
-  "modelName": "SVM",
-  "c": 1.0,
-  "kernel": "RBF",
+  "coral": true,
   "threshold": 0.5,
   "seed": 42
 }
@@ -144,13 +131,12 @@ Rules:
 - targets must differ from the source and use the same family;
 - manual target type must be `MANUAL`;
 - predefined target type must be `PREDEFINED` and labeled;
-- KNN K must be `1..5`;
-- SVM C must be greater than `0` and at most `1000`;
-- SVM kernel must be `LINEAR`, `RBF`, `POLY`, or `SIGMOID`;
+- the model must be `KNN` and K must be from `1` through `5`;
+- `coral` optionally enables/disables dataset alignment;
 - threshold must be strictly between `0` and `1`.
 
-The standard preparation pipeline is automatic. There are no public
-preprocessing mode or log/CORAL switch fields.
+Log preprocessing is automatic. Dataset alignment is controlled by the public
+`coral` boolean field.
 
 A dual response contains:
 

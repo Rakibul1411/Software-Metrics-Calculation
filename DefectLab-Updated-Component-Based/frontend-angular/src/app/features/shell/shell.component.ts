@@ -63,7 +63,7 @@ interface NavItem {
             Analysis services ready
           </div>
           <p>PROMISE 20 predictors · AEEEM 56 features</p>
-          <small>Manual K/C · CORAL · KNN/SVM</small>
+          <small>KNN · K=1–5 · Optional CORAL</small>
         </div>
       </aside>
 
@@ -166,7 +166,7 @@ export class ShellComponent implements OnInit {
       predictions: {
         title: 'Predictions',
         section: 'Results',
-        description: 'Run a model with manual K/C and inspect ranked classes.'
+        description: 'Run KNN with K=1–5, choose dataset alignment, and inspect ranked classes.'
       },
       'metric-comparisons': {
         title: 'Compare Metrics',

@@ -37,8 +37,8 @@ The deterministic sequence is:
 4. impute missing values using source medians;
 5. apply log1p only to configured non-negative skewed features;
 6. standardize using source statistics;
-7. align source covariance to target with shallow CORAL;
-8. fit the manually configured model;
+7. optionally align source covariance to target with shallow CORAL;
+8. fit KNN with the user-selected K from 1 to 5;
 9. calculate a defect score and thresholded label;
 10. rank classes from highest to lowest risk.
 
@@ -47,33 +47,23 @@ predefined target returns its labels only for post-prediction evaluation.
 
 ## KNN
 
-The UI accepts manual `K = 1..5`. K is not auto-selected. Different K values
-create different saved runs.
-
-For even K, an exact tied vote at threshold `0.5` uses the closest neighbor's
-label. This makes K=2 and K=4 deterministic while retaining the user-requested
-range.
-
-## SVM
-
-The UI accepts manual `C` values and RBF, linear, polynomial, or sigmoid
-kernels. Gamma defaults to `scale`. Probabilities are enabled so both models
-produce a comparable continuous defect score.
+K is selected manually from 1 to 5 and is not auto-selected. Probabilities are
+the proportion of the selected neighbors labeled Buggy.
 
 ## Reproducibility
 
 Every run saves:
 
-- model name and manual K/C;
-- kernel/distance details;
+- model name and selected K;
+- distance details and dataset-alignment choice;
 - threshold;
 - preparation pipeline settings;
 - random seed;
 - the three dataset IDs;
 - prediction CSV paths and result summaries.
 
-The preparation flow is not user-selectable. Log transformation and CORAL are
-always part of the standard pipeline.
+Log transformation is always part of preparation. CORAL is applied only when
+the user enables dataset alignment.
 
 ## Evaluation
 

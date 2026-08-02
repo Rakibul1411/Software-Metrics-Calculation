@@ -1,7 +1,7 @@
 # DefectLab FastAPI ML Service
 
-This module implements schema validation, preprocessing, shallow CORAL,
-KNN/SVM prediction, evaluation, and comparison. It is an internal stateless
+This module implements schema validation, preprocessing, optional shallow
+CORAL, KNN prediction, evaluation, and comparison. It is an internal stateless
 service called by Spring Boot.
 
 For the complete product workflow, see the [project README](../README.md).
@@ -41,7 +41,7 @@ app/
 ├── defectlab/
 │   ├── registry.py                PROMISE/AEEEM feature registries
 │   ├── preparation.py             header/schema/label preparation
-│   ├── pipeline.py                fixed preparation + KNN/SVM pipeline
+│   ├── pipeline.py                preparation + KNN pipeline
 │   ├── evaluation.py              classification evaluation
 │   └── routes.py                  /ml route handlers
 └── services/
@@ -92,14 +92,14 @@ Header normalization
   -> registered log1p transforms
   -> zero-variance source-feature removal
   -> source-fitted StandardScaler
-  -> shallow CORAL source-to-target alignment
-  -> KNN or SVM fit
+  -> optional shallow CORAL source-to-target alignment
+  -> KNN fit with user-selected K=1–5
   -> probability and thresholded label
   -> descending risk rank
 ```
 
-There is no preprocessing mode parameter. Log transformation and CORAL always
-run as normal pipeline steps.
+Log transformation always runs. The `coral` boolean controls whether dataset
+alignment runs before fitting.
 
 ### Leakage prevention
 
@@ -117,20 +117,10 @@ target supplies them.
 
 ## KNN behavior
 
-- K is manual and must be from 1 through 5.
+- K is selected by the user from 1 through 5.
 - K cannot exceed the number of source rows.
 - Uniform weights and Euclidean/Minkowski `p=2` distance are used.
-- An exact even-K tie at threshold `0.5` uses the closest neighbor's label.
-- Probabilities are the defective-neighbor proportion.
-
-## SVM behavior
-
-- C must be greater than zero.
-- Kernels: `linear`, `rbf`, `poly`, `sigmoid`.
-- Gamma defaults to `scale`.
-- Balanced class weights are used.
-- Both clean and defective source classes are required.
-- The seed controls reproducible probability fitting behavior.
+- Probabilities are the Buggy-neighbor proportion.
 
 ## Prediction output
 
@@ -191,10 +181,16 @@ venv/bin/python -m pip install -r requirements.txt pytest
 
 ## Run
 
+From the repository root, start FastAPI with change detection:
+
 ```bash
 export ML_SERVICE_TOKEN='replace-with-the-shared-value'
-venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+scripts/run-python-dev.sh
 ```
+
+Uvicorn watches `ml-service-python/app` and restarts the worker after Python
+changes. The launcher uses `ml-service-python/venv/bin/python` when available
+and otherwise falls back to `python3`.
 
 Health:
 
@@ -216,8 +212,8 @@ Compile check:
 venv/bin/python -m compileall -q app tests
 ```
 
-The suite covers schema preparation, labels, fixed pipeline behavior, KNN/SVM,
-CORAL covariance distance, deterministic output, evaluation, and comparison.
+The suite covers schema preparation, labels, user-configured KNN, optional CORAL
+alignment, covariance distance, deterministic output, evaluation, and comparison.
 
 ## Development rules
 

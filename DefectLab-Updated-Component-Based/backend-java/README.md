@@ -161,17 +161,18 @@ The source metric file is never modified by prediction.
 - at least one target;
 - a MANUAL target and/or a labeled PREDEFINED target;
 - the same metric family across source/targets; and
-- different source/target dataset identities.
+- a different source record for MANUAL targets. A labeled PREDEFINED target may
+  reference the source record for training-set evaluation.
 
-The user configures:
+The prediction contract uses:
 
-- `KNN` with K from 1 to 5; or
-- `SVM` with C and `LINEAR`, `RBF`, `POLY`, or `SIGMOID`;
+- `KNN` with user-selected K from 1 through 5;
+- optional shallow CORAL dataset alignment;
 - threshold strictly between 0 and 1;
 - optional seed, default 42.
 
-The backend always records log transformation and CORAL as applied standard
-pipeline metadata. It does not accept a selectable pipeline mode.
+The backend always records log transformation and stores whether CORAL
+alignment was selected for the run.
 
 For each target:
 
@@ -223,7 +224,8 @@ Never commit real database credentials or service tokens.
 
 ## Run locally
 
-Start PostgreSQL and FastAPI first, then:
+Start PostgreSQL and FastAPI first, then run the auto-reloading Java launcher
+from the repository root:
 
 ```bash
 export DEFECTLAB_DB_URL='jdbc:postgresql://localhost:5432/defectlab'
@@ -231,10 +233,24 @@ export DEFECTLAB_DB_USER='defectlab'
 export DEFECTLAB_DB_PASSWORD='defectlab'
 export ML_SERVICE_BASE_URL='http://localhost:8000'
 export ML_SERVICE_TOKEN='replace-with-the-shared-value'
-mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
+scripts/run-java-dev.sh
 ```
 
-The API listens on <http://localhost:8080>.
+The API listens on <http://localhost:8080>. The launcher watches Java, XML,
+properties, JSON, and YAML files under `backend-java/src/main`, plus `pom.xml`.
+For source/resource changes it runs an incremental Maven compile; Spring Boot
+DevTools detects the updated classpath and restarts the application context.
+Changing `pom.xml` restarts Maven so dependency changes are also loaded.
+
+The DevTools dependency is runtime-only and optional, so it supports local
+development without being included in the production application archive.
+
+For a one-time run without watching:
+
+```bash
+cd backend-java
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
+```
 
 ## Test
 

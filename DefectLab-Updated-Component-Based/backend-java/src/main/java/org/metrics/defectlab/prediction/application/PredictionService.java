@@ -13,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -68,7 +67,7 @@ public class PredictionService {
                 userId, requiredLong(body, "sourceDatasetId"));
         if (!source.hasActualLabel()) {
             throw new IllegalArgumentException(
-                    "Source dataset must contain an actual defect label.");
+                    "Source dataset must contain actual Buggy/Clean labels.");
         }
 
         MetricDataset manual = optionalDataset(userId, body.get("manualTargetDatasetId"),
@@ -179,49 +178,39 @@ public class PredictionService {
             }
         }
         if (predefined != null) {
-            validateDifferentAndFamily(source, predefined);
+            validateSameFamily(source, predefined);
             if (predefined.getDatasetType() != MetricDataset.Type.PREDEFINED) {
                 throw new IllegalArgumentException(
                         "Predefined target must use dataset type PREDEFINED.");
             }
             if (!predefined.hasActualLabel()) {
                 throw new IllegalArgumentException(
-                        "Predefined target must contain actual defect labels.");
+                        "Predefined target must contain actual Buggy/Clean labels.");
             }
         }
     }
 
     private void validateDifferentAndFamily(MetricDataset source, MetricDataset target) {
-        if (source.getId().equals(target.getId()) || sameDatasetIdentity(source, target)) {
+        if (source.getId().equals(target.getId())) {
             throw new IllegalArgumentException(
-                    "Source and target datasets must have different project identities.");
+                    "Source and target must reference different dataset records.");
         }
+        validateSameFamily(source, target);
+    }
+
+    private void validateSameFamily(MetricDataset source, MetricDataset target) {
         if (source.getDatasetFamily() != target.getDatasetFamily()) {
             throw new IllegalArgumentException(
                     "Source and target must use the same metric family.");
         }
     }
 
-    private boolean sameDatasetIdentity(MetricDataset left, MetricDataset right) {
-        return left.getDatasetFamily() == right.getDatasetFamily()
-                && left.getDatasetType() == right.getDatasetType()
-                && normalizeIdentity(left.getProjectName()).equals(
-                        normalizeIdentity(right.getProjectName()))
-                && normalizeIdentity(left.getProjectVersion()).equals(
-                        normalizeIdentity(right.getProjectVersion()));
-    }
-
-    private String normalizeIdentity(String value) {
-        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT)
-                .replaceAll("\\s+", " ");
-    }
-
     private Map<String, Object> modelConfig(
             Map<String, Object> body, MetricDataset source) {
         String modelName = String.valueOf(
                 body.getOrDefault("modelName", "KNN")).trim().toUpperCase(Locale.ROOT);
-        if (!Set.of("KNN", "SVM").contains(modelName)) {
-            throw new IllegalArgumentException("modelName must be KNN or SVM.");
+        if (!"KNN".equals(modelName)) {
+            throw new IllegalArgumentException("Only KNN is supported.");
         }
         double threshold = doubleValue(body.get("threshold"), 0.5);
         if (!(threshold > 0.0 && threshold < 1.0)) {
@@ -232,30 +221,16 @@ public class PredictionService {
         config.put("modelName", modelName);
         config.put("threshold", threshold);
         config.put("logTransform", true);
-        config.put("coral", true);
+        config.put("coral", body.containsKey("coral")
+                ? booleanValue(body.get("coral")) : true);
         config.put("seed", integerValue(body.get("seed"), DEFAULT_SEED));
         config.put("datasetFamily", source.getDatasetFamily().name());
 
-        if ("KNN".equals(modelName)) {
-            int k = integerValue(body.get("k"), 3);
-            if (k < 1 || k > 5) {
-                throw new IllegalArgumentException("KNN K must be between 1 and 5.");
-            }
-            config.put("k", k);
-        } else {
-            double c = doubleValue(body.get("c"), 1.0);
-            if (c <= 0 || c > 1000) {
-                throw new IllegalArgumentException("SVM C must be greater than 0 and at most 1000.");
-            }
-            String kernel = String.valueOf(body.getOrDefault("kernel", "RBF"))
-                    .trim().toUpperCase(Locale.ROOT);
-            if (!Set.of("LINEAR", "RBF", "POLY", "SIGMOID").contains(kernel)) {
-                throw new IllegalArgumentException(
-                        "SVM kernel must be LINEAR, RBF, POLY or SIGMOID.");
-            }
-            config.put("c", c);
-            config.put("kernel", kernel);
+        int k = integerValue(body.get("k"), 3);
+        if (k < 1 || k > 5) {
+            throw new IllegalArgumentException("KNN K must be between 1 and 5.");
         }
+        config.put("k", k);
         return config;
     }
 
@@ -269,13 +244,8 @@ public class PredictionService {
         request.put("modelName", config.get("modelName"));
         request.put("threshold", config.get("threshold"));
         request.put("seed", config.get("seed"));
-        if ("KNN".equals(config.get("modelName"))) {
-            request.put("k", config.get("k"));
-        } else {
-            request.put("c", config.get("c"));
-            request.put("kernel", config.get("kernel"));
-            request.put("gamma", "scale");
-        }
+        request.put("coral", config.get("coral"));
+        request.put("k", config.get("k"));
         return request;
     }
 
@@ -315,12 +285,12 @@ public class PredictionService {
             MetricDataset source, MetricDataset target, Map<String, Object> config,
             UUID groupId, List<Map<String, Object>> predictions,
             Map<String, Object> evaluation, Map<String, Object> mlResponse) {
-        long defective = predictions.stream()
+        long buggy = predictions.stream()
                 .filter(row -> integerValue(row.get("predictedLabel"), 0) == 1).count();
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("totalRecords", predictions.size());
-        summary.put("predictedDefective", defective);
-        summary.put("predictedNonDefective", predictions.size() - defective);
+        summary.put("predictedBuggy", buggy);
+        summary.put("predictedClean", predictions.size() - buggy);
 
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("status", "COMPLETED");
@@ -340,14 +310,14 @@ public class PredictionService {
             Path report, MetricDataset source, MetricDataset target,
             Map<String, Object> config, List<Map<String, Object>> predictions,
             Map<String, Object> evaluation) throws IOException {
-        long defective = predictions.stream()
+        long buggy = predictions.stream()
                 .filter(row -> integerValue(row.get("predictedLabel"), 0) == 1).count();
         List<String> lines = new ArrayList<>();
         lines.add("Source: " + source.getDisplayName() + " (" + source.getDatasetFamily() + ")");
         lines.add("Target: " + target.getDisplayName() + " (" + target.getDatasetType() + ")");
         lines.add("Model configuration: " + config);
-        lines.add("Total predicted defective files: " + defective);
-        lines.add("Total predicted non-defective files: " + (predictions.size() - defective));
+        lines.add("Total predicted buggy files: " + buggy);
+        lines.add("Total predicted clean files: " + (predictions.size() - buggy));
         if (!evaluation.isEmpty()) {
             lines.add("");
             lines.add("EVALUATION METRICS");
@@ -364,9 +334,10 @@ public class PredictionService {
                 : "RANK | FILE/IDENTIFIER | PROBABILITY | PREDICTED");
         for (Map<String, Object> row : predictions) {
             String line = row.get("riskRank") + " | " + row.get("classIdentifier")
-                    + " | " + probability(row) + " | " + row.get("predictedLabel");
+                    + " | " + probability(row) + " | "
+                    + classLabel(row.get("predictedLabel"));
             if (target.hasActualLabel()) {
-                line += " | " + row.get("actualLabel");
+                line += " | " + classLabel(row.get("actualLabel"));
             }
             lines.add(line);
         }
@@ -404,7 +375,7 @@ public class PredictionService {
         body.put("status", "COMPLETED");
         body.put("predictionFileAvailable", run.getPredictionFilePath() != null);
         body.put("reportFileAvailable", true);
-        body.put("summary", metadata.getOrDefault("summary", Map.of()));
+        body.put("summary", canonicalSummary(metadata.get("summary")));
         body.put("evaluation", metadata.get("evaluation"));
         return body;
     }
@@ -436,11 +407,11 @@ public class PredictionService {
     }
 
     public List<Map<String, Object>> predictions(
-            Long userId, Long runId, int limit, boolean defectiveOnly) {
+            Long userId, Long runId, int limit, boolean buggyOnly) {
         PredictionRun run = require(userId, runId);
         List<Map<String, Object>> rows = predictionRows(readMetadata(run));
         return rows.stream()
-                .filter(row -> !defectiveOnly
+                .filter(row -> !buggyOnly
                         || integerValue(row.get("predictedLabel"), 0) == 1)
                 .limit(Math.max(1, Math.min(limit, MAX_PUBLIC_PREDICTIONS)))
                 .toList();
@@ -496,6 +467,23 @@ public class PredictionService {
     private List<Map<String, Object>> limitPredictions(
             Map<String, Object> metadata, int limit) {
         return predictionRows(metadata).stream().limit(limit).toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> canonicalSummary(Object raw) {
+        if (!(raw instanceof Map)) {
+            return Map.of();
+        }
+        Map<String, Object> summary = new LinkedHashMap<>((Map<String, Object>) raw);
+        Object legacyBuggy = summary.remove("predictedDefective");
+        Object legacyClean = summary.remove("predictedNonDefective");
+        if (!summary.containsKey("predictedBuggy") && legacyBuggy != null) {
+            summary.put("predictedBuggy", legacyBuggy);
+        }
+        if (!summary.containsKey("predictedClean") && legacyClean != null) {
+            summary.put("predictedClean", legacyClean);
+        }
+        return summary;
     }
 
     private List<Map<String, String>> asRowMaps(DatasetTable table) {
@@ -564,6 +552,10 @@ public class PredictionService {
         Object value = row.containsKey("defectProbability")
                 ? row.get("defectProbability") : row.get("defectScore");
         return String.valueOf(value);
+    }
+
+    private static String classLabel(Object value) {
+        return integerValue(value, 0) == 1 ? "Buggy" : "Clean";
     }
 
     @SuppressWarnings("unchecked")

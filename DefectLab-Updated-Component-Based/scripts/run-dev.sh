@@ -18,17 +18,11 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 (
-  cd "$project_root/ml-service-python"
-  if [[ -x "venv/bin/python" ]]; then
-    venv/bin/python -m uvicorn app.main:app --reload --port 8000
-  else
-    python3 -m uvicorn app.main:app --reload --port 8000
-  fi
+  exec bash "$project_root/scripts/run-python-dev.sh"
 ) &
 
 (
-  cd "$project_root/backend-java"
-  mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
+  exec bash "$project_root/scripts/run-java-dev.sh"
 ) &
 
 (
