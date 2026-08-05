@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-defectlab}
+      POSTGRES_USER: ${POSTGRES_USER:-defectlab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-defectlab}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-defectlab} -d ${POSTGRES_DB:-defectlab}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ml:
+    build:
+      context: .
+      dockerfile: ml-service-python/Dockerfile
+    environment:
+      ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:-local-development-token}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ml/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend-java/Dockerfile
+    environment:
+      DEFECTLAB_DB_URL: ${DEFECTLAB_DB_URL:-jdbc:postgresql://postgres:5432/defectlab}
+      DEFECTLAB_DB_USER: ${DEFECTLAB_DB_USER:-defectlab}
+      DEFECTLAB_DB_PASSWORD: ${DEFECTLAB_DB_PASSWORD:-defectlab}
+      ML_SERVICE_BASE_URL: http://ml:8000
+      ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:-local-development-token}
+      PREDEFINED_DATA_DIR: /app/sample-data/predefined
+      DEFECTLAB_SESSION_SECURE: ${DEFECTLAB_SESSION_SECURE:-false}
+    volumes:
+      - metric_storage:/app/backend-java/storage
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ml:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend-angular/Dockerfile
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  metric_storage:

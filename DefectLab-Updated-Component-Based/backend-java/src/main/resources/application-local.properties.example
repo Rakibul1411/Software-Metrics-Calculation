@@ -1,0 +1,7 @@
+# Docker PostgreSQL defaults. For Neon, export DEFECTLAB_DB_URL,
+# DEFECTLAB_DB_USER and DEFECTLAB_DB_PASSWORD before starting Spring Boot.
+spring.datasource.url=${DEFECTLAB_DB_URL:jdbc:postgresql://localhost:5432/defectlab}
+spring.datasource.username=${DEFECTLAB_DB_USER:defectlab}
+spring.datasource.password=${DEFECTLAB_DB_PASSWORD:defectlab}
+spring.datasource.driver-class-name=org.postgresql.Driver
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQL10Dialect

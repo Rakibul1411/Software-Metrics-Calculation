@@ -1,0 +1,225 @@
+/* ---------------------------------------------------------------------------
+   Design tokens.
+
+   Three typefaces, each with one job:
+     body    Inter          — UI prose, labels, controls
+     heading Manrope        — titles only
+     mono    JetBrains Mono — every identifier and number (metric values, class
+                              names, column names, K, thresholds, file paths)
+
+   The mono family is the point of the system: this is a metrics workbench, and
+   digits that line up in a column are readable as data rather than as text.
+--------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light;
+
+  --font-body: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-heading: Manrope, var(--font-body);
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* 4px base scale — every margin, padding and gap resolves to one of these. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-pill: 999px;
+
+  --ink: #1b2630;
+  --ink-heading: #101a22;
+  --muted: #69757f;
+  --text-secondary: #4b5762;
+
+  --line: #e1e7eb;
+  --line-strong: #cad3da;
+  --surface: #ffffff;
+  --surface-alt: #f8fafb;
+  --surface-alt-2: #f3f6f8;
+  --surface-muted: #eef2f5;
+  --input-bg: #ffffff;
+  --canvas: #f5f7f9;
+
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  /* Fill colour for large solid surfaces (primary button, brand mark). Kept
+     separate from --accent because the two have opposite needs on dark: accent
+     must stay bright to read as text/icon, a fill must stay calm to not glare. */
+  --accent-solid: #2563eb;
+  --accent-solid-hover: #1d4ed8;
+  --accent-soft: #edf3ff;
+  --accent-soft-strong: #bfd0fb;
+  --accent-soft-bg-2: #f4f7ff;
+  --accent-ink: #1d4fbf;
+  --accent-muted: #5f6f91;
+  --accent-border: rgba(37, 99, 235, .18);
+
+  --danger-bg: #fdf4f3;
+  --danger-border: #eec9c5;
+  --danger-text: #9a453f;
+  --danger-soft-bg: #fceeec;
+  --danger-strong: #ad4d45;
+
+  --warning-bg: #fdf9f0;
+  --warning-border: #e6d6ad;
+  --warning-text: #77601f;
+
+  --header-bg: rgba(250, 251, 252, .85);
+  --header-border: rgba(220, 227, 232, .9);
+  --disabled-bg: #d3dade;
+  --disabled-text: #8f9aa3;
+  --shadow-sm: 0 1px 2px rgba(20, 30, 40, .04);
+  --shadow-card: 0 1px 2px rgba(20, 30, 40, .04), 0 12px 32px rgba(20, 30, 40, .05);
+  --focus-ring: rgba(37, 99, 235, .18);
+  --accent-shadow: rgba(37, 99, 235, .22);
+
+  font-family: var(--font-body);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Headings sit dimmer than pure white on purpose: a near-white bold headline
+     against a near-black surface reads as glare, not as emphasis. */
+  --ink: #ccd5dc;
+  --ink-heading: #dbe2e8;
+  --muted: #8794a0;
+  --text-secondary: #b3bec7;
+
+  --line: #222b33;
+  --line-strong: #2f3a44;
+  --surface: #151b22;
+  --surface-alt: #191f27;
+  --surface-alt-2: #1c242c;
+  --surface-muted: #1f2831;
+  --input-bg: #10161c;
+  --canvas: #0d1217;
+
+  --accent: #7ea2ff;
+  --accent-dark: #6b91ed;
+  /* Deeper and less chromatic than --accent: as a full-width fill the bright
+     mint reads as neon. 4.6:1 against white label text. */
+  --accent-solid: #315fc2;
+  --accent-solid-hover: #3a69d1;
+  --accent-soft: rgba(126, 162, 255, .11);
+  --accent-soft-strong: rgba(126, 162, 255, .32);
+  --accent-soft-bg-2: rgba(126, 162, 255, .07);
+  --accent-ink: #9ab5ff;
+  --accent-muted: #9aa9c6;
+  --accent-border: rgba(126, 162, 255, .26);
+
+  --danger-bg: rgba(220, 100, 88, .09);
+  --danger-border: rgba(220, 100, 88, .3);
+  --danger-text: #dd8378;
+  --danger-soft-bg: rgba(220, 100, 88, .13);
+  --danger-strong: #dd8378;
+
+  --warning-bg: rgba(208, 165, 78, .09);
+  --warning-border: rgba(208, 165, 78, .3);
+  --warning-text: #d3b476;
+
+  --header-bg: rgba(14, 19, 25, .8);
+  --header-border: rgba(34, 43, 51, .9);
+  --disabled-bg: #232c35;
+  --disabled-text: #5c6873;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35);
+  --focus-ring: rgba(126, 162, 255, .26);
+  /* Neutral, not a coloured halo — a glow around a saturated fill is what makes
+     it read as neon on a near-black surface. */
+  --accent-shadow: rgba(0, 0, 0, .38);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+  background: var(--canvas);
+  transition: background-color .32s ease, color .32s ease;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background: var(--canvas);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color .32s ease, color .32s ease;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button,
+a,
+label {
+  -webkit-tap-highlight-color: transparent;
+}
+
+code,
+kbd,
+samp {
+  font-family: var(--font-mono);
+  font-size: .92em;
+}
+
+/* Focus lands on the control itself, never on the wrapping <label>. Outlining
+   the label draws a second box around its text and helper copy, which reads as
+   a nested double border around the field. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--line-strong);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

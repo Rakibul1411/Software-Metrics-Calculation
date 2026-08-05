@@ -1,0 +1,9 @@
+target/
+storage/uploads/
+storage/extracted-projects/
+storage/generated-datasets/
+storage/prediction-results/
+*.class
+*.jar
+output/
+storage/
