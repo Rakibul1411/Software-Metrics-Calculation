@@ -169,6 +169,7 @@ export interface InstanceMetricComparisonResult {
   manualOnly: string[];
   predefinedOnly: string[];
   comparisons: InstanceMetricComparisonRow[];
+  metrics: AggregateMetricComparisonRow[];
 }
 
 export type MetricComparisonResult =
