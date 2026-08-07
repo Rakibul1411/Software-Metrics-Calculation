@@ -123,6 +123,29 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
             <strong>{{ predefinedOnlyCount }}</strong></article>
         </div>
 
+        <h3>Metric-wise mean &amp; std (manual vs predefined)</h3>
+        <div class="dl-table-wrap dl-comparison-result-scroll">
+          <table class="dl-table">
+            <thead><tr>
+              <th>Metric</th>
+              <th>Mean Manual</th>
+              <th>Mean Predefined</th>
+              <th>Std Manual</th>
+              <th>Std Predefined</th>
+              <th>Percentage Difference</th>
+            </tr></thead>
+            <tbody><tr *ngFor="let row of instanceMetricStats">
+              <td class="dl-mono">{{ row.metric }}</td>
+              <td>{{ number(row.manual.mean) }}</td>
+              <td>{{ number(row.predefined.mean) }}</td>
+              <td>{{ number(row.manual.standardDeviation) }}</td>
+              <td>{{ number(row.predefined.standardDeviation) }}</td>
+              <td>{{ percentage(row.percentageDifference) }}</td>
+            </tr></tbody>
+          </table>
+        </div>
+
+        <h3>File-wise comparison</h3>
         <div class="dl-table-wrap dl-comparison-result-scroll">
           <table class="dl-table">
             <thead><tr>
@@ -170,6 +193,11 @@ export class ComparisonsComponent implements OnInit {
   get instanceRows(): InstanceMetricComparisonRow[] {
     const result = this.selected?.result;
     return result?.comparisonMode === 'INSTANCE_WISE' ? result.comparisons : [];
+  }
+
+  get instanceMetricStats(): AggregateMetricComparisonRow[] {
+    const result = this.selected?.result;
+    return result?.comparisonMode === 'INSTANCE_WISE' ? result.metrics : [];
   }
 
   get matchedIdentifiers(): number {
