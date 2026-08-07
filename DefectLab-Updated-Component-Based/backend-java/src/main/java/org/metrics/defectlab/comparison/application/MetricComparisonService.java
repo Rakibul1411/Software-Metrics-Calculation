@@ -50,6 +50,7 @@ public class MetricComparisonService {
         this.comparisonRepository = comparisonRepository;
         this.objectMapper = objectMapper;
         Files.createDirectories(storageRoot);
+        migrateStaleComparisons();
     }
 
     public Map<String, Object> execute(Long userId, Map<String, Object> body)
@@ -174,6 +175,15 @@ public class MetricComparisonService {
     private Map<String, Object> aggregate(
             MetricDataset dataset, DatasetTable manual, DatasetTable predefined) {
         List<String> metrics = commonNumericMetrics(dataset, manual, predefined);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("comparisonMode", "AGGREGATE");
+        result.put("commonNumericMetricCount", metrics.size());
+        result.put("metrics", metricStatsRows(metrics, manual, predefined));
+        return result;
+    }
+
+    private List<Map<String, Object>> metricStatsRows(
+            List<String> metrics, DatasetTable manual, DatasetTable predefined) {
         List<Map<String, Object>> rows = new ArrayList<>();
         for (String metric : metrics) {
             Stats left = stats(numericValues(manual.column(metric)));
@@ -187,11 +197,7 @@ public class MetricComparisonService {
             row.put("percentageDifference", percentageDifference(left.mean, right.mean));
             rows.add(row);
         }
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("comparisonMode", "AGGREGATE");
-        result.put("commonNumericMetricCount", metrics.size());
-        result.put("metrics", rows);
-        return result;
+        return rows;
     }
 
     private Map<String, Object> instanceWise(
@@ -250,6 +256,7 @@ public class MetricComparisonService {
         result.put("manualOnly", manualOnly);
         result.put("predefinedOnly", predefinedOnly);
         result.put("comparisons", comparisons);
+        result.put("metrics", metricStatsRows(metrics, manual, predefined));
         return result;
     }
 
@@ -287,6 +294,14 @@ public class MetricComparisonService {
             lines.add("Status counts: " + result.get("statusCounts"));
             lines.add("Manual-only identifiers: " + result.get("manualOnly"));
             lines.add("Predefined-only identifiers: " + result.get("predefinedOnly"));
+            lines.add("");
+            lines.add("METRIC | MANUAL STATS | PREDEFINED STATS | MEAN DIFF | SD DIFF | % DIFF");
+            for (Map<String, Object> row : mapList(result.get("metrics"))) {
+                lines.add(row.get("metric") + " | " + row.get("manual") + " | "
+                        + row.get("predefined") + " | " + row.get("meanDifference")
+                        + " | " + row.get("sdDifference") + " | "
+                        + row.get("percentageDifference"));
+            }
             lines.add("");
             lines.add("IDENTIFIER | METRIC | MANUAL | PREDEFINED | STATUS");
             for (Map<String, Object> row : mapList(result.get("comparisons"))) {
@@ -411,6 +426,40 @@ public class MetricComparisonService {
             throw new IllegalStateException(
                     "The metric-comparison metadata is unreadable.", exception);
         }
+    }
+
+    /**
+     * Comparisons saved before the per-metric mean/std summary was added to the
+     * comparison result are missing the "metrics" field. Recompute and overwrite
+     * those stored reports once at startup so old comparisons pick up the new
+     * summary without requiring a manual re-run. Cache-hit reads themselves stay
+     * cheap and never touch dataset files (see MetricComparisonServiceTest).
+     */
+    private void migrateStaleComparisons() {
+        for (MetricComparison comparison : comparisonRepository.findAll()) {
+            if (readResult(comparison).containsKey("metrics")) continue;
+            try {
+                refreshStoredResult(comparison);
+            } catch (RuntimeException | IOException exception) {
+                // Best-effort: skip comparisons whose source datasets are gone.
+            }
+        }
+    }
+
+    private void refreshStoredResult(MetricComparison comparison) throws IOException {
+        Long userId = comparison.getUserId();
+        MetricDataset manual = datasetService.require(userId, comparison.getManualDatasetId());
+        MetricDataset predefined = datasetService.require(
+                userId, comparison.getPredefinedDatasetId());
+        DatasetTable manualTable = datasetService.load(manual);
+        DatasetTable predefinedTable = datasetService.load(predefined);
+        Map<String, Object> config = readJson(comparison.getComparisonConfig());
+        Map<String, Object> result = "AGGREGATE".equals(config.get("comparisonMode"))
+                ? aggregate(manual, manualTable, predefinedTable)
+                : instanceWise(manual, manualTable, predefinedTable, config);
+        Path pdf = Paths.get(comparison.getComparisonReportFilePath());
+        Files.writeString(metadataPath(pdf), writeJson(result), StandardCharsets.UTF_8);
+        writePdf(pdf, manual, predefined, config, result);
     }
 
     private static String datasetIdentity(MetricDataset dataset) {
