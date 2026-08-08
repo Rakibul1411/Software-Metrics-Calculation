@@ -98,12 +98,17 @@ class PredictionServiceConfigurationTest {
     }
 
     @Test
-    void allowsLabeledPredefinedDatasetToBeItsOwnEvaluationTarget() {
+    void rejectsALabeledPredefinedDatasetAsItsOwnEvaluationTarget() {
+        // prediction_runs.ck_prediction_different is an unconditional
+        // "source_dataset_id <> target_dataset_id" CHECK constraint: it has no
+        // exception for PREDEFINED targets. Allowing this at the service layer
+        // let the request pass validation, run the full KNN prediction, and
+        // only then fail on the database insert with an opaque 500.
         when(source.getId()).thenReturn(52L);
         when(source.getDatasetType()).thenReturn(MetricDataset.Type.PREDEFINED);
         when(source.hasActualLabel()).thenReturn(true);
 
-        assertDoesNotThrow(() -> ReflectionTestUtils.invokeMethod(
+        assertThrows(IllegalArgumentException.class, () -> ReflectionTestUtils.invokeMethod(
                 service, "validateTargets", source, null, source));
     }
 
