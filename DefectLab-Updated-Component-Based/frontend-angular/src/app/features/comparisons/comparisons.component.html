@@ -1,0 +1,126 @@
+<ui-card heading="Compare calculated metrics">
+
+  <div class="dl-form-row">
+    <label class="dl-field">
+      <span>Dataset family</span>
+      <select [(ngModel)]="selectedFamily"
+              (ngModelChange)="familyChanged()"
+              [disabled]="busy">
+        <option [ngValue]="null">Choose PROMISE or AEEEM first</option>
+        <option [ngValue]="'PROMISE'">PROMISE · file-wise comparison</option>
+        <option [ngValue]="'AEEEM'">AEEEM · metric-wise comparison</option>
+      </select>
+    </label>
+
+    <label class="dl-field">
+      <span>Dataset with MANUAL and PREDEFINED metrics</span>
+      <select [(ngModel)]="selectedPairKey"
+              (ngModelChange)="compareSelectedPair()"
+              [disabled]="busy || !selectedFamily || !filteredPairs.length">
+        <option [ngValue]="null">Choose a dataset</option>
+        <option *ngFor="let pair of filteredPairs" [ngValue]="pair.key">
+          {{ pair.displayName }}
+          {{ pair.cached ? '· Saved comparison' : '· Not calculated yet' }}
+        </option>
+      </select>
+    </label>
+  </div>
+
+  <ui-state *ngIf="!busy && selectedFamily && !filteredPairs.length" kind="empty"
+            [message]="'No ' + selectedFamily + ' dataset currently has both MANUAL and PREDEFINED records.'">
+  </ui-state>
+  <ui-state *ngIf="busy" kind="loading"
+            message="Loading or calculating the metric comparison…"></ui-state>
+  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+</ui-card>
+
+<ui-card heading="{{ comparison.manualDataset.displayName }} ↔ {{ comparison.predefinedDataset.displayName }}"
+         *ngIf="selected as comparison">
+  <ng-container actions>
+    <ui-button icon="download" [href]="api.metricComparisonReportUrl(comparison.id)">Download PDF report</ui-button>
+  </ng-container>
+
+  <ui-state kind="success"
+            [message]="comparison.cacheHit
+              ? 'Loaded from saved comparison storage. Metrics were not recalculated.'
+              : 'Calculated for the first time and saved in metric_comparisons and storage.'">
+  </ui-state>
+
+  <ng-container *ngIf="comparison.result.comparisonMode === 'AGGREGATE'; else instanceResult">
+    <div class="dl-grid dl-grid-3">
+      <ui-metric-card label="Common numeric metrics"
+                      [value]="comparison.result.commonNumericMetricCount"></ui-metric-card>
+      <ui-metric-card label="Dataset A" value="MANUAL"></ui-metric-card>
+      <ui-metric-card label="Dataset B" value="PREDEFINED"></ui-metric-card>
+    </div>
+
+    <div class="dl-table-wrap dl-comparison-result-scroll">
+      <table class="dl-table">
+        <thead><tr>
+          <th>Metric</th>
+          <th>Mean Manual</th>
+          <th>Mean Predefined</th>
+          <th>Std Manual</th>
+          <th>Std Predefined</th>
+          <th>Percentage Difference</th>
+        </tr></thead>
+        <tbody><tr *ngFor="let row of aggregateRows">
+          <td class="dl-mono">{{ row.metric }}</td>
+          <td>{{ number(row.manual.mean) }}</td>
+          <td>{{ number(row.predefined.mean) }}</td>
+          <td>{{ number(row.manual.standardDeviation) }}</td>
+          <td>{{ number(row.predefined.standardDeviation) }}</td>
+          <td>{{ percentage(row.percentageDifference) }}</td>
+        </tr></tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <ng-template #instanceResult>
+    <div class="dl-grid dl-grid-4">
+      <ui-metric-card label="Matched identifiers" [value]="matchedIdentifiers"></ui-metric-card>
+      <ui-metric-card label="Common numeric metrics" [value]="commonMetricCount"></ui-metric-card>
+      <ui-metric-card label="Manual-only files" [value]="manualOnlyCount"></ui-metric-card>
+      <ui-metric-card label="Predefined-only files" [value]="predefinedOnlyCount"></ui-metric-card>
+    </div>
+
+    <h3>Metric-wise mean &amp; std (manual vs predefined)</h3>
+    <div class="dl-table-wrap dl-comparison-result-scroll">
+      <table class="dl-table">
+        <thead><tr>
+          <th>Metric</th>
+          <th>Mean Manual</th>
+          <th>Mean Predefined</th>
+          <th>Std Manual</th>
+          <th>Std Predefined</th>
+          <th>Percentage Difference</th>
+        </tr></thead>
+        <tbody><tr *ngFor="let row of instanceMetricStats">
+          <td class="dl-mono">{{ row.metric }}</td>
+          <td>{{ number(row.manual.mean) }}</td>
+          <td>{{ number(row.predefined.mean) }}</td>
+          <td>{{ number(row.manual.standardDeviation) }}</td>
+          <td>{{ number(row.predefined.standardDeviation) }}</td>
+          <td>{{ percentage(row.percentageDifference) }}</td>
+        </tr></tbody>
+      </table>
+    </div>
+
+    <h3>File-wise comparison</h3>
+    <div class="dl-table-wrap dl-comparison-result-scroll">
+      <table class="dl-table">
+        <thead><tr>
+          <th>File / Identifier</th><th>Metric</th><th>Manual Value</th>
+          <th>Predefined Value</th><th>Status</th>
+        </tr></thead>
+        <tbody><tr *ngFor="let row of instanceRows">
+          <td class="dl-mono">{{ row.identifier }}</td>
+          <td class="dl-mono">{{ row.metric }}</td>
+          <td>{{ number(row.manualValue) }}</td>
+          <td>{{ number(row.predefinedValue) }}</td>
+          <td>{{ row.status }}</td>
+        </tr></tbody>
+      </table>
+    </div>
+  </ng-template>
+</ui-card>

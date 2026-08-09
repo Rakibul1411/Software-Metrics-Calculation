@@ -15,9 +15,23 @@ import { PredictionsComponent } from './features/predictions/predictions.compone
 import { ReportDetailComponent } from './features/reports/report-detail.component';
 import { ReportsComponent } from './features/reports/reports.component';
 import { ShellComponent } from './features/shell/shell.component';
+import { UiBadgeComponent } from './shared/ui-badge.component';
+import { UiButtonComponent } from './shared/ui-button.component';
+import { UiCardComponent } from './shared/ui-card.component';
+import { UiIconComponent } from './shared/ui-icon.component';
+import { UiFilePickerComponent } from './shared/ui-file-picker.component';
+import { UiMetricCardComponent } from './shared/ui-metric-card.component';
+import { UiStateComponent } from './shared/ui-state.component';
 
 @NgModule({
   declarations: [
+    UiIconComponent,
+    UiButtonComponent,
+    UiCardComponent,
+    UiBadgeComponent,
+    UiFilePickerComponent,
+    UiMetricCardComponent,
+    UiStateComponent,
     AppComponent,
     AuthPageComponent,
     ShellComponent,

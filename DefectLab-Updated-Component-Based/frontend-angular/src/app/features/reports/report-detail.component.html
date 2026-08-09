@@ -1,0 +1,202 @@
+<section class="dl-card">
+  <div class="dl-card-head"><div>
+    <h2>{{ groupTitle }}</h2>
+    <p *ngIf="group">
+      Source: {{ group.runs[0].sourceDataset.displayName }} ·
+      Model: {{ group.runs[0].modelConfig.modelName }} ·
+      Group: {{ group.comparisonGroupId || 'Single target run' }}
+    </p>
+  </div>
+    <ui-button variant="ghost" (pressed)="back()">Back to reports</ui-button>
+  </div>
+  <ui-state *ngIf="loading" kind="loading"
+            message="Loading complete prediction details…"></ui-state>
+  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+</section>
+
+<section class="dl-card" *ngIf="group && !loading">
+  <div class="dl-card-head"><div>
+    <h2>Shared source and model settings</h2>
+  </div></div>
+  <div class="dl-grid dl-grid-4">
+    <ui-metric-card label="Source dataset"
+                    [value]="group.runs[0].sourceDataset.displayName"></ui-metric-card>
+    <ui-metric-card label="Dataset family"
+                    [value]="group.runs[0].modelConfig.datasetFamily"></ui-metric-card>
+    <ui-metric-card label="Model" [value]="modelSetting(group.runs[0])"></ui-metric-card>
+    <ui-metric-card label="Threshold"
+                    [value]="group.runs[0].modelConfig.threshold"></ui-metric-card>
+    <ui-metric-card label="Log transform"
+                    [value]="enabled(group.runs[0].modelConfig.logTransform)"></ui-metric-card>
+    <ui-metric-card label="CORAL alignment"
+                    [value]="enabled(group.runs[0].modelConfig.coral)"></ui-metric-card>
+    <ui-metric-card label="Random seed"
+                    [value]="group.runs[0].modelConfig.seed"></ui-metric-card>
+  </div>
+</section>
+
+<div class="dl-grid dl-grid-2" *ngIf="group && !loading">
+  <section class="dl-card dl-report-target-card">
+    <div class="dl-card-head"><div>
+      <h2>{{ manualRun?.targetDataset?.displayName || 'Not included' }}</h2>
+      <p *ngIf="manualRun">Prediction run #{{ manualRun.id }}</p>
+    </div>
+      <div class="dl-actions" *ngIf="manualRun as run">
+        <ui-button variant="ghost" icon="download" [href]="api.predictionDownloadUrl(run.id)">Download labeled CSV</ui-button>
+        <ui-button icon="download" [href]="api.reportDownloadUrl(run.id)">Download report</ui-button>
+      </div>
+    </div>
+
+    <ng-container *ngIf="manualRun as run; else noManual">
+      <div class="dl-grid dl-grid-3">
+        <ui-metric-card label="Total files" [value]="run.summary.totalRecords"></ui-metric-card>
+        <ui-metric-card label="Predicted buggy files" [value]="run.summary.predictedBuggy"></ui-metric-card>
+        <ui-metric-card label="Predicted clean files" [value]="run.summary.predictedClean"></ui-metric-card>
+      </div>
+    </ng-container>
+    <ng-template #noManual>
+      <ui-state kind="empty" message="This report group has no MANUAL target."></ui-state>
+    </ng-template>
+  </section>
+
+  <section class="dl-card dl-report-target-card">
+    <div class="dl-card-head"><div>
+      <h2>{{ predefinedRun?.targetDataset?.displayName || 'Not included' }}</h2>
+      <p *ngIf="predefinedRun">Prediction run #{{ predefinedRun.id }}</p>
+    </div>
+      <div class="dl-actions" *ngIf="predefinedRun as run">
+        <ui-button icon="download" [href]="api.reportDownloadUrl(run.id)">Download report</ui-button>
+      </div>
+    </div>
+
+    <ng-container *ngIf="predefinedRun as run; else noPredefined">
+      <div class="dl-grid dl-grid-4" *ngIf="run.evaluation as evaluation">
+        <ui-metric-card label="True positive (TP)"
+                        [value]="evaluation.confusionMatrix.truePositive"></ui-metric-card>
+        <ui-metric-card label="True negative (TN)"
+                        [value]="evaluation.confusionMatrix.trueNegative"></ui-metric-card>
+        <ui-metric-card label="False positive (FP)"
+                        [value]="evaluation.confusionMatrix.falsePositive"></ui-metric-card>
+        <ui-metric-card label="False negative (FN)"
+                        [value]="evaluation.confusionMatrix.falseNegative"></ui-metric-card>
+      </div>
+      <div class="dl-grid dl-grid-4"
+           *ngIf="run.evaluation as evaluation">
+        <ui-metric-card label="Accuracy" [value]="metric(evaluation.accuracy)"></ui-metric-card>
+        <ui-metric-card label="Precision" [value]="metric(evaluation.precision)"></ui-metric-card>
+        <ui-metric-card label="Recall" [value]="metric(evaluation.recall)"></ui-metric-card>
+        <ui-metric-card label="F1-score" [value]="metric(evaluation.f1)"></ui-metric-card>
+        <ui-metric-card label="ROC-AUC" [value]="metric(evaluation.rocAuc)"></ui-metric-card>
+      </div>
+    </ng-container>
+    <ng-template #noPredefined>
+      <ui-state kind="empty" message="This report group has no PREDEFINED target."></ui-state>
+    </ng-template>
+  </section>
+</div>
+
+<div class="dl-grid dl-grid-2 dl-report-results-grid" *ngIf="group && !loading">
+  <section class="dl-card">
+    <div class="dl-card-head"><div>
+      <h2>File-wise model output</h2>
+    </div></div>
+    <div class="dl-table-wrap dl-report-predictions-scroll"
+         *ngIf="manualRun; else noManualRows">
+      <table class="dl-table">
+        <thead><tr><th>Rank</th><th>File / identifier</th>
+          <th>Probability</th><th>Model prediction</th></tr></thead>
+        <tbody><tr *ngFor="let row of manualRows">
+          <td>{{ row.riskRank }}</td>
+          <td class="dl-mono">{{ row.classIdentifier }}</td>
+          <td>{{ row.defectProbability | number:'1.4-4' }}</td>
+          <td>{{ label(row.predictedLabel) }}</td>
+        </tr></tbody>
+      </table>
+    </div>
+    <ng-template #noManualRows>
+      <ui-state kind="empty" message="No MANUAL prediction rows."></ui-state>
+    </ng-template>
+  </section>
+
+  <section class="dl-card">
+    <div class="dl-card-head"><div>
+      <h2>File-wise model output and actual label</h2>
+    </div></div>
+    <div class="dl-table-wrap dl-report-predictions-scroll"
+         *ngIf="predefinedRun; else noPredefinedRows">
+      <table class="dl-table">
+        <thead><tr><th>Rank</th><th>File / identifier</th>
+          <th>Probability</th><th>Model prediction</th><th>Actual</th></tr></thead>
+        <tbody><tr *ngFor="let row of predefinedRows">
+          <td>{{ row.riskRank }}</td>
+          <td class="dl-mono">{{ row.classIdentifier }}</td>
+          <td>{{ row.defectProbability | number:'1.4-4' }}</td>
+          <td>{{ label(row.predictedLabel) }}</td>
+          <td>{{ row.actualLabel === null ? '—' : label(row.actualLabel) }}</td>
+        </tr></tbody>
+      </table>
+    </div>
+    <ng-template #noPredefinedRows>
+      <ui-state kind="empty" message="No PREDEFINED prediction rows."></ui-state>
+    </ng-template>
+  </section>
+</div>
+
+<section class="dl-card" *ngIf="manualRun && predefinedRun && !loading">
+  <div class="dl-card-head"><div>
+    <h2>MANUAL prediction compared with PREDEFINED actual label</h2>
+    <p>
+      Files are joined by normalized identifier. Correct/Wrong is determined
+      against the PREDEFINED dataset's actual Buggy/Clean label.
+    </p>
+  </div></div>
+
+  <div class="dl-grid dl-grid-3">
+    <ui-metric-card label="Matched files" [value]="matchedRows.length"></ui-metric-card>
+    <ui-metric-card label="MANUAL prediction correct" [value]="manualCorrectCount"></ui-metric-card>
+    <ui-metric-card label="MANUAL prediction wrong" [value]="manualWrongCount"></ui-metric-card>
+    <ui-metric-card label="PREDEFINED prediction correct" [value]="predefinedCorrectCount"></ui-metric-card>
+    <ui-metric-card label="PREDEFINED prediction wrong" [value]="predefinedWrongCount"></ui-metric-card>
+    <ui-metric-card label="Models agree" [value]="modelsAgreeCount"></ui-metric-card>
+  </div>
+
+  <div class="dl-table-wrap dl-report-predictions-scroll dl-matched-comparison-table"
+       *ngIf="matchedRows.length; else noMatchedRows">
+    <table class="dl-table">
+      <thead><tr>
+        <th>File / identifier</th>
+        <th>MANUAL prediction</th>
+        <th>PREDEFINED prediction</th>
+        <th>Actual label</th>
+        <th>MANUAL result</th>
+        <th>PREDEFINED result</th>
+        <th>Models agree</th>
+      </tr></thead>
+      <tbody><tr *ngFor="let row of matchedRows">
+        <td class="dl-mono">{{ row.identifier }}</td>
+        <td>{{ label(row.manualPrediction) }}</td>
+        <td>{{ label(row.predefinedPrediction) }}</td>
+        <td>{{ row.actualLabel === null ? '—' : label(row.actualLabel) }}</td>
+        <td>
+          <ui-badge [tone]="row.manualCorrect === null ? 'amber' : (row.manualCorrect ? 'green' : 'red')">
+            {{ correctness(row.manualCorrect) }}
+          </ui-badge>
+        </td>
+        <td>
+          <ui-badge [tone]="row.predefinedCorrect === null ? 'amber' : (row.predefinedCorrect ? 'green' : 'red')">
+            {{ correctness(row.predefinedCorrect) }}
+          </ui-badge>
+        </td>
+        <td>
+          <ui-badge [tone]="row.modelsAgree ? 'green' : 'amber'">
+            {{ row.modelsAgree ? 'Yes' : 'No' }}
+          </ui-badge>
+        </td>
+      </tr></tbody>
+    </table>
+  </div>
+  <ng-template #noMatchedRows>
+    <ui-state kind="empty"
+              message="No common file identifiers were found between the two targets."></ui-state>
+  </ng-template>
+</section>

@@ -1,0 +1,91 @@
+<section class="dl-grid dl-grid-3 dl-analyze-modes">
+  <article class="dl-card dl-action-card"
+           [class.dl-data-card]="mode === 'archive'"
+           [class.dl-disabled]="family === 'AEEEM'"
+           (click)="selectMode('archive')">
+    <span class="dl-card-index">01</span>
+    <h2>Source code archive</h2>
+  </article>
+  <article class="dl-card dl-action-card"
+           [class.dl-data-card]="mode === 'github'"
+           (click)="selectMode('github')">
+    <span class="dl-card-index">02</span>
+    <h2>GitHub repository</h2>
+  </article>
+  <article class="dl-card dl-action-card">
+    <span class="dl-card-index">03</span>
+    <h2>Saved automatically</h2>
+  </article>
+</section>
+
+<ui-card heading="{{ mode === 'archive' ? 'Analyze Java archive' : 'Analyze GitHub repository' }}">
+    <form class="dl-form-stack" (ngSubmit)="submit()">
+      <div class="dl-form-row">
+        <label class="dl-field">
+          <span>Metric family</span>
+          <select [(ngModel)]="family" name="family"
+                  (ngModelChange)="selectFamily($event)">
+            <option value="PROMISE">PROMISE · 20 static predictors</option>
+            <option value="AEEEM">AEEEM · 56 static/history predictors</option>
+          </select>
+        </label>
+        <label class="dl-field">
+          <span>Source input</span>
+          <select [(ngModel)]="mode" name="sourceMode"
+                  (ngModelChange)="selectMode($event)">
+            <option value="archive" [disabled]="family === 'AEEEM'">
+              Local source archive
+            </option>
+            <option value="github">Public GitHub repository</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="dl-form-row">
+        <label class="dl-field">
+          <span>Project version *</span>
+          <input [(ngModel)]="projectVersion" name="projectVersion"
+                 required placeholder="Example: 1.7 or 3.4">
+        </label>
+        <label class="dl-field">
+          <span>Project name (optional)</span>
+          <input [(ngModel)]="projectName" name="projectName"
+                 placeholder="Automatically derived when empty">
+        </label>
+      </div>
+
+      <ng-container *ngIf="mode === 'archive'">
+        <ui-file-picker
+          accept=".zip,.tar,.tgz,.tar.gz,.gz,application/zip,application/x-tar,application/gzip"
+          [label]="archive?.name || 'Choose a Java source archive'"
+          helper="ZIP, TAR, TGZ, TAR.GZ or GZ · maximum 50 MB"
+          (fileChange)="selectArchive($event)">
+        </ui-file-picker>
+      </ng-container>
+
+      <ng-container *ngIf="mode === 'github'">
+        <label class="dl-field">
+          <span>Public GitHub URL *</span>
+          <input [(ngModel)]="githubUrl" name="githubUrl"
+                 placeholder="https://github.com/owner/repository">
+        </label>
+        <label class="dl-field" *ngIf="family === 'AEEEM'">
+          <span>AEEEM benchmark profile</span>
+          <select [(ngModel)]="aeeemProfile" name="aeeemProfile"
+                  (ngModelChange)="applyAeeemProfile($event)">
+            <option value="current">Current repository history</option>
+            <option value="jdt">JDT 3.4</option>
+            <option value="eq">Equinox 3.4</option>
+            <option value="pde">PDE UI 3.4.1</option>
+            <option value="lc">Lucene 2.4.0</option>
+            <option value="ml">Mylyn 3.1</option>
+          </select>
+        </label>
+      </ng-container>
+
+      <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+      <ui-button type="submit" [disabled]="busy || !canSubmit()" [loading]="busy">
+        {{ busy ? 'Calculating metrics…' : 'Calculate and store metrics' }}
+      </ui-button>
+  </form>
+</ui-card>

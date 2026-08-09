@@ -1,0 +1,36 @@
+<div class="dl-grid dl-grid-2">
+  <ui-card heading="Profile">
+    <dl class="dl-kv" *ngIf="session.user as user">
+      <dt>Name</dt><dd>{{ user.name }}</dd>
+      <dt>Email</dt><dd>{{ user.email }}</dd>
+      <dt>Member since</dt><dd>{{ user.createdAt | date:'medium' }}</dd>
+    </dl>
+    <div class="dl-actions dl-actions-spaced">
+      <ui-button variant="ghost" icon="logout" (pressed)="session.signOut()">Sign out</ui-button>
+    </div>
+  </ui-card>
+
+  <ui-card heading="Change password">
+    <form (ngSubmit)="submit()" class="dl-form-stack">
+      <label class="dl-field">
+        <span>Current password</span>
+        <input type="password" autocomplete="current-password"
+               [(ngModel)]="currentPassword" name="currentPassword" [disabled]="saving">
+      </label>
+      <label class="dl-field">
+        <span>New password</span>
+        <input type="password" autocomplete="new-password"
+               minlength="8" maxlength="72"
+               [(ngModel)]="newPassword" name="newPassword" [disabled]="saving">
+        <small>8–72 characters.</small>
+      </label>
+
+      <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+      <ui-state *ngIf="saved" kind="success" message="Password updated."></ui-state>
+
+      <ui-button type="submit" [disabled]="!canSubmit || saving" [loading]="saving">
+        {{ saving ? 'Saving…' : 'Update password' }}
+      </ui-button>
+    </form>
+  </ui-card>
+</div>

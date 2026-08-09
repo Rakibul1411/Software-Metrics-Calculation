@@ -1,0 +1,29 @@
+<ui-card heading="Prediction reports">
+  <ng-container actions>
+    <ui-button variant="ghost" size="sm" icon="refresh" (pressed)="load()">Refresh</ui-button>
+  </ng-container>
+  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+  <div class="dl-table-wrap" *ngIf="groups.length; else empty">
+    <table class="dl-table"><thead><tr>
+      <th>Group</th><th>Source</th><th>Targets</th><th>Model</th>
+      <th>Runs</th><th>Created</th><th>View</th>
+    </tr></thead>
+      <tbody><tr *ngFor="let group of groups">
+        <td class="dl-mono">{{ group.comparisonGroupId || groupKey(group) }}</td>
+        <td>{{ group.runs[0].sourceDataset.displayName }}</td>
+        <td>{{ targetNames(group) }}</td>
+        <td>{{ group.runs[0].modelConfig.modelName }}</td>
+        <td>{{ group.runs.length }}</td>
+        <td>{{ group.runs[0].createdAt | date:'medium' }}</td>
+        <td>
+          <ui-button variant="ghost" size="sm" icon="view"
+                     title="View report details" ariaLabel="View report details"
+                     (pressed)="view(group)"></ui-button>
+        </td>
+      </tr></tbody>
+    </table>
+  </div>
+  <ng-template #empty>
+    <ui-state kind="empty" message="No complete dual-target prediction reports yet."></ui-state>
+  </ng-template>
+</ui-card>

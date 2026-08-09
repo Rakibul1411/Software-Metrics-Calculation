@@ -50,6 +50,16 @@ export class DefectLabApiService {
       `${this.api}/auth/password`, { currentPassword, newPassword }, this.options);
   }
 
+  forgotPassword(email: string) {
+    return this.http.post<{ registered: boolean }>(
+      `${this.api}/auth/password/forgot`, { email }, this.options);
+  }
+
+  resetPassword(email: string, newPassword: string) {
+    return this.http.post<{ updated: boolean }>(
+      `${this.api}/auth/password/reset`, { email, newPassword }, this.options);
+  }
+
   dashboard(): Observable<DashboardData> {
     return this.http.get<DashboardData>(`${this.api}/dashboard`, this.options);
   }

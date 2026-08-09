@@ -1,0 +1,83 @@
+<div class="dl-shell">
+  <button type="button" class="dl-sidebar-scrim"
+          *ngIf="mobileNavOpen"
+          aria-label="Close navigation"
+          (click)="closeMobileNav()"></button>
+
+  <aside class="dl-sidebar" [class.mobile-open]="mobileNavOpen">
+    <button type="button" class="dl-sidebar-close"
+            aria-label="Close navigation"
+            (click)="closeMobileNav()">×</button>
+    <a class="dl-brand" routerLink="/overview" (click)="closeMobileNav()">
+      <span class="dl-brand-mark" aria-hidden="true">DL</span>
+      <span>
+        <strong>DefectLab</strong>
+        <small>Defect intelligence</small>
+      </span>
+    </a>
+
+    <nav class="dl-nav" aria-label="Main navigation">
+      <span class="dl-nav-label">Workspace</span>
+      <a *ngFor="let item of primaryNav"
+         [routerLink]="item.path"
+         routerLinkActive="active"
+         (click)="closeMobileNav()">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path [attr.d]="item.icon"/>
+        </svg>
+        {{ item.label }}
+      </a>
+
+      <span class="dl-nav-label">Results</span>
+      <a *ngFor="let item of analysisNav"
+         [routerLink]="item.path"
+         routerLinkActive="active"
+         (click)="closeMobileNav()">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path [attr.d]="item.icon"/>
+        </svg>
+        {{ item.label }}
+      </a>
+    </nav>
+
+    <div class="dl-sidebar-footer" *ngIf="session.user as user">
+      <span class="dl-footer-identity">
+        <span class="dl-avatar" aria-hidden="true">{{ initials(user.name) }}</span>
+        <span class="dl-footer-user">{{ user.name }}</span>
+      </span>
+      <button type="button" class="dl-footer-link" (click)="session.signOut()">
+        <ui-icon name="logout"></ui-icon>
+        Sign out
+      </button>
+    </div>
+  </aside>
+
+  <div class="dl-main">
+    <header class="dl-topbar">
+      <button type="button" class="dl-menu-button"
+              aria-label="Open navigation"
+              [attr.aria-expanded]="mobileNavOpen"
+              (click)="toggleMobileNav()">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="dl-page-context">
+        <h1>{{ title }}</h1>
+        <p>{{ description }}</p>
+      </div>
+      <div class="dl-spacer"></div>
+      <button type="button" class="dl-icon-button"
+              (click)="toggleTheme()"
+              [attr.aria-pressed]="isDark"
+              [attr.title]="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+              aria-label="Toggle dark mode">
+        <ui-icon [name]="isDark ? 'sun' : 'moon'" [size]="18"></ui-icon>
+      </button>
+      <span class="dl-avatar" *ngIf="session.user as user"
+            [attr.title]="user.name">{{ initials(user.name) }}</span>
+    </header>
+
+    <main class="dl-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

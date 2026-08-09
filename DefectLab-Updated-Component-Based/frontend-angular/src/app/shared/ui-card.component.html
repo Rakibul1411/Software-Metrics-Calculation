@@ -1,0 +1,7 @@
+<section class="dl-card">
+  <div class="dl-card-head" *ngIf="heading">
+    <h2>{{ heading }}</h2>
+    <div class="dl-actions"><ng-content select="[actions]"></ng-content></div>
+  </div>
+  <ng-content></ng-content>
+</section>

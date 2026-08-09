@@ -44,6 +44,25 @@ public class AuthController {
         return ResponseEntity.ok(profile(user));
     }
 
+    /** Step 1: confirm the address belongs to an account. */
+    @PostMapping("/password/forgot")
+    public ResponseEntity<Map<String, Object>> forgotPassword(
+            @RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        if (!authService.emailRegistered(email)) {
+            throw new IllegalArgumentException("No account uses that email address.");
+        }
+        return ResponseEntity.ok(Map.of("email", email, "registered", true));
+    }
+
+    /** Step 2: set the new password for that address. */
+    @PostMapping("/password/reset")
+    public ResponseEntity<Map<String, Object>> resetPassword(
+            @RequestBody Map<String, String> body) {
+        authService.resetPassword(body.get("email"), body.get("newPassword"));
+        return ResponseEntity.ok(Map.of("updated", true));
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<Map<String, Object>> logout(HttpServletRequest request) {
         currentUser.endSession(request);

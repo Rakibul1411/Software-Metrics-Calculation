@@ -1,0 +1,26 @@
+<a *ngIf="link; else hrefOrButton" [class]="classes" [routerLink]="link"
+   [attr.title]="title" [attr.aria-label]="ariaLabel">
+  <ui-icon *ngIf="icon" [name]="icon" [size]="size === 'sm' ? 14 : 16"></ui-icon>
+  <ng-container *ngTemplateOutlet="label"></ng-container>
+</a>
+
+<ng-template #hrefOrButton>
+  <a *ngIf="href; else plainButton" [class]="classes" [href]="href"
+     [attr.title]="title" [attr.aria-label]="ariaLabel">
+    <ui-icon *ngIf="icon" [name]="icon" [size]="size === 'sm' ? 14 : 16"></ui-icon>
+    <ng-container *ngTemplateOutlet="label"></ng-container>
+  </a>
+</ng-template>
+
+<ng-template #plainButton>
+  <button [class]="classes" [type]="type"
+          [disabled]="disabled || loading"
+          [attr.title]="title" [attr.aria-label]="ariaLabel"
+          (click)="pressed.emit()">
+    <span class="dl-spinner" *ngIf="loading" aria-hidden="true"></span>
+    <ui-icon *ngIf="icon && !loading" [name]="icon" [size]="size === 'sm' ? 14 : 16"></ui-icon>
+    <ng-container *ngTemplateOutlet="label"></ng-container>
+  </button>
+</ng-template>
+
+<ng-template #label><ng-content></ng-content></ng-template>
