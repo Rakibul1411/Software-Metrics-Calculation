@@ -1,0 +1,9 @@
+<label class="dl-field">
+  <span *ngIf="label">{{ label }}<ng-container *ngIf="required"> *</ng-container></span>
+  <input [type]="type" [placeholder]="placeholder" [disabled]="disabled"
+         [value]="value" (input)="onInput($any($event.target).value)"
+         [attr.autocomplete]="autocomplete || null"
+         [attr.minlength]="minlength ?? null" [attr.maxlength]="maxlength ?? null"
+         [attr.min]="min ?? null" [attr.max]="max ?? null" [attr.step]="step ?? null">
+  <small *ngIf="helper">{{ helper }}</small>
+</label>

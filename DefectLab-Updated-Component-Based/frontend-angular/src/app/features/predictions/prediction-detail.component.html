@@ -1,0 +1,42 @@
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header dl-detail-header-grid">
+    <nav class="dl-breadcrumb">
+      <a (click)="back()">Predictions</a>
+      <ui-icon name="chevron-right" [size]="14"></ui-icon>
+    </nav>
+    <h2>{{ run ? ('Run #' + run.id) : 'Prediction run' }}</h2>
+    <div class="dl-actions" *ngIf="run as item">
+      <ui-button *ngIf="item.predictionFileAvailable" variant="ghost" icon="download"
+                 [href]="api.predictionDownloadUrl(item.id)">Download labeled CSV</ui-button>
+      <ui-button icon="download" [href]="api.reportDownloadUrl(item.id)">Download PDF</ui-button>
+    </div>
+  </div>
+
+  <ui-state *ngIf="loading" kind="loading" message="Loading prediction run…"></ui-state>
+  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+
+  <ui-detail-fields *ngIf="run" [fields]="runFields"></ui-detail-fields>
+
+  <div class="dl-detail-section" *ngIf="run?.evaluation as metrics">
+    <h3>Evaluation</h3>
+    <div class="dl-grid dl-grid-4">
+      <ui-metric-card label="Accuracy" [value]="metric(metrics.accuracy)"></ui-metric-card>
+      <ui-metric-card label="Precision" [value]="metric(metrics.precision)"></ui-metric-card>
+      <ui-metric-card label="Recall" [value]="metric(metrics.recall)"></ui-metric-card>
+      <ui-metric-card label="F1-score" [value]="metric(metrics.f1)"></ui-metric-card>
+      <ui-metric-card label="ROC-AUC" [value]="metric(metrics.rocAuc)"></ui-metric-card>
+    </div>
+  </div>
+
+  <div class="dl-detail-section" *ngIf="run">
+    <h3>Predicted classes</h3>
+    <ui-table *ngIf="run.predictions.length; else emptyPredictions"
+              [columns]="predictionDetailColumns" [rows]="run.predictions"
+              trackByKey="classIdentifier" scrollClass="dl-prediction-detail-scroll">
+      <ng-template uiTableCell="defectProbability" let-row>{{ row.defectProbability | number:'1.4-4' }}</ng-template>
+      <ng-template uiTableCell="predictedLabel" let-row>{{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}</ng-template>
+      <ng-template uiTableCell="actualLabel" let-row>{{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}</ng-template>
+    </ui-table>
+    <ng-template #emptyPredictions><ui-state kind="empty" message="No predictions available."></ui-state></ng-template>
+  </div>
+</ui-card>

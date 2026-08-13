@@ -1,12 +1,9 @@
-import { Component, OnInit } from '@angular/core';
-import {
-  AggregateMetricComparisonRow,
-  DatasetFamily,
-  InstanceMetricComparisonRow,
-  MetricComparisonDetail,
-  MetricComparisonPair
-} from '../../core/models/defectlab.model';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Router } from '@angular/router';
+import { MetricComparisonPair } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
+import { SelectOption } from '../../shared/ui-select/ui-select.model';
+import { TableColumn } from '../../shared/ui-table/ui-table.model';
 
 @Component({
   selector: 'app-comparisons',
@@ -15,105 +12,83 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 })
 export class ComparisonsComponent implements OnInit {
   pairs: MetricComparisonPair[] = [];
-  selectedFamily: DatasetFamily | null = null;
-  selectedPairKey: string | null = null;
-  selected: MetricComparisonDetail | null = null;
-  busy = false;
   error = '';
+  runningKey: string | null = null;
+  search = '';
+  searchOpen = false;
+  familyFilter = '';
 
-  constructor(readonly api: DefectLabApiService) {}
+  readonly familyFilterOptions: SelectOption[] = [
+    { value: '', label: 'All families' },
+    { value: 'PROMISE', label: 'PROMISE' },
+    { value: 'AEEEM', label: 'AEEEM' }
+  ];
 
-  ngOnInit(): void {
-    this.loadPairs();
+  @ViewChild('searchInput') private readonly searchInputRef?: ElementRef<HTMLInputElement>;
+
+  readonly columns: TableColumn[] = [
+    { key: 'pair', label: 'Dataset pair', sticky: 'start' },
+    { key: 'family', label: 'Metric family' },
+    { key: 'status', label: 'Status' },
+    { key: 'actions', label: 'Actions', sticky: 'end', className: 'dl-col-actions', width: '8%' }
+  ];
+
+  constructor(
+    readonly api: DefectLabApiService,
+    private readonly router: Router
+  ) {}
+
+  ngOnInit(): void { this.load(); }
+
+  get filtered(): MetricComparisonPair[] {
+    const query = this.search.trim().toLowerCase();
+    return this.pairs.filter(pair =>
+      (!query || pair.projectName.toLowerCase().includes(query)) &&
+      (!this.familyFilter || pair.datasetFamily === this.familyFilter));
   }
 
-  get aggregateRows(): AggregateMetricComparisonRow[] {
-    const result = this.selected?.result;
-    return result?.comparisonMode === 'AGGREGATE' ? result.metrics : [];
-  }
-
-  get filteredPairs(): MetricComparisonPair[] {
-    return this.selectedFamily
-      ? this.pairs.filter(pair => pair.datasetFamily === this.selectedFamily)
-      : [];
-  }
-
-  get instanceRows(): InstanceMetricComparisonRow[] {
-    const result = this.selected?.result;
-    return result?.comparisonMode === 'INSTANCE_WISE' ? result.comparisons : [];
-  }
-
-  get instanceMetricStats(): AggregateMetricComparisonRow[] {
-    const result = this.selected?.result;
-    return result?.comparisonMode === 'INSTANCE_WISE' ? result.metrics : [];
-  }
-
-  get matchedIdentifiers(): number {
-    const result = this.selected?.result;
-    return result?.comparisonMode === 'INSTANCE_WISE' ? result.matchedIdentifiers : 0;
-  }
-
-  get commonMetricCount(): number {
-    return this.selected?.result.commonNumericMetricCount ?? 0;
-  }
-
-  get manualOnlyCount(): number {
-    const result = this.selected?.result;
-    return result?.comparisonMode === 'INSTANCE_WISE' ? result.manualOnly.length : 0;
-  }
-
-  get predefinedOnlyCount(): number {
-    const result = this.selected?.result;
-    return result?.comparisonMode === 'INSTANCE_WISE' ? result.predefinedOnly.length : 0;
-  }
-
-  loadPairs(): void {
+  load(): void {
     this.error = '';
     this.api.metricComparisonPairs().subscribe({
       next: rows => this.pairs = rows,
-      error: error => {
-        this.error = error?.error?.error ?? 'Could not load comparable datasets.';
-      }
+      error: error => this.error = error?.error?.error ?? 'Could not load comparable datasets.'
     });
   }
 
-  familyChanged(): void {
-    this.selectedPairKey = null;
-    this.selected = null;
-    this.error = '';
+  openSearch(): void {
+    this.searchOpen = true;
+    setTimeout(() => this.searchInputRef?.nativeElement.focus());
   }
 
-  compareSelectedPair(): void {
-    this.selected = null;
-    this.error = '';
-    const pair = this.pairs.find(item => item.key === this.selectedPairKey);
-    if (!pair) return;
+  closeSearch(): void {
+    this.searchOpen = false;
+    this.search = '';
+  }
 
-    this.busy = true;
+  onFamilyFilterChange(value: string | number | null): void {
+    this.familyFilter = (value as string) ?? '';
+  }
+
+  view(pair: MetricComparisonPair): void {
+    if (pair.comparisonId) this.router.navigate(['/metric-comparisons', pair.comparisonId]);
+  }
+
+  run(pair: MetricComparisonPair): void {
+    if (this.runningKey) return;
+    this.runningKey = pair.key;
+    this.error = '';
     this.api.runMetricComparison({
       manualDatasetId: pair.manualDatasetId,
       predefinedDatasetId: pair.predefinedDatasetId
     }).subscribe({
       next: detail => {
-        this.selected = detail;
-        pair.cached = true;
-        pair.comparisonId = detail.id;
-        this.busy = false;
+        this.runningKey = null;
+        this.router.navigate(['/metric-comparisons', detail.id]);
       },
       error: error => {
+        this.runningKey = null;
         this.error = error?.error?.error ?? 'Metric comparison failed.';
-        this.busy = false;
       }
     });
-  }
-
-  number(value: number | null | undefined): string {
-    return value === null || value === undefined || !Number.isFinite(value)
-      ? '—' : value.toFixed(4);
-  }
-
-  percentage(value: number | null | undefined): string {
-    return value === null || value === undefined || !Number.isFinite(value)
-      ? '—' : `${value.toFixed(2)}%`;
   }
 }

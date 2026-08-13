@@ -1,6 +1,7 @@
 package org.metrics.defectlab.dataset.api;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,6 +20,8 @@ import org.metrics.defectlab.dataset.domain.DatasetQuality;
 import org.metrics.defectlab.dataset.domain.DatasetTable;
 import org.metrics.defectlab.dataset.domain.FeatureProfile;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
+import org.metrics.defectlab.dataset.infrastructure.DatasetFileWriter;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -124,18 +127,37 @@ public class DatasetController {
 
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> download(
-            @PathVariable("id") Long id, HttpServletRequest request) {
+            @PathVariable("id") Long id,
+            @RequestParam(value = "format", required = false) String format,
+            HttpServletRequest request) throws IOException {
         MetricDataset dataset = datasetService.require(
                 currentUser.requireUserId(request), id);
         Path file = Paths.get(dataset.getMetricsFilePath());
         if (!Files.exists(file)) {
             return ResponseEntity.notFound().build();
         }
+        String storedExtension = file.getFileName().toString().toLowerCase(Locale.ROOT)
+                .endsWith(".arff") ? "arff" : "csv";
+        String requestedFormat = parseDownloadFormat(format, storedExtension);
+
+        if (requestedFormat.equals(storedExtension)) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + downloadName(dataset, storedExtension) + "\"")
+                    .body(new FileSystemResource(file.toFile()));
+        }
+
+        DatasetTable table = datasetService.load(dataset);
+        String converted = "arff".equals(requestedFormat)
+                ? DatasetFileWriter.toArff(table, DatasetFileWriter.sanitizedRelationName(
+                        dataset.getProjectName(), dataset.getProjectVersion()))
+                : DatasetFileWriter.toCsv(table);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + downloadName(dataset, file) + "\"")
-                .body(new FileSystemResource(file.toFile()));
+                        "attachment; filename=\"" + downloadName(dataset, requestedFormat) + "\"")
+                .body(new ByteArrayResource(converted.getBytes(StandardCharsets.UTF_8)));
     }
 
     @DeleteMapping("/{id}")
@@ -162,11 +184,20 @@ public class DatasetController {
         }
     }
 
-    private static String downloadName(MetricDataset dataset, Path file) {
-        String extension = file.getFileName().toString().toLowerCase(Locale.ROOT)
-                .endsWith(".arff") ? ".arff" : ".csv";
+    private static String parseDownloadFormat(String requested, String fallback) {
+        if (requested == null || requested.isBlank()) {
+            return fallback;
+        }
+        String normalized = requested.trim().toLowerCase(Locale.ROOT);
+        if (!normalized.equals("csv") && !normalized.equals("arff")) {
+            throw new IllegalArgumentException("The download format must be csv or arff.");
+        }
+        return normalized;
+    }
+
+    private static String downloadName(MetricDataset dataset, String extension) {
         return (dataset.getProjectName() + "-"
                 + (dataset.getProjectVersion() == null ? "metrics" : dataset.getProjectVersion()))
-                .replaceAll("[^A-Za-z0-9._-]", "_") + extension;
+                .replaceAll("[^A-Za-z0-9._-]", "_") + "." + extension;
     }
 }

@@ -34,34 +34,29 @@
                 (click)="setMode('register')">Create account</button>
       </div>
 
-      <div class="dl-card">
-        <div class="dl-card-head">
-          <div>
-            <h2>{{ mode === 'forgot'
-                    ? 'Reset your password'
-                    : (mode === 'login' ? 'Sign in to DefectLab' : 'Create your account') }}</h2>
-            <p>{{ mode === 'forgot'
-                ? (forgotStep === 'email'
-                    ? 'Enter the email address on your account.'
-                    : 'Choose a new password of 8-12 characters.')
-                : (mode === 'login'
-                    ? 'Your datasets and runs are scoped to your account.'
-                    : 'Use 8-12 characters for the password.') }}</p>
-          </div>
-        </div>
+      <ui-card
+        [heading]="mode === 'forgot'
+          ? 'Reset your password'
+          : (mode === 'login' ? 'Sign in to DefectLab' : 'Create your account')"
+        [subtitle]="mode === 'forgot'
+          ? (forgotStep === 'email'
+              ? 'Enter the email address on your account.'
+              : 'Choose a new password of 8-12 characters.')
+          : (mode === 'login'
+              ? 'Your datasets and runs are scoped to your account.'
+              : 'Use 8-12 characters for the password.')">
 
         <form (ngSubmit)="submit()" class="dl-form-stack">
-          <label class="dl-field" *ngIf="mode === 'register'">
-            <span>Full name</span>
-            <input type="text" name="name" autocomplete="name"
-                   maxlength="100" [(ngModel)]="name" [disabled]="loading">
-          </label>
+          <ui-input *ngIf="mode === 'register'" label="Full name" autocomplete="name"
+                     [maxlength]="100" [disabled]="loading"
+                     [value]="name" (valueChange)="name = $event">
+          </ui-input>
 
-          <label class="dl-field" *ngIf="mode !== 'forgot' || forgotStep === 'email'">
-            <span>Email</span>
-            <input type="email" name="email" autocomplete="email"
-                   maxlength="150" [(ngModel)]="email" [disabled]="loading">
-          </label>
+          <ui-input *ngIf="mode !== 'forgot' || forgotStep === 'email'"
+                     label="Email" type="email" autocomplete="email"
+                     [maxlength]="150" [disabled]="loading"
+                     [value]="email" (valueChange)="email = $event">
+          </ui-input>
 
           <label class="dl-field" *ngIf="mode !== 'forgot' || forgotStep === 'password'">
             <span>{{ mode === 'forgot' ? 'New password' : 'Password' }}</span>
@@ -99,7 +94,7 @@
             </button>
           </div>
         </form>
-      </div>
+      </ui-card>
     </div>
   </section>
 </div>

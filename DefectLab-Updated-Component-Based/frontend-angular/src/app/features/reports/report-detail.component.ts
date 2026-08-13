@@ -8,6 +8,8 @@ import {
   PredictionRunSummary
 } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
+import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
+import { TableColumn } from '../../shared/ui-table/ui-table.model';
 
 interface MatchedPredictionRow {
   identifier: string;
@@ -33,6 +35,31 @@ export class ReportDetailComponent implements OnInit {
   matchedRows: MatchedPredictionRow[] = [];
   loading = true;
   error = '';
+
+  readonly manualColumns: TableColumn[] = [
+    { key: 'riskRank', label: 'Rank', sticky: 'start', width: '10%' },
+    { key: 'classIdentifier', label: 'File / identifier', className: 'dl-mono', width: '46%' },
+    { key: 'defectProbability', label: 'Probability', width: '22%' },
+    { key: 'predictedLabel', label: 'Model prediction', sticky: 'end', width: '22%' }
+  ];
+
+  readonly predefinedColumns: TableColumn[] = [
+    { key: 'riskRank', label: 'Rank', sticky: 'start', width: '8%' },
+    { key: 'classIdentifier', label: 'File / identifier', className: 'dl-mono', width: '38%' },
+    { key: 'defectProbability', label: 'Probability', width: '18%' },
+    { key: 'predictedLabel', label: 'Model prediction', width: '18%' },
+    { key: 'actualLabel', label: 'Actual', sticky: 'end', width: '18%' }
+  ];
+
+  readonly matchedColumns: TableColumn[] = [
+    { key: 'identifier', label: 'File / identifier', sticky: 'start', className: 'dl-mono', width: '26%' },
+    { key: 'manualPrediction', label: 'MANUAL prediction', width: '13%' },
+    { key: 'predefinedPrediction', label: 'PREDEFINED prediction', width: '13%' },
+    { key: 'actualLabel', label: 'Actual label', width: '12%' },
+    { key: 'manualResult', label: 'MANUAL result', width: '12%' },
+    { key: 'predefinedResult', label: 'PREDEFINED result', width: '12%' },
+    { key: 'modelsAgree', label: 'Models agree', sticky: 'end', width: '12%' }
+  ];
 
   constructor(
     readonly api: DefectLabApiService,
@@ -75,6 +102,20 @@ export class ReportDetailComponent implements OnInit {
 
   get modelsAgreeCount(): number {
     return this.matchedRows.filter(row => row.modelsAgree).length;
+  }
+
+  get settingsFields(): DetailField[] {
+    const run = this.group?.runs[0];
+    if (!run) return [];
+    return [
+      { label: 'Source dataset', value: run.sourceDataset.displayName },
+      { label: 'Dataset family', value: run.modelConfig.datasetFamily },
+      { label: 'Model', value: this.modelSetting(run) },
+      { label: 'Threshold', value: run.modelConfig.threshold },
+      { label: 'Log transform', value: this.enabled(run.modelConfig.logTransform) },
+      { label: 'CORAL alignment', value: this.enabled(run.modelConfig.coral) },
+      { label: 'Random seed', value: run.modelConfig.seed }
+    ];
   }
 
   load(key: string): void {

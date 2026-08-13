@@ -12,18 +12,14 @@
 
   <ui-card heading="Change password">
     <form (ngSubmit)="submit()" class="dl-form-stack">
-      <label class="dl-field">
-        <span>Current password</span>
-        <input type="password" autocomplete="current-password"
-               [(ngModel)]="currentPassword" name="currentPassword" [disabled]="saving">
-      </label>
-      <label class="dl-field">
-        <span>New password</span>
-        <input type="password" autocomplete="new-password"
-               minlength="8" maxlength="72"
-               [(ngModel)]="newPassword" name="newPassword" [disabled]="saving">
-        <small>8–72 characters.</small>
-      </label>
+      <ui-input label="Current password" type="password" autocomplete="current-password"
+                 [disabled]="saving"
+                 [value]="currentPassword" (valueChange)="currentPassword = $event">
+      </ui-input>
+      <ui-input label="New password" type="password" autocomplete="new-password"
+                 [minlength]="8" [maxlength]="12" [disabled]="saving" helper="8–12 characters."
+                 [value]="newPassword" (valueChange)="newPassword = $event">
+      </ui-input>
 
       <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
       <ui-state *ngIf="saved" kind="success" message="Password updated."></ui-state>

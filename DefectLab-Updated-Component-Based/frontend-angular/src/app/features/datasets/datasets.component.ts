@@ -1,11 +1,8 @@
-import { Component, OnInit } from '@angular/core';
-import {
-  DatasetFamily,
-  DatasetType,
-  DatasetPreview,
-  DatasetSummary
-} from '../../core/models/defectlab.model';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { DatasetFamily, DatasetSummary } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
+import { SelectOption } from '../../shared/ui-select/ui-select.model';
+import { TableColumn } from '../../shared/ui-table/ui-table.model';
 
 @Component({
   selector: 'app-datasets',
@@ -17,22 +14,36 @@ export class DatasetsComponent implements OnInit {
   loading = true;
   loadError = '';
   search = '';
+  searchOpen = false;
   familyFilter = '';
   originFilter = '';
 
-  projectName = '';
-  projectVersion = '';
-  family: DatasetFamily = 'PROMISE';
-  origin: DatasetType = 'PREDEFINED';
-  file: File | null = null;
-  uploading = false;
-  uploadError = '';
-  uploadSuccess = '';
+  readonly familyFilterOptions: SelectOption[] = [
+    { value: '', label: 'All families' },
+    { value: 'PROMISE', label: 'PROMISE' },
+    { value: 'AEEEM', label: 'AEEEM' }
+  ];
 
-  previewData: DatasetPreview | null = null;
-  previewName = '';
+  readonly originFilterOptions: SelectOption[] = [
+    { value: '', label: 'All origins' },
+    { value: 'PREDEFINED', label: 'Predefined dataset' },
+    { value: 'MANUAL', label: 'Manually extracted' }
+  ];
 
-  constructor(readonly api: DefectLabApiService) {}
+  @ViewChild('searchInput') private readonly searchInputRef?: ElementRef<HTMLInputElement>;
+
+  readonly columns: TableColumn[] = [
+    { key: 'projectName', label: 'Project Name', sticky: 'start', width: '28%' },
+    { key: 'datasetFamily', label: 'Metrics Family', width: '10%' },
+    { key: 'datasetType', label: 'Data Source', width: '14%' },
+    { key: 'hasActualLabel', label: 'Labeled', width: '10%' },
+    { key: 'totalFiles', label: 'Instances', align: 'right', width: '8%' },
+    { key: 'totalMetrics', label: 'Features', align: 'right', width: '9%' },
+    { key: 'createdAt', label: 'Created At', width: '13%' },
+    { key: 'actions', label: 'Actions', sticky: 'end', className: 'dl-col-actions', width: '8%' }
+  ];
+
+  constructor(private readonly api: DefectLabApiService) {}
 
   ngOnInit(): void { this.load(); }
 
@@ -59,52 +70,25 @@ export class DatasetsComponent implements OnInit {
     });
   }
 
-  selectFile(event: Event): void {
-    this.file = (event.target as HTMLInputElement).files?.[0] ?? null;
+  openSearch(): void {
+    this.searchOpen = true;
+    setTimeout(() => this.searchInputRef?.nativeElement.focus());
   }
 
-  upload(): void {
-    if (!this.file) return;
-    this.uploading = true;
-    this.uploadError = '';
-    this.uploadSuccess = '';
-    this.api.uploadDataset({
-      file: this.file,
-      projectName: this.projectName,
-      projectVersion: this.projectVersion,
-      family: this.family,
-      type: this.origin
-    }).subscribe({
-      next: dataset => {
-        this.uploadSuccess = `${dataset.displayName} stored successfully.`;
-        this.uploading = false;
-        this.file = null;
-        this.load();
-      },
-      error: error => {
-        this.uploadError = error?.error?.error ?? 'Dataset upload failed.';
-        this.uploading = false;
-      }
-    });
-  }
-
-  preview(item: DatasetSummary): void {
-    this.previewName = item.displayName;
-    this.api.previewDataset(item.id).subscribe({
-      next: data => this.previewData = data,
-      error: error => this.loadError = error?.error?.error ?? 'Preview failed.'
-    });
-  }
-
-  remove(item: DatasetSummary): void {
-    if (!window.confirm(`Delete ${item.displayName}?`)) return;
-    this.api.deleteDataset(item.id).subscribe({
-      next: () => this.load(),
-      error: error => this.loadError = error?.error?.error ?? 'Dataset could not be deleted.'
-    });
+  closeSearch(): void {
+    this.searchOpen = false;
+    this.search = '';
   }
 
   countFamily(family: DatasetFamily): number {
     return this.datasets.filter(item => item.datasetFamily === family).length;
+  }
+
+  onFamilyFilterChange(value: string | number | null): void {
+    this.familyFilter = (value as string) ?? '';
+  }
+
+  onOriginFilterChange(value: string | number | null): void {
+    this.originFilter = (value as string) ?? '';
   }
 }

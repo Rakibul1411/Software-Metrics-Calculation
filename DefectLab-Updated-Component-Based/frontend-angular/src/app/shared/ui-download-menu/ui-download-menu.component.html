@@ -1,0 +1,10 @@
+<div class="dl-dropdown">
+  <ui-button [variant]="variant" [size]="size" icon="download"
+             [attr.aria-expanded]="open" (pressed)="open = !open">
+    {{ label }}
+  </ui-button>
+  <div class="dl-dropdown-menu" *ngIf="open">
+    <a class="dl-dropdown-item" [href]="csvUrl" (click)="open = false">CSV</a>
+    <a class="dl-dropdown-item" [href]="arffUrl" (click)="open = false">ARFF</a>
+  </div>
+</div>

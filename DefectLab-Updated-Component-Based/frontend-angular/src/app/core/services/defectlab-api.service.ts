@@ -118,8 +118,8 @@ export class DefectLabApiService {
     return this.http.delete(`${this.api}/datasets/${id}`, this.options);
   }
 
-  datasetDownloadUrl(id: number): string {
-    return `${this.api}/datasets/${id}/download`;
+  datasetDownloadUrl(id: number, format?: 'csv' | 'arff'): string {
+    return `${this.api}/datasets/${id}/download` + (format ? `?format=${format}` : '');
   }
 
   listPredictionRuns(): Observable<PredictionRunSummary[]> {

@@ -22,7 +22,8 @@ export class AccountComponent {
   ) {}
 
   get canSubmit(): boolean {
-    return this.currentPassword.length > 0 && this.newPassword.length >= 8;
+    return this.currentPassword.length > 0
+      && this.newPassword.length >= 8 && this.newPassword.length <= 12;
   }
 
   submit(): void {

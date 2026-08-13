@@ -1,124 +1,64 @@
-<section class="dl-grid dl-grid-3">
-  <ui-metric-card variant="stat" label="Visible datasets" [value]="datasets.length"></ui-metric-card>
-  <ui-metric-card variant="stat" label="PROMISE" [value]="countFamily('PROMISE')"></ui-metric-card>
-  <ui-metric-card variant="stat" label="AEEEM" [value]="countFamily('AEEEM')"></ui-metric-card>
-</section>
-
-<ui-card heading="Add a metrics dataset">
-    <form class="dl-form-stack" (ngSubmit)="upload()">
-      <div class="dl-form-row">
-        <label class="dl-field">
-          <span>Project name *</span>
-          <input [(ngModel)]="projectName" name="projectName"
-                 required placeholder="Example: Ant">
-        </label>
-        <label class="dl-field">
-          <span>Project version *</span>
-          <input [(ngModel)]="projectVersion" name="projectVersion"
-                 required placeholder="Example: 1.7">
-        </label>
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header">
+    <div class="dl-detail-title-row">
+      <div class="dl-heading-search">
+        <h2>Dataset Catalog</h2>
+        <button *ngIf="!searchOpen" type="button" class="dl-icon-button" title="Search datasets"
+                aria-label="Search datasets" (click)="openSearch()">
+          <ui-icon name="search" [size]="16"></ui-icon>
+        </button>
+        <input *ngIf="searchOpen" #searchInput class="dl-inline-search" type="text"
+               placeholder="Project or version" [(ngModel)]="search" name="search"
+               (blur)="closeSearch()">
       </div>
-      <div class="dl-form-row">
-        <label class="dl-field">
-          <span>Family</span>
-          <select [(ngModel)]="family" name="family">
-            <option value="PROMISE">PROMISE</option>
-            <option value="AEEEM">AEEEM</option>
-          </select>
-        </label>
-        <label class="dl-field">
-          <span>Origin</span>
-          <select [(ngModel)]="origin" name="origin">
-            <option value="PREDEFINED">Predefined / published</option>
-            <option value="MANUAL">Manual extraction</option>
-          </select>
-        </label>
+      <div class="dl-actions">
+        <ui-button icon="plus" link="/datasets/new">Add Dataset</ui-button>
       </div>
-      <ui-file-picker accept=".csv,.arff"
-                      [label]="file?.name || 'Choose CSV or ARFF'"
-                      helper="Accepted formats: CSV and ARFF"
-                      (fileChange)="selectFile($event)">
-      </ui-file-picker>
-      <ui-state *ngIf="uploadError" kind="error" [message]="uploadError"></ui-state>
-      <ui-state *ngIf="uploadSuccess" kind="success" [message]="uploadSuccess"></ui-state>
-      <ui-button type="submit" [disabled]="uploading || !file || !projectName.trim() || !projectVersion.trim()" [loading]="uploading">
-        {{ uploading ? 'Validating and storing…' : 'Store dataset' }}
-      </ui-button>
-  </form>
-</ui-card>
-
-<ui-card heading="Stored metric datasets">
-  <ng-container actions>
-    <ui-button variant="ghost" size="sm" icon="refresh" (pressed)="load()">Refresh</ui-button>
-  </ng-container>
-  <div class="dl-form-row dl-dataset-filter-row">
-    <label class="dl-field">
-      <span>Search</span>
-      <input [(ngModel)]="search" placeholder="Project or version">
-    </label>
-    <label class="dl-field">
-      <span>Family</span>
-      <select [(ngModel)]="familyFilter">
-        <option value="">All families</option>
-        <option value="PROMISE">PROMISE</option>
-        <option value="AEEEM">AEEEM</option>
-      </select>
-    </label>
-    <label class="dl-field">
-      <span>Origin</span>
-      <select [(ngModel)]="originFilter">
-        <option value="">All origins</option>
-        <option value="PREDEFINED">Predefined</option>
-        <option value="MANUAL">Manual extracted</option>
-      </select>
-    </label>
+    </div>
   </div>
-  <ui-state *ngIf="loading" kind="loading" message="Loading datasets…"></ui-state>
-  <ui-state *ngIf="loadError" kind="error" [message]="loadError"></ui-state>
-  <div class="dl-table-wrap dl-dataset-storage-scroll"
-       *ngIf="filtered.length; else empty">
-    <table class="dl-table">
-      <thead>
-        <tr><th>Project</th><th>Family</th><th>Origin</th><th>Label</th>
-          <th class="dl-num">Rows</th><th class="dl-num">Features</th>
-          <th>Created</th><th class="dl-col-actions">Actions</th></tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of filtered">
-          <td><strong>{{ item.projectName }}</strong><br><small>{{ item.projectVersion || '—' }}</small></td>
-          <td><ui-badge tone="blue">{{ item.datasetFamily }}</ui-badge></td>
-          <td>{{ item.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' }}</td>
-          <td>
-            <ui-badge [tone]="item.hasActualLabel ? 'green' : 'amber'">
-              {{ item.hasActualLabel ? 'Labeled' : 'Unlabeled' }}
-            </ui-badge>
-          </td>
-          <td class="dl-num">{{ item.totalFiles | number }}</td>
-          <td class="dl-num">{{ item.totalMetrics }}</td>
-          <td>{{ item.createdAt | date:'mediumDate' }}</td>
-          <td class="dl-col-actions">
-            <div class="dl-actions">
-              <ui-button variant="ghost" size="sm" (pressed)="preview(item)">Preview</ui-button>
-              <ui-button variant="ghost" size="sm" icon="download" [href]="api.datasetDownloadUrl(item.id)">CSV/ARFF</ui-button>
-              <ui-button *ngIf="!item.systemDataset" variant="danger" size="sm"
-                         icon="trash" (pressed)="remove(item)">Delete</ui-button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  <ng-template #empty><ui-state kind="empty" message="No matching datasets."></ui-state></ng-template>
-</ui-card>
 
-<ui-card heading="{{ previewName }} preview" *ngIf="previewData as view">
-  <ng-container actions>
-    <ui-button variant="ghost" size="sm" icon="close" (pressed)="previewData = null">Close</ui-button>
-  </ng-container>
-  <div class="dl-table-wrap dl-scroll-y">
-    <table class="dl-table">
-      <thead><tr><th *ngFor="let header of view.headers">{{ header }}</th></tr></thead>
-      <tbody><tr *ngFor="let row of view.rows"><td class="dl-mono" *ngFor="let cell of row">{{ cell }}</td></tr></tbody>
-    </table>
+  <div class="dl-form-row dl-form-row-3">
+    <ui-select label="Metric family" [options]="familyFilterOptions"
+               [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
+    </ui-select>
+    <ui-select label="Data source" [options]="originFilterOptions"
+               [value]="originFilter" (valueChange)="onOriginFilterChange($event)">
+    </ui-select>
+  </div>
+
+  <section class="dl-grid dl-grid-3">
+    <ui-metric-card variant="stat" label="Total datasets" [value]="datasets.length"></ui-metric-card>
+    <ui-metric-card variant="stat" label="PROMISE datasets" [value]="countFamily('PROMISE')"></ui-metric-card>
+    <ui-metric-card variant="stat" label="AEEEM datasets" [value]="countFamily('AEEEM')"></ui-metric-card>
+  </section>
+
+  <div class="dl-detail-section">
+    <ui-state *ngIf="loading" kind="loading" message="Loading datasets…"></ui-state>
+    <ui-state *ngIf="loadError" kind="error" [message]="loadError"></ui-state>
+    <ui-table *ngIf="filtered.length; else empty"
+              [columns]="columns" [rows]="filtered" trackByKey="id"
+              scrollClass="dl-dataset-storage-scroll">
+      <ng-template uiTableCell="projectName" let-row>
+        <strong>{{ row.projectName }}</strong><br><small>{{ row.projectVersion || '—' }}</small>
+      </ng-template>
+      <ng-template uiTableCell="datasetFamily" let-row>
+        <ui-badge tone="blue">{{ row.datasetFamily }}</ui-badge>
+      </ng-template>
+      <ng-template uiTableCell="datasetType" let-row>
+        {{ row.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' }}
+      </ng-template>
+      <ng-template uiTableCell="hasActualLabel" let-row>
+        <ui-badge [tone]="row.hasActualLabel ? 'green' : 'amber'">
+          {{ row.hasActualLabel ? 'Labeled' : 'Unlabeled' }}
+        </ui-badge>
+      </ng-template>
+      <ng-template uiTableCell="totalFiles" let-row>{{ row.totalFiles | number }}</ng-template>
+      <ng-template uiTableCell="createdAt" let-row>{{ row.createdAt | date:'mediumDate' }}</ng-template>
+      <ng-template uiTableCell="actions" let-row>
+        <ui-button variant="ghost" size="sm" icon="view" [link]="['/datasets', row.id]"
+                   title="Preview dataset" ariaLabel="Preview dataset"></ui-button>
+      </ng-template>
+    </ui-table>
+    <ng-template #empty><ui-state kind="empty" message="No matching datasets."></ui-state></ng-template>
   </div>
 </ui-card>

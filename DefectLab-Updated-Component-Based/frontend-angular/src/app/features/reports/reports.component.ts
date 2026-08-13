@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PredictionRunGroup } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
+import { TableColumn } from '../../shared/ui-table/ui-table.model';
 
 @Component({
   selector: 'app-reports',
@@ -11,6 +12,16 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 export class ReportsComponent implements OnInit {
   groups: PredictionRunGroup[] = [];
   error = '';
+
+  readonly columns: TableColumn[] = [
+    { key: 'group', label: 'Group', sticky: 'start', className: 'dl-mono' },
+    { key: 'source', label: 'Source' },
+    { key: 'targets', label: 'Targets' },
+    { key: 'model', label: 'Model' },
+    { key: 'runs', label: 'Runs', align: 'right' },
+    { key: 'created', label: 'Created at' },
+    { key: 'view', label: 'View', sticky: 'end', className: 'dl-col-actions', width: '8%' }
+  ];
 
   constructor(
     readonly api: DefectLabApiService,

@@ -1,0 +1,14 @@
+<div class="dl-field">
+  <span *ngIf="fieldLabel">{{ fieldLabel }}<ng-container *ngIf="required"> *</ng-container></span>
+  <label class="dl-file-panel" [class.dl-file-panel-active]="dragActive"
+         (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+    <input #fileInput class="dl-sr-only" type="file" [attr.accept]="accept"
+           (change)="fileChange.emit($event)">
+    <ui-icon name="upload" [size]="24"></ui-icon>
+    <span class="dl-file-copy">
+      <strong>{{ label }}</strong>
+      <span class="dl-file-browse">or {{ buttonLabel }}</span>
+      <small *ngIf="helper">{{ helper }}</small>
+    </span>
+  </label>
+</div>

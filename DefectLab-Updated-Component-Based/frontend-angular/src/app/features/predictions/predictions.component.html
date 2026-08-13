@@ -1,161 +1,43 @@
-<section class="dl-grid dl-grid-2 dl-prediction-layout">
-  <ui-card heading="Predict one or two targets">
-
-    <form class="dl-form-stack dl-prediction-form" (ngSubmit)="run()">
-      <label class="dl-field">
-        <span>Dataset metric type</span>
-        <select [(ngModel)]="datasetFamily" name="datasetFamily"
-                (ngModelChange)="datasetFamilyChanged()">
-          <option value="PROMISE">PROMISE · 20 metrics</option>
-          <option value="AEEEM">AEEEM · 56 metrics</option>
-        </select>
-      </label>
-
-      <label class="dl-field">
-        <span>Labeled source dataset *</span>
-        <select [(ngModel)]="sourceId" name="sourceId"
-                (ngModelChange)="sourceChanged()">
-          <option [ngValue]="null">Choose source</option>
-          <option *ngFor="let item of sourceOptions" [ngValue]="item.id">
-            {{ item.displayName }} · {{ item.datasetFamily }} · {{ item.datasetType }}
-            · LABELED · {{ datasetScope(item) }}
-          </option>
-        </select>
-      </label>
-
-      <label class="dl-field">
-        <span>MANUAL target (optional)</span>
-        <select [(ngModel)]="manualId" name="manualId"
-                (ngModelChange)="manualChanged()">
-          <option [ngValue]="null">No manual target</option>
-          <option *ngFor="let item of manualOptions" [ngValue]="item.id">
-            {{ item.displayName }} · {{ item.datasetFamily }} · MANUAL
-            · {{ datasetScope(item) }}
-          </option>
-        </select>
-      </label>
-
-      <label class="dl-field">
-        <span>PREDEFINED target (optional)</span>
-        <select [(ngModel)]="predefinedId" name="predefinedId">
-          <option [ngValue]="null">No predefined target</option>
-          <option *ngFor="let item of predefinedOptions" [ngValue]="item.id">
-            {{ item.displayName }} · {{ item.datasetFamily }} · PREDEFINED
-            · {{ datasetScope(item) }}
-          </option>
-        </select>
-      </label>
-
-      <div class="dl-form-row">
-        <label class="dl-field"><span>Model</span>
-          <input type="text" value="K-Nearest Neighbors" disabled>
-        </label>
-        <label class="dl-field"><span>K</span>
-          <select [(ngModel)]="k" name="k">
-            <option *ngFor="let value of [1,2,3,4,5]" [ngValue]="value">
-              {{ value }}
-            </option>
-          </select>
-        </label>
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header">
+    <div class="dl-detail-title-row">
+      <div class="dl-heading-search">
+        <h2>Saved Prediction Runs</h2>
+        <button *ngIf="!searchOpen" type="button" class="dl-icon-button" title="Search prediction runs"
+                aria-label="Search prediction runs" (click)="openSearch()">
+          <ui-icon name="search" [size]="16"></ui-icon>
+        </button>
+        <input *ngIf="searchOpen" #searchInput class="dl-inline-search" type="text"
+               placeholder="Project name" [(ngModel)]="search" name="search"
+               (blur)="closeSearch()">
       </div>
-
-      <div class="dl-form-row">
-        <label class="dl-field"><span>Threshold</span>
-          <input type="number" min="0.05" max="0.95" step="0.05"
-                 [(ngModel)]="threshold" name="threshold">
-        </label>
+      <div class="dl-actions">
+        <ui-button icon="plus" link="/predictions/new">Run Prediction</ui-button>
       </div>
-
-      <div class="dl-choice-group dl-alignment-choice">
-        <label>
-          <input type="checkbox" [(ngModel)]="coral" name="coral">
-          <span>
-            <strong>Apply dataset alignment</strong>
-            <small>Use shallow CORAL to align source features with the target before training.</small>
-          </span>
-        </label>
-      </div>
-
-      <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
-      <ui-button type="submit" [disabled]="busy || !canRun()" [loading]="busy">
-        {{ busy ? 'Training and generating reports…' : 'Run prediction' }}
-      </ui-button>
-    </form>
-  </ui-card>
-
-  <ui-card heading="Output contract">
-    <div class="dl-step-overview">
-      <div class="dl-step"><span class="dl-step-order">M</span><div>
-        <strong>MANUAL</strong><p>Original metric columns plus predicted_label.</p>
-      </div></div>
-      <div class="dl-step"><span class="dl-step-order">P</span><div>
-        <strong>PREDEFINED</strong><p>PDF with accuracy, precision, recall, F1, ROC-AUC and confusion matrix.</p>
-      </div></div>
     </div>
-    <ui-state *ngIf="created" kind="success"
-              [message]="'Completed run IDs ' + created.runIds.join(', ') + (created.comparisonGroupId ? ' · group ' + created.comparisonGroupId : '')">
-    </ui-state>
-  </ui-card>
-</section>
-
-<ui-card heading="Saved prediction runs">
-  <ng-container actions>
-    <ui-button variant="ghost" size="sm" icon="refresh" (pressed)="load()">Refresh</ui-button>
-  </ng-container>
-  <div class="dl-table-wrap dl-prediction-runs-scroll"
-       *ngIf="runs.length; else emptyRuns">
-    <table class="dl-table">
-      <thead><tr><th>Run</th><th>Group</th><th>Target</th><th>Type</th>
-        <th>Model</th><th>Buggy</th><th>Created</th><th></th></tr></thead>
-      <tbody><tr *ngFor="let item of runs">
-        <td class="dl-mono">#{{ item.id }}</td>
-        <td class="dl-mono">{{ item.comparisonGroupId || '—' }}</td>
-        <td>{{ item.targetDataset.displayName }}</td>
-        <td>{{ item.targetDataset.datasetType }}</td>
-        <td>{{ item.modelConfig.modelName }} · {{ setting(item) }}</td>
-        <td class="dl-num">{{ item.summary.predictedBuggy }}</td>
-        <td>{{ item.createdAt | date:'medium' }}</td>
-        <td><ui-button variant="ghost" size="sm" (pressed)="open(item)">Inspect</ui-button></td>
-      </tr></tbody>
-    </table>
-  </div>
-  <ng-template #emptyRuns><ui-state kind="empty" message="No prediction runs yet."></ui-state></ng-template>
-</ui-card>
-
-<ui-card heading="Run #{{ run.id }} · {{ run.targetDataset.displayName }}" *ngIf="selectedRun as run">
-  <ng-container actions>
-    <ui-button *ngIf="run.predictionFileAvailable" variant="ghost" size="sm" icon="download" [href]="api.predictionDownloadUrl(run.id)">Download labeled CSV</ui-button>
-    <ui-button size="sm" icon="download" [href]="api.reportDownloadUrl(run.id)">Download PDF</ui-button>
-  </ng-container>
-
-  <div *ngIf="run.evaluation as metrics" class="dl-grid dl-grid-4">
-    <ui-metric-card label="Accuracy" [value]="metric(metrics.accuracy)"></ui-metric-card>
-    <ui-metric-card label="Precision" [value]="metric(metrics.precision)"></ui-metric-card>
-    <ui-metric-card label="Recall" [value]="metric(metrics.recall)"></ui-metric-card>
-    <ui-metric-card label="F1-score" [value]="metric(metrics.f1)"></ui-metric-card>
-    <ui-metric-card label="ROC-AUC" [value]="metric(metrics.rocAuc)"></ui-metric-card>
   </div>
 
-  <ui-state *ngIf="predictionLoading" kind="loading" message="Loading prediction details…"></ui-state>
-  <div class="dl-table-wrap dl-prediction-detail-scroll" *ngIf="predictions.length">
-    <table class="dl-table">
-      <thead><tr><th class="dl-num dl-col-rank">Rank</th>
-        <th class="dl-col-identifier">File / identifier</th>
-        <th class="dl-num dl-col-probability">Probability</th>
-        <th class="dl-prediction-status">Predicted</th>
-        <th class="dl-prediction-status"
-            *ngIf="run.targetDataset.datasetType === 'PREDEFINED'">Actual</th></tr></thead>
-      <tbody><tr *ngFor="let row of predictions">
-        <td class="dl-num dl-col-rank">{{ row.riskRank }}</td>
-        <td class="dl-mono dl-col-identifier">{{ row.classIdentifier }}</td>
-        <td class="dl-num dl-col-probability">{{ row.defectProbability | number:'1.4-4' }}</td>
-        <td class="dl-prediction-status">
-          {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}</td>
-        <td class="dl-prediction-status"
-            *ngIf="run.targetDataset.datasetType === 'PREDEFINED'">
-          {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
-        </td>
-      </tr></tbody>
-    </table>
+  <div>
+    <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+    <ui-table *ngIf="filtered.length; else emptyRuns"
+              [columns]="runsColumns" [rows]="filtered" trackByKey="id"
+              scrollClass="dl-prediction-runs-scroll">
+      <ng-template uiTableCell="run" let-row>#{{ row.id }}</ng-template>
+      <ng-template uiTableCell="group" let-row>{{ row.comparisonGroupId || '—' }}</ng-template>
+      <ng-template uiTableCell="target" let-row>{{ row.targetDataset.displayName }}</ng-template>
+      <ng-template uiTableCell="type" let-row>
+        {{ row.targetDataset.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' }}
+      </ng-template>
+      <ng-template uiTableCell="model" let-row>{{ row.modelConfig.modelName }} · {{ setting(row) }}</ng-template>
+      <ng-template uiTableCell="buggy" let-row>{{ row.summary.predictedBuggy }}</ng-template>
+      <ng-template uiTableCell="created" let-row>{{ row.createdAt | date:'medium' }}</ng-template>
+      <ng-template uiTableCell="inspect" let-row>
+        <ui-button variant="ghost" size="sm" icon="view" [link]="['/predictions', row.id]"
+                   title="Inspect" ariaLabel="Inspect run"></ui-button>
+      </ng-template>
+    </ui-table>
+    <ng-template #emptyRuns>
+      <ui-state kind="empty" [message]="runs.length ? 'No matching prediction runs.' : 'No prediction runs yet.'"></ui-state>
+    </ng-template>
   </div>
 </ui-card>

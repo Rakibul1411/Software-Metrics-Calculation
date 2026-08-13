@@ -1,0 +1,41 @@
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header">
+    <nav class="dl-breadcrumb">
+      <a (click)="back()">Metric Storage</a>
+      <ui-icon name="chevron-right" [size]="14"></ui-icon>
+    </nav>
+    <h2>Add dataset</h2>
+    <p>Upload a labeled or unlabeled CSV/ARFF file.</p>
+  </div>
+
+  <form class="dl-form-stack dl-form-fill" (ngSubmit)="upload()">
+    <div class="dl-form-row dl-form-row-3">
+      <ui-radio-group label="Metric family" [options]="familyOptions"
+                       [value]="family" (valueChange)="onFamilyChange($event)">
+      </ui-radio-group>
+      <ui-radio-group label="Data source" [options]="originOptions"
+                       [value]="origin" (valueChange)="onOriginChange($event)">
+      </ui-radio-group>
+      <ui-input label="Project name" [required]="true"
+                 placeholder="Example: Ant"
+                 [value]="projectName" (valueChange)="projectName = $event">
+      </ui-input>
+      <ui-input label="Project version" [required]="true"
+                 placeholder="Example: 1.7"
+                 [value]="projectVersion" (valueChange)="projectVersion = $event">
+      </ui-input>
+    </div>
+    <ui-file-picker fieldLabel="Metrics file" [required]="true" accept=".csv,.arff"
+                    [label]="file?.name || 'Drop your CSV or ARFF file here'"
+                    helper="Accepted formats: CSV and ARFF"
+                    (fileChange)="selectFile($event)">
+    </ui-file-picker>
+    <ui-state *ngIf="uploadError" kind="error" [message]="uploadError"></ui-state>
+    <div class="dl-form-actions">
+      <ui-button type="button" variant="ghost" icon="undo" (pressed)="back()">Cancel</ui-button>
+      <ui-button type="submit" [disabled]="uploading || !canSubmit" [loading]="uploading">
+        {{ uploading ? 'Uploading dataset…' : 'Upload dataset' }}
+      </ui-button>
+    </div>
+  </form>
+</ui-card>

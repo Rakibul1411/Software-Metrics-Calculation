@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { UiIconName } from './ui-icon.component';
+import { UiIconName } from '../ui-icon/ui-icon.component';
 
 /**
  * The only button in the application.

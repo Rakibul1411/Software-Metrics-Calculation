@@ -1,0 +1,31 @@
+<div class="dl-table-wrap" [ngClass]="scrollClass">
+  <table class="dl-table">
+    <thead>
+      <tr>
+        <th *ngFor="let column of columns"
+            [class]="column.className"
+            [class.dl-num]="column.align === 'right'"
+            [class.dl-col-sticky-start]="column.sticky === 'start'"
+            [class.dl-col-sticky-end]="column.sticky === 'end'"
+            [style.width]="column.width">
+          {{ column.label }}
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of rows; trackBy: trackByFn">
+        <td *ngFor="let column of columns"
+            [class]="column.className"
+            [class.dl-num]="column.align === 'right'"
+            [class.dl-col-sticky-start]="column.sticky === 'start'"
+            [class.dl-col-sticky-end]="column.sticky === 'end'">
+          <ng-container
+              *ngTemplateOutlet="cellTemplate(column.key) || defaultCell; context: { $implicit: row, column: column }">
+          </ng-container>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<ng-template #defaultCell let-row let-column="column">{{ cellValue(row, column) }}</ng-template>

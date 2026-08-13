@@ -16,6 +16,7 @@ export type UiIconName =
   | 'plus'
   | 'close'
   | 'arrow-right'
+  | 'arrow-left'
   | 'search'
   | 'upload'
   | 'warning'
@@ -24,7 +25,10 @@ export type UiIconName =
   | 'moon'
   | 'user'
   | 'logout'
-  | 'view-off';
+  | 'view-off'
+  | 'undo'
+  | 'chevron-right'
+  | 'info';
 
 const PATHS: Record<UiIconName, string> = {
   'check': 'M4 12.5 9 17.5 20 6.5',
@@ -35,6 +39,7 @@ const PATHS: Record<UiIconName, string> = {
   'plus': 'M12 5v14M5 12h14',
   'close': 'M6 6l12 12M18 6 6 18',
   'arrow-right': 'M5 12h13m0 0-5-5m5 5-5 5',
+  'arrow-left': 'M19 12H6m0 0 5 5m-5-5 5-5',
   'search': 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5.5-1.5L21 21',
   'upload': 'M12 21V9m0 0 4 4m-4-4-4 4M4 4h16',
   'warning': 'M12 4 2.5 20h19L12 4Zm0 6v5m0 3v.5',
@@ -43,7 +48,10 @@ const PATHS: Record<UiIconName, string> = {
   'moon': 'M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z',
   'user': 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-8 8a8 8 0 0 1 16 0',
   'logout': 'M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8 6 12l4 4m-4-4h11',
-  'view-off': 'M3 3l18 18M10.6 10.6a3 3 0 0 0 4.2 4.2M9.9 5.2A9.5 9.5 0 0 1 12 5c6 0 9.5 6 9.5 6a15 15 0 0 1-3 3.6M6.5 6.6A15 15 0 0 0 2.5 11S6 17 12 17a9 9 0 0 0 3.2-.6'
+  'view-off': 'M3 3l18 18M10.6 10.6a3 3 0 0 0 4.2 4.2M9.9 5.2A9.5 9.5 0 0 1 12 5c6 0 9.5 6 9.5 6a15 15 0 0 1-3 3.6M6.5 6.6A15 15 0 0 0 2.5 11S6 17 12 17a9 9 0 0 0 3.2-.6',
+  'undo': 'M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12',
+  'chevron-right': 'M9 5l7 7-7 7',
+  'info': 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-8v5m0-9v.01'
 };
 
 @Component({

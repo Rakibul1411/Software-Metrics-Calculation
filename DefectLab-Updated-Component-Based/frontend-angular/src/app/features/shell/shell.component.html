@@ -28,7 +28,7 @@
         {{ item.label }}
       </a>
 
-      <span class="dl-nav-label">Results</span>
+      <span class="dl-nav-label">Analysis</span>
       <a *ngFor="let item of analysisNav"
          [routerLink]="item.path"
          routerLinkActive="active"
@@ -45,6 +45,11 @@
         <span class="dl-avatar" aria-hidden="true">{{ initials(user.name) }}</span>
         <span class="dl-footer-user">{{ user.name }}</span>
       </span>
+      <a class="dl-footer-link" routerLink="/account" routerLinkActive="active"
+         (click)="closeMobileNav()">
+        <ui-icon name="user"></ui-icon>
+        Account
+      </a>
       <button type="button" class="dl-footer-link" (click)="session.signOut()">
         <ui-icon name="logout"></ui-icon>
         Sign out

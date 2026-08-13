@@ -61,13 +61,16 @@
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
-  padding: var(--space-5) var(--space-6) var(--space-10);
+  /* Flush against the topbar's own border-bottom — that line already reads
+     as the divider, so no extra top padding is layered on top of it. */
+  padding: 0 var(--space-4) var(--space-4);
 }
 
 /* Routed feature hosts are the page stack. Without this, sibling cards inside
    a routed component do not inherit .dl-content's gap and collapse together. */
 .dl-content > *:not(router-outlet) {
   display: flex;
+  flex: 1;
   width: 100%;
   min-width: 0;
   flex-direction: column;
@@ -308,6 +311,8 @@ button.dl-footer-link:hover {
   color: var(--dl-accent);
 }
 
+.dl-icon-button-lg { width: 36px; height: 36px; flex: 0 0 36px; }
+
 .dl-avatar {
   display: grid;
   width: 30px;
@@ -325,19 +330,30 @@ button.dl-footer-link:hover {
 /* ── Cards & layout ────────────────────────────────────────────────────── */
 
 /* One card, everywhere. Dashboard, Analyze and the list pages previously each
-   had their own padding and flow, which is why no two pages agreed. */
+   had their own padding and flow, which is why no two pages agreed.
+   Top padding is trimmed 8px below the other sides here, once, in the
+   shared rule — not as a per-page override — because a heading's own
+   line-height already reads as extra space above the text; every card's
+   first line sits at the same distance from its top border as a result,
+   with no opt-in class required. */
 .dl-card,
-.dl-action-card,
-.dl-wallet-card,
-.dl-wallet-list-card {
+.dl-action-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-5);
+  padding: 12px var(--space-5) var(--space-5);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface);
 }
+
+/* A page whose entire content is one card (Analyze, Add dataset, Run
+   prediction, the detail pages, the list pages, the dashboard) stretches
+   that card to the page's full height instead of leaving empty canvas
+   below it. Applied per-page via cardClass — not the base rule, so pages
+   that intentionally stack several independent cards (report details,
+   compare metrics) keep their natural, content-sized heights. */
+.dl-page-card { flex: 1; }
 
 .dl-grid > .dl-card,
 .dl-grid > .dl-data-card { height: 100%; }
@@ -348,11 +364,13 @@ button.dl-footer-link:hover {
 .dl-card > h3,
 .dl-action-card > h2,
 .dl-card-head h2,
-.dl-wallet-section-head h3 {
+.dl-detail-toolbar h2,
+.dl-section-toolbar h2,
+.dl-dash-section-head h3 {
   margin: 0;
   color: var(--ink-heading);
   font-family: var(--font-heading);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -374,6 +392,12 @@ button.dl-footer-link:hover {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+}
+
+.dl-card-head p {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 /* Small tile: a label above a mono value. Used for score/summary readouts. */
@@ -429,10 +453,121 @@ button.dl-footer-link:hover {
   line-height: 1.1;
 }
 
+/* A stat card whose value is a short label rather than a number — e.g. the
+   Analyze page's mode cards — reads better at heading size than at the
+   26px numeric-readout size. Doubled class beats `.dl-data-card > strong`
+   (0,1,1) so a selected card's accent styling can't reintroduce 17px. */
+.dl-stat-value.dl-stat-value-sm { font-size: 13px; font-variant-numeric: normal; }
+
+/* A record's attributes as label : value rows — flows down the first
+   column, then the second, rather than interleaving row by row. */
+.dl-detail-fields { column-count: 2; column-gap: var(--space-8); }
+
+.dl-detail-field {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+  break-inside: avoid;
+  font-size: 13px;
+}
+
+.dl-detail-field-label { flex: 0 0 160px; color: var(--text-secondary); }
+.dl-detail-field-colon { color: var(--text-secondary); }
+.dl-detail-field-value { color: var(--ink-heading); font-weight: 600; }
+
+/* A detail page's breadcrumb + title + actions, all inside the same card as
+   its fields and data table — one bordered box, not several stacked cards. */
+.dl-detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.dl-detail-header .dl-breadcrumb { margin-top: 0; }
+
+/* When a header also carries actions (Download, Delete…), a flex column
+   can't win: aligning the button with the breadcrumb stretches the row to
+   the button's height and leaves dead air under the (shorter) breadcrumb
+   text before the title; aligning it with the title instead relocates the
+   button lower on the page. Grid sidesteps the conflict — breadcrumb and
+   title stack tightly in their own column, and the actions sit in a second
+   column, vertically centered against that whole two-line block. */
+.dl-detail-header-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+}
+
+.dl-detail-header-grid .dl-breadcrumb { grid-column: 1; grid-row: 1; margin-top: 0; }
+.dl-detail-header-grid > h2,
+.dl-detail-header-grid > .dl-detail-title { grid-column: 1; grid-row: 2; }
+.dl-detail-header-grid > .dl-actions { grid-column: 2; grid-row: 1 / 3; align-self: start; }
+
+
+.dl-detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.dl-detail-title { display: flex; align-items: center; gap: var(--space-3); }
+
+.dl-detail-header h2 {
+  margin: 0;
+  color: var(--ink-heading);
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.dl-detail-header p { margin: 0; color: var(--muted); font-size: 12px; }
+
+/* A second block (e.g. a data table) inside the same card as the fields
+   above, separated by a rule instead of a card boundary. */
+.dl-detail-section { padding-top: var(--space-4); border-top: 1px solid var(--line); }
+
+/* When a section sits directly under the header (no ui-detail-fields or
+   other divider between them), the header's own border-bottom already reads
+   as the divider — an extra border-top here would double the line. */
+.dl-detail-header + .dl-detail-section { padding-top: 0; border-top: none; }
+
+.dl-detail-section h3 {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-heading);
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 /* ── Forms ─────────────────────────────────────────────────────────────── */
 
 .dl-form-stack { display: flex; flex-direction: column; gap: var(--space-4); }
-.dl-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+
+/* Stretches an element to fill its flex parent's remaining height, and
+   turns it into a flex column itself — used to chain that stretch down to
+   a form's own .dl-form-actions, which pins to the bottom via margin-top:
+   auto. Opt-in, not the .dl-form-stack default, since forms outside a
+   full-height page card (auth, account) shouldn't stretch. */
+.dl-form-fill { display: flex; flex-direction: column; flex: 1; }
+
+/* Fields still stretch full width, but a submit button keeps its normal
+   content-sized shape instead of the column's default cross-axis stretch —
+   the same size as every other ui-button in the app — and sits at the
+   form's trailing edge. Scoped to [type=submit] so it doesn't also catch
+   the file-picker's own internal Upload button. */
+.dl-form-stack .dl-btn[type='submit'] { align-self: flex-end; }
+.dl-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  row-gap: var(--space-5);
+  column-gap: var(--space-3);
+}
 .dl-field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 
 .dl-field > span {
@@ -443,7 +578,7 @@ button.dl-footer-link:hover {
   text-transform: uppercase;
 }
 
-.dl-field input,
+.dl-field input:not([type='checkbox']),
 .dl-field select,
 .dl-field textarea {
   width: 100%;
@@ -459,7 +594,7 @@ button.dl-footer-link:hover {
 
 .dl-field textarea { height: auto; min-height: 80px; padding: var(--space-2) var(--space-3); resize: vertical; }
 
-.dl-field input:focus,
+.dl-field input:not([type='checkbox']):focus,
 .dl-field select:focus,
 .dl-field textarea:focus {
   border-color: var(--dl-accent);
@@ -467,39 +602,81 @@ button.dl-footer-link:hover {
   outline: none;
 }
 
+/* A checkbox in the same shape as a ui-radio-group option: no input-style
+   box, just an accent-coloured control beside its label. */
+.dl-checkbox-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--dl-h-control);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.dl-checkbox-control input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--dl-accent);
+  cursor: pointer;
+}
+
+.dl-field small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .dl-file-panel {
   display: flex;
+  width: 50%;
+  align-self: flex-start;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 160px;
+  padding: var(--space-5);
   border: 1px dashed var(--line-strong);
   border-radius: var(--radius-sm);
   background: var(--surface-alt);
+  color: var(--muted);
+  text-align: center;
   cursor: pointer;
   transition: border-color .15s ease, background .15s ease;
 }
 
-.dl-file-panel:hover { border-color: var(--dl-accent); background: var(--dl-accent-soft); }
-.dl-file-panel strong { flex: 1; font-size: 13px; font-weight: 500; }
+.dl-file-panel:hover,
+.dl-file-panel-active { border-color: var(--dl-accent); background: var(--dl-accent-soft); }
+.dl-file-panel:hover .ui-icon,
+.dl-file-panel-active .ui-icon { color: var(--dl-accent); }
+.dl-file-panel strong { font-size: 13px; font-weight: 500; }
 
 .dl-file-copy {
   display: flex;
-  min-width: 0;
-  flex: 1;
+  max-width: 100%;
   flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 4px;
 }
 
 .dl-file-copy strong {
   overflow: hidden;
+  max-width: 100%;
   color: var(--ink-heading);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.dl-file-copy small { color: var(--muted); font-size: 11px; }
+.dl-file-browse {
+  color: var(--dl-accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+}
 
-.dl-choice-group { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.dl-file-copy small { color: var(--muted); font-size: 11px; white-space: pre-line; }
 
 /* ── Buttons ───────────────────────────────────────────────────────────── */
 
@@ -560,17 +737,6 @@ button.dl-footer-link:hover {
 .dl-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .dl-actions-spaced { margin-top: var(--space-4); }
 
-.dl-wallet-period {
-  height: var(--dl-h-control-sm);
-  padding: 0 var(--space-3);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-}
-
 .dl-tabs { display: flex; gap: var(--space-1); border-bottom: 1px solid var(--line); }
 
 .dl-tabs button {
@@ -594,6 +760,9 @@ button.dl-footer-link:hover {
   border-radius: var(--radius-sm);
 }
 
+/* Full width, but table-layout:auto still sizes each column from its content
+   and any TableColumn.width hint — explicit widths beat guessing which
+   column should absorb the leftover space. */
 .dl-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
 .dl-table th {
@@ -623,8 +792,73 @@ button.dl-footer-link:hover {
 .dl-table td strong { font-weight: 600; }
 .dl-table td small { color: var(--muted); font-size: 11px; }
 
+/* Frozen edge columns (ui-table's first/last column) stay put while the rest
+   of a wide table scrolls horizontally underneath them. */
+.dl-col-sticky-start,
+.dl-col-sticky-end { position: sticky; z-index: 1; }
+.dl-col-sticky-start { left: 0; box-shadow: 1px 0 0 var(--line); }
+.dl-col-sticky-end { right: 0; box-shadow: -1px 0 0 var(--line); }
+
+/* A frozen header cell scrolls in both axes, so it needs to out-rank both a
+   plain sticky-top header (z-index 1) and a frozen body cell (z-index 1). */
+.dl-table th.dl-col-sticky-start,
+.dl-table th.dl-col-sticky-end { z-index: 2; }
+
+.dl-table tbody td.dl-col-sticky-start,
+.dl-table tbody td.dl-col-sticky-end { background: var(--surface); }
+
+/* --dl-row-hover is a translucent tint meant to sit over an opaque surface —
+   using it alone here left the frozen cell nearly see-through, so the row
+   scrolled underneath showed through and overlapped its text. Layering it
+   over --surface reproduces the same tint while staying fully opaque. */
+.dl-table tbody tr:hover td.dl-col-sticky-start,
+.dl-table tbody tr:hover td.dl-col-sticky-end {
+  background:
+    linear-gradient(var(--dl-row-hover), var(--dl-row-hover)),
+    var(--surface);
+}
+
+/* A trigger button plus an absolutely-positioned menu — used by the CSV/ARFF
+   download menu. */
+.dl-dropdown { position: relative; display: inline-flex; }
+
+.dl-dropdown-menu {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 220px;
+  max-height: 280px;
+  overflow: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .3);
+}
+
+.dl-dropdown-menu label,
+.dl-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dl-dropdown-menu label:hover,
+.dl-dropdown-item:hover { background: var(--dl-row-hover); color: var(--ink); }
+
 /* Numbers are the payload of this application: tabular figures so digits align
-   into scannable columns down the page. */
+   into scannable columns down the page. Left-aligned, flush under the header
+   text, like every other column — not justified to the column's right edge. */
 .dl-num,
 .dl-mono,
 .dl-col-rank,
@@ -635,11 +869,7 @@ button.dl-footer-link:hover {
 
 .dl-num,
 .dl-col-rank,
-.dl-col-probability { text-align: right; white-space: nowrap; }
-
-/* A numeric header must share its column's alignment, or the label floats
-   left while every value under it sits right. */
-.dl-table th.dl-num { text-align: right; }
+.dl-col-probability { white-space: nowrap; }
 
 /* Row actions sit centred on one line. */
 .dl-table th.dl-col-actions,
@@ -663,8 +893,8 @@ button.dl-footer-link:hover {
 .dl-comparison-result-scroll { max-height: 460px; }
 
 .dl-empty,
-.dl-wallet-list-empty,
-.dl-wallet-chart-empty {
+.dl-dash-list-empty,
+.dl-dash-chart-empty {
   padding: var(--space-8) var(--space-4);
   color: var(--muted);
   font-size: 13px;
@@ -750,6 +980,78 @@ button.dl-footer-link:hover {
 
 :root[data-theme='dark'] .dl-alert-success { color: #6ce9a6; }
 
+/* ── Toasts ────────────────────────────────────────────────────────────── */
+
+.dl-toast-stack {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 320px;
+  max-width: calc(100vw - var(--space-4) * 2);
+}
+
+.dl-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .3);
+  animation: dl-toast-in .2s ease-out;
+}
+
+.dl-toast span { flex: 1; min-width: 0; padding-top: 1px; overflow-wrap: anywhere; }
+.dl-toast-icon { flex: 0 0 auto; margin-top: 1px; }
+
+.dl-toast-close {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  opacity: .6;
+  cursor: pointer;
+}
+
+.dl-toast-close:hover { opacity: 1; }
+
+.dl-toast-info {
+  border-left-color: var(--dl-accent);
+  background: var(--dl-accent-soft);
+}
+.dl-toast-info .dl-toast-icon { color: var(--dl-accent); }
+
+.dl-toast-success {
+  border-left-color: #2e9c6b;
+  background: rgba(62, 201, 138, .12);
+}
+.dl-toast-success .dl-toast-icon { color: #2e9c6b; }
+:root[data-theme='dark'] .dl-toast-success .dl-toast-icon { color: #6ce9a6; }
+
+.dl-toast-error {
+  border-left-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+.dl-toast-error .dl-toast-icon { color: var(--danger-text); }
+
+@keyframes dl-toast-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Steps ─────────────────────────────────────────────────────────────── */
 
 .dl-step-overview { display: flex; flex-direction: column; gap: var(--space-3); }
@@ -776,18 +1078,20 @@ button.dl-footer-link:hover {
 
 /* ── Dashboard ─────────────────────────────────────────────────────────── */
 
-.dl-wallet-dashboard { display: flex; flex-direction: column; gap: var(--space-4); }
+.dl-dashboard { display: flex; flex-direction: column; gap: var(--space-4); }
 
 /* A <header> holding the page title and its actions — a row, not a heading. */
-.dl-wallet-heading {
+.dl-dash-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
 }
 
-.dl-wallet-heading h2 {
+.dl-dash-heading h2 {
   margin: 0;
   color: var(--ink-heading);
   font-family: var(--font-heading);
@@ -796,8 +1100,8 @@ button.dl-footer-link:hover {
   letter-spacing: -.01em;
 }
 
-.dl-wallet-heading > div:first-child > span,
-.dl-wallet-eyebrow {
+.dl-dash-heading > div:first-child > span,
+.dl-dash-eyebrow {
   display: block;
   color: var(--muted);
   font-size: 10px;
@@ -806,12 +1110,36 @@ button.dl-footer-link:hover {
   text-transform: uppercase;
 }
 
-.dl-wallet-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
-.dl-wallet-analytics-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--space-4); }
-.dl-wallet-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.dl-dash-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.dl-dash-analytics-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--space-4); }
+.dl-dash-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 
-.dl-wallet-card-head,
-.dl-wallet-section-head {
+/* The dashboard's widgets sit inside one outer card now, so each tile gets
+   its own (slightly offset) surface instead of inheriting .dl-card's box —
+   nesting the app's one full-bordered card style inside itself reads as a
+   card-in-a-card, not a widget grid. */
+.dl-dash-panel,
+.dl-dash-metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+/* A rule above each subsequent widget row, instead of the gap between
+   separate cards doing that job. */
+.dl-dash-analytics-grid,
+.dl-dash-lists,
+.dl-dash-workflow {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.dl-dash-card-head,
+.dl-dash-section-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -820,11 +1148,11 @@ button.dl-footer-link:hover {
 
 /* The number lives in a <strong>; sizing the container would enlarge its
    labels too, because font-size inherits. */
-.dl-wallet-card-head strong,
-.dl-wallet-metric > strong,
-.dl-wallet-chart-total strong,
-.dl-wallet-run-count,
-.dl-wallet-asset-value {
+.dl-dash-card-head strong,
+.dl-dash-metric > strong,
+.dl-dash-chart-total strong,
+.dl-dash-run-count,
+.dl-dash-asset-value {
   display: block;
   color: var(--ink-heading);
   font-family: var(--font-mono);
@@ -834,16 +1162,16 @@ button.dl-footer-link:hover {
   line-height: 1.15;
 }
 
-.dl-wallet-card small,
-.dl-wallet-chart-total span,
-.dl-wallet-run-label,
-.dl-wallet-live { color: var(--muted); font-size: 11px; }
+.dl-dash-panel small,
+.dl-dash-chart-total span,
+.dl-dash-run-label,
+.dl-dash-live { color: var(--muted); font-size: 11px; }
 
-.dl-wallet-live,
-.dl-wallet-legend span { display: inline-flex; align-items: center; gap: var(--space-1); }
+.dl-dash-live,
+.dl-dash-legend span { display: inline-flex; align-items: center; gap: var(--space-1); }
 
-.dl-wallet-live i,
-.dl-wallet-status-dot {
+.dl-dash-live i,
+.dl-dash-status-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -851,7 +1179,7 @@ button.dl-footer-link:hover {
 }
 
 /* Stacked proportion bar: two spans whose widths are bound as percentages. */
-.dl-wallet-mix {
+.dl-dash-mix {
   display: flex;
   overflow: hidden;
   height: 7px;
@@ -859,15 +1187,15 @@ button.dl-footer-link:hover {
   background: var(--surface-muted);
 }
 
-.dl-wallet-mix .manual { background: var(--dl-accent); }
-.dl-wallet-mix .predefined { background: var(--accent-soft-strong); }
+.dl-dash-mix .manual { background: var(--dl-accent); }
+.dl-dash-mix .predefined { background: var(--accent-soft-strong); }
 
-.dl-wallet-legend { display: flex; flex-wrap: wrap; gap: var(--space-4); color: var(--muted); font-size: 11px; }
-.dl-wallet-legend i { width: 8px; height: 8px; border-radius: 2px; }
-.dl-wallet-legend .manual { background: var(--dl-accent); }
-.dl-wallet-legend .predefined { background: var(--accent-soft-strong); }
+.dl-dash-legend { display: flex; flex-wrap: wrap; gap: var(--space-4); color: var(--muted); font-size: 11px; }
+.dl-dash-legend i { width: 8px; height: 8px; border-radius: 2px; }
+.dl-dash-legend .manual { background: var(--dl-accent); }
+.dl-dash-legend .predefined { background: var(--accent-soft-strong); }
 
-.dl-wallet-card footer {
+.dl-dash-panel footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -878,18 +1206,18 @@ button.dl-footer-link:hover {
   font-size: 11px;
 }
 
-.dl-wallet-card footer strong {
+.dl-dash-panel footer strong {
   color: var(--ink-heading);
   font-family: var(--font-mono);
   font-size: 13px;
 }
 
-.dl-wallet-metric > span { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
-.dl-wallet-metric a { margin-top: auto; color: var(--dl-accent); font-size: 12px; font-weight: 600; text-decoration: none; }
-.dl-wallet-metric a:hover { text-decoration: underline; }
+.dl-dash-metric > span { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.dl-dash-metric a { margin-top: auto; color: var(--dl-accent); font-size: 12px; font-weight: 600; text-decoration: none; }
+.dl-dash-metric a:hover { text-decoration: underline; }
 
-.dl-wallet-metric-icon,
-.dl-wallet-asset-mark {
+.dl-dash-metric-icon,
+.dl-dash-asset-mark {
   display: grid;
   width: 30px;
   height: 30px;
@@ -903,20 +1231,20 @@ button.dl-footer-link:hover {
   font-weight: 700;
 }
 
-.dl-wallet-metric-icon.alt { background: var(--surface-muted); color: var(--text-secondary); }
+.dl-dash-metric-icon.alt { background: var(--surface-muted); color: var(--text-secondary); }
 
 /* Labelled progress bar. */
-.dl-wallet-readiness { display: flex; flex-direction: column; gap: var(--space-2); }
-.dl-wallet-readiness > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); font-size: 12px; }
-.dl-wallet-readiness > div:first-child span { color: var(--muted); }
-.dl-wallet-readiness > div:first-child strong { font-family: var(--font-mono); font-size: 13px; }
+.dl-dash-readiness { display: flex; flex-direction: column; gap: var(--space-2); }
+.dl-dash-readiness > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); font-size: 12px; }
+.dl-dash-readiness > div:first-child span { color: var(--muted); }
+.dl-dash-readiness > div:first-child strong { font-family: var(--font-mono); font-size: 13px; }
 
-.track { overflow: hidden; height: 6px; border-radius: var(--radius-pill); background: var(--surface-muted); }
-.track > span { display: block; height: 100%; border-radius: inherit; background: var(--dl-accent); }
+.dl-dash-progress-track { overflow: hidden; height: 6px; border-radius: var(--radius-pill); background: var(--surface-muted); color: var(--muted); }
+.dl-dash-progress-track > span { display: block; height: 100%; border-radius: inherit; background: var(--dl-accent); }
 
-.dl-wallet-assets { display: flex; flex-direction: column; }
+.dl-dash-assets { display: flex; flex-direction: column; }
 
-.dl-wallet-asset {
+.dl-dash-asset {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -924,27 +1252,27 @@ button.dl-footer-link:hover {
   border-bottom: 1px solid var(--line);
 }
 
-.dl-wallet-asset:last-child { border-bottom: none; }
-.dl-wallet-asset-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-.dl-wallet-asset-copy strong { font-size: 13px; font-weight: 600; }
-.dl-wallet-asset-copy small { color: var(--muted); font-size: 11px; }
-.dl-wallet-asset-value { font-size: 15px; }
+.dl-dash-asset:last-child { border-bottom: none; }
+.dl-dash-asset-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.dl-dash-asset-copy strong { font-size: 13px; font-weight: 600; }
+.dl-dash-asset-copy small { color: var(--muted); font-size: 11px; }
+.dl-dash-asset-value { font-size: 15px; }
 
 /* Every SVG child needs an explicit fill/stroke: the default is fill:black,
    stroke:none, which turns the <polyline> into a solid black area and makes
    the gridlines invisible. */
-.dl-wallet-chart-stage { display: flex; flex-direction: column; gap: var(--space-2); }
-.dl-wallet-chart-stage svg { width: 100%; height: 150px; overflow: visible; }
+.dl-dash-chart-stage { display: flex; flex-direction: column; gap: var(--space-2); }
+.dl-dash-chart-stage svg { width: 100%; height: 150px; overflow: visible; }
 
-.dl-wallet-chart-stage line {
+.dl-dash-chart-stage line {
   stroke: var(--line);
   stroke-width: 1;
   stroke-dasharray: 3 4;
 }
 
-.dl-wallet-chart-area { fill: rgba(var(--dl-accent-rgb), .16); stroke: none; }
+.dl-dash-chart-area { fill: rgba(var(--dl-accent-rgb), .16); stroke: none; }
 
-.dl-wallet-chart-stage polyline {
+.dl-dash-chart-stage polyline {
   fill: none;
   stroke: var(--dl-accent);
   stroke-width: 2;
@@ -952,13 +1280,13 @@ button.dl-footer-link:hover {
   stroke-linejoin: round;
 }
 
-.dl-wallet-chart-stage circle {
+.dl-dash-chart-stage circle {
   fill: var(--surface);
   stroke: var(--dl-accent);
   stroke-width: 2;
 }
 
-.dl-wallet-chart-labels {
+.dl-dash-chart-labels {
   display: flex;
   gap: var(--space-2);
   color: var(--muted);
@@ -967,7 +1295,7 @@ button.dl-footer-link:hover {
 }
 
 /* Equal shares so long project names cannot crush their neighbours. */
-.dl-wallet-chart-labels span {
+.dl-dash-chart-labels span {
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
@@ -977,51 +1305,42 @@ button.dl-footer-link:hover {
 }
 
 /* Horizontal pipeline rail: numbered steps joined by <i> connectors. */
-.dl-wallet-workflow {
+.dl-dash-workflow {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
-  padding: var(--space-5);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
 }
 
-.dl-wallet-workflow > div { display: flex; min-width: 0; flex-direction: column; }
-.dl-wallet-workflow > div > span { color: var(--dl-accent); font-family: var(--font-mono); font-size: 10px; font-weight: 700; }
-.dl-wallet-workflow > div > strong { font-size: 13px; font-weight: 600; }
-.dl-wallet-workflow > div > small { color: var(--muted); font-size: 11px; }
+.dl-dash-workflow > div { display: flex; min-width: 0; flex-direction: column; }
+.dl-dash-workflow > div > span { color: var(--dl-accent); font-family: var(--font-mono); font-size: 10px; font-weight: 700; }
+.dl-dash-workflow > div > strong { font-size: 13px; font-weight: 600; }
+.dl-dash-workflow > div > small { color: var(--muted); font-size: 11px; }
 
-.dl-wallet-workflow > i {
+.dl-dash-workflow > i {
   flex: 1;
   min-width: 20px;
   height: 1px;
   background: var(--line-strong);
 }
 
-/* Section headings inside dashboard cards match the card scale. */
-.dl-wallet-section-head h3 {
-  margin: 0;
-  color: var(--ink-heading);
-  font-family: var(--font-heading);
-  font-size: 14px;
-  font-weight: 700;
-}
+.dl-dash-section-head a { color: var(--dl-accent); font-size: 12px; font-weight: 600; text-decoration: none; }
+.dl-dash-section-head a:hover { text-decoration: underline; }
 
-.dl-wallet-section-head a { color: var(--dl-accent); font-size: 12px; font-weight: 600; text-decoration: none; }
-.dl-wallet-section-head a:hover { text-decoration: underline; }
+.dl-dash-assets > a { color: inherit; text-decoration: none; }
 
-.dl-wallet-assets > a { color: inherit; text-decoration: none; }
+.dl-dash-actions,
+.dl-dash-prediction-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.dl-dash-prediction-actions { margin-top: auto; }
 
-.dl-wallet-actions,
-.dl-wallet-prediction-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.dl-wallet-prediction-actions { margin-top: auto; }
-
-.dl-wallet-period {
+.dl-dash-period {
   align-self: flex-start;
+  height: var(--dl-h-control-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
   color: var(--muted);
-  cursor: default;
+  font-size: 12px;
 }
 
 /* ── Auth ──────────────────────────────────────────────────────────────── */
@@ -1095,42 +1414,176 @@ button.dl-footer-link:hover {
 }
 
 .dl-auth-card .dl-card-head { margin-bottom: var(--space-5); }
-
-.dl-auth-card .dl-card-head p {
-  margin: var(--space-1) 0 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
+.dl-auth-card .dl-card-head p { line-height: 1.5; }
 
 .dl-auth-card .dl-btn[type='submit'] { width: 100%; margin-top: var(--space-1); }
 
 /* ── Page-specific layout ──────────────────────────────────────────────── */
 
-.dl-prediction-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: var(--space-4);
-  align-items: start;
+.dl-form-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* A title/actions row that sits above a card instead of inside its own
+   .dl-card-head — used when a section's filters also need to live outside
+   the card, between this row and the card itself. */
+.dl-detail-toolbar,
+.dl-section-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
-.dl-analyze-modes { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.dl-dataset-filter-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
-.dl-alignment-choice { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+/* Only the very first row on a detail page pulls up flush under the topbar,
+   cancelling .dl-content's top padding. */
+.dl-detail-toolbar { margin-top: calc(var(--space-5) * -1); }
+
+/* A section heading with a search toggle sitting right beside it, instead of
+   a search field permanently occupying the filter row. */
+.dl-heading-search { display: flex; align-items: center; gap: var(--space-2); }
+.dl-heading-search h2 { font-size: 16px; }
+
+/* The field the search toggle reveals — sits inline next to the icon button
+   at its own compact width, instead of stretching the full row. */
+.dl-inline-search {
+  width: 220px;
+  /* Matches .dl-icon-button's 30px exactly — it swaps places with that
+     button, and a taller field would grow the row and shift the heading
+     beside it when the two swap. */
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.dl-inline-search:focus {
+  border-color: var(--dl-accent);
+  box-shadow: 0 0 0 3px rgba(var(--dl-accent-rgb), .13);
+  outline: none;
+}
+
+/* A dropdown with a fixed panel that only opens downward, unlike a native
+   <select> whose popup size/direction the browser decides on its own. */
+.dl-select { position: relative; }
+
+.dl-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  height: var(--dl-h-control);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dl-select-trigger:focus {
+  border-color: var(--dl-accent);
+  box-shadow: 0 0 0 3px rgba(var(--dl-accent-rgb), .13);
+  outline: none;
+}
+
+.dl-select-trigger:disabled { cursor: not-allowed; opacity: .6; }
+.dl-select-trigger .ui-icon { flex: none; color: var(--muted); transform: rotate(90deg); }
+.dl-select-open .dl-select-trigger .ui-icon { transform: rotate(-90deg); }
+.dl-select-placeholder span:first-child { color: var(--muted); }
+
+.dl-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, .28);
+}
+
+.dl-select-option {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dl-select-option:hover { background: var(--dl-row-hover); }
+.dl-select-option-active { background: var(--dl-accent-soft); color: var(--dl-accent); font-weight: 600; }
+
+/* A text trail above a create/edit form's card, replacing a lone icon back
+   button — the link is the only way back, the current page reads as plain
+   text after the chevron. */
+.dl-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: calc(var(--space-5) * -1);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Nested in a toolbar that already pulls itself up under the topbar — the
+   breadcrumb shouldn't also shift, or it drifts out of line with its
+   sibling actions. */
+.dl-detail-toolbar .dl-breadcrumb { margin-top: 0; }
+
+.dl-breadcrumb a {
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dl-breadcrumb a:hover { color: var(--ink-heading); }
+.dl-breadcrumb .ui-icon { width: 14px; height: 14px; }
+
+/* Cancel + submit sitting together at a form's trailing edge, instead of a
+   lone submit button drifting there on its own. A rule above them separates
+   the footer from the fields, mirroring the divider under the card head. */
+.dl-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
 
 .dl-report-results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); }
-.dl-report-target-card { display: flex; flex-direction: column; gap: var(--space-2); }
+.dl-report-panel-sub { margin: 0; color: var(--muted); font-size: 11px; }
 
-.dl-prediction-status { display: flex; align-items: center; gap: var(--space-2); font-size: 12px; }
+/* A flat sub-block for one target's results — a rule under its title row
+   instead of a bordered/tinted box, so it reads as a section like every
+   other detail page's metric grid, not a dashboard-style tile. */
+.dl-report-target { display: flex; flex-direction: column; gap: var(--space-4); }
+.dl-report-target-head { padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
+
 .dl-prediction-form { display: flex; flex-direction: column; gap: var(--space-4); }
-.track { color: var(--muted); }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
 
 @media (max-width: 1180px) {
-  .dl-prediction-layout,
-  .dl-wallet-analytics-grid { grid-template-columns: minmax(0, 1fr); }
-  .dl-wallet-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dl-dash-analytics-grid { grid-template-columns: minmax(0, 1fr); }
+  .dl-dash-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 920px) {
@@ -1196,12 +1649,11 @@ button.dl-footer-link:hover {
   .dl-content { padding: var(--space-4) var(--space-4) var(--space-8); }
   .dl-topbar { padding: 0 var(--space-4); }
   .dl-grid-2, .dl-grid-3, .dl-grid-4,
-  .dl-form-row, .dl-dataset-filter-row,
-  .dl-wallet-summary-grid, .dl-wallet-lists { grid-template-columns: minmax(0, 1fr); }
+  .dl-form-row,
+  .dl-dash-summary-grid, .dl-dash-lists { grid-template-columns: minmax(0, 1fr); }
   .dl-topbar { gap: var(--space-2); }
   .dl-page-context p { display: none; }
-  .dl-file-panel { align-items: flex-start; flex-wrap: wrap; }
-  .dl-file-panel .dl-btn { width: 100%; }
+  .dl-file-panel { width: 100%; }
 }
 
 /* ── Shared UI components ──────────────────────────────────────────────── */
@@ -1214,7 +1666,83 @@ ui-badge,
 ui-card,
 ui-file-picker,
 ui-metric-card,
-ui-state { display: contents; }
+ui-state,
+ui-confirm-dialog,
+ui-table,
+ui-download-menu,
+ui-radio-group,
+ui-input,
+ui-select,
+ui-detail-fields { display: contents; }
+
+/* Labelled row of radio choices — one filled dot per option, accent-tinted. */
+.dl-radio-group { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.dl-radio-group-label {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.dl-radio-row { display: flex; flex-wrap: wrap; gap: var(--space-5); }
+
+.dl-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.dl-radio input[type='radio'] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--dl-accent);
+  cursor: pointer;
+}
+
+.dl-radio.dl-disabled { color: var(--muted); cursor: not-allowed; opacity: .6; }
+.dl-radio.dl-disabled input[type='radio'] { cursor: not-allowed; }
+
+/* Yes/no confirmation modal, floated above a dimmed scrim. */
+.dl-modal-scrim {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, .5);
+}
+
+.dl-modal {
+  display: flex;
+  width: min(420px, 100%);
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
+}
+
+.dl-modal h2 {
+  margin: 0;
+  color: var(--ink-heading);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dl-modal p { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+.dl-modal-actions { justify-content: flex-end; }
 
 .dl-btn svg,
 .ui-icon {

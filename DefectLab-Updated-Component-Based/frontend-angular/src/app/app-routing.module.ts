@@ -4,9 +4,15 @@ import { AuthGuard, GuestGuard } from './core/guards/auth.guard';
 import { AuthPageComponent } from './features/auth/auth-page.component';
 import { AnalyzeComponent } from './features/analysis/analyze.component';
 import { AccountComponent } from './features/account/account.component';
+import { ComparisonCreateComponent } from './features/comparisons/comparison-create.component';
+import { ComparisonDetailComponent } from './features/comparisons/comparison-detail.component';
 import { ComparisonsComponent } from './features/comparisons/comparisons.component';
+import { DatasetCreateComponent } from './features/datasets/dataset-create.component';
+import { DatasetDetailComponent } from './features/datasets/dataset-detail.component';
 import { DatasetsComponent } from './features/datasets/datasets.component';
 import { OverviewComponent } from './features/dashboard/overview.component';
+import { PredictionCreateComponent } from './features/predictions/prediction-create.component';
+import { PredictionDetailComponent } from './features/predictions/prediction-detail.component';
 import { PredictionsComponent } from './features/predictions/predictions.component';
 import { ReportDetailComponent } from './features/reports/report-detail.component';
 import { ReportsComponent } from './features/reports/reports.component';
@@ -21,8 +27,22 @@ const routes: Routes = [
     children: [
       { path: 'overview', component: OverviewComponent, title: 'Dashboard' },
       { path: 'analyze', component: AnalyzeComponent, title: 'Analyze source' },
+      { path: 'datasets/new', component: DatasetCreateComponent, title: 'Add dataset' },
+      { path: 'datasets/:id', component: DatasetDetailComponent, title: 'Dataset details' },
       { path: 'datasets', component: DatasetsComponent, title: 'Metric storage' },
+      { path: 'predictions/new', component: PredictionCreateComponent, title: 'Run prediction' },
+      { path: 'predictions/:id', component: PredictionDetailComponent, title: 'Prediction run details' },
       { path: 'predictions', component: PredictionsComponent, title: 'Predictions' },
+      {
+        path: 'metric-comparisons/new',
+        component: ComparisonCreateComponent,
+        title: 'New comparison'
+      },
+      {
+        path: 'metric-comparisons/:id',
+        component: ComparisonDetailComponent,
+        title: 'Metric comparison details'
+      },
       {
         path: 'metric-comparisons',
         component: ComparisonsComponent,
