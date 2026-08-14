@@ -11,6 +11,7 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,10 +21,12 @@ public class FileStorageService {
     private static final int MAX_FOLDER_FILES = 20_000;
     private static final long MAX_FOLDER_BYTES = 250L * 1024L * 1024L;
 
-    private final Path uploadLocation = Paths.get("storage/uploads");
-    private final Path folderLocation = Paths.get("storage/uploaded-folders");
+    private final Path uploadLocation;
+    private final Path folderLocation;
 
-    public FileStorageService() throws IOException {
+    public FileStorageService(StorageRoot storageRoot) throws IOException {
+        this.uploadLocation = storageRoot.resolve("uploads");
+        this.folderLocation = storageRoot.resolve("uploaded-folders");
         Files.createDirectories(uploadLocation);
         Files.createDirectories(folderLocation);
     }

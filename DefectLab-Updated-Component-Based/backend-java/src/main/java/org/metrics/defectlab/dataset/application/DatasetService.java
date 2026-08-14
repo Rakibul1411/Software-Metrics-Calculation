@@ -20,6 +20,7 @@ import org.metrics.defectlab.comparison.persistence.MetricComparisonRepository;
 import org.metrics.defectlab.prediction.persistence.PredictionRunRepository;
 import org.metrics.defectlab.shared.exception.ConflictException;
 import org.metrics.defectlab.shared.exception.NotFoundException;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,16 +40,18 @@ public class DatasetService {
     private final MetricDatasetRepository datasetRepository;
     private final PredictionRunRepository predictionRunRepository;
     private final MetricComparisonRepository metricComparisonRepository;
-    private final Path storageRoot = Paths.get("storage/metrics");
+    private final Path metricsRoot;
 
     public DatasetService(MetricDatasetRepository datasetRepository,
                           PredictionRunRepository predictionRunRepository,
-                          MetricComparisonRepository metricComparisonRepository)
+                          MetricComparisonRepository metricComparisonRepository,
+                          StorageRoot storageRoot)
             throws IOException {
         this.datasetRepository = datasetRepository;
         this.predictionRunRepository = predictionRunRepository;
         this.metricComparisonRepository = metricComparisonRepository;
-        Files.createDirectories(storageRoot);
+        this.metricsRoot = storageRoot.resolve("metrics");
+        Files.createDirectories(metricsRoot);
     }
 
     @Transactional
@@ -60,10 +63,9 @@ public class DatasetService {
             MultipartFile file) throws IOException {
         String originalName = validateUpload(file);
         String projectName = cleanProjectName(requestedProjectName, stripExtension(originalName));
-        Path userDirectory = userStorage(userId);
-        String storedName = UUID.randomUUID() + "_" + sanitize(projectName)
-                + suffixOf(originalName);
-        Path stored = userDirectory.resolve(storedName);
+        Path directory = metricsStorage(userId, datasetType);
+        Path stored = directory.resolve(storedFileName(
+                datasetType, projectName, projectVersion, suffixOf(originalName)));
         Files.copy(file.getInputStream(), stored, StandardCopyOption.REPLACE_EXISTING);
         try {
             return register(userId, projectName, projectVersion, stored, datasetType, null);
@@ -81,8 +83,9 @@ public class DatasetService {
             MetricDataset.Family expectedFamily,
             Path generatedCsv) throws IOException {
         String cleanedProject = cleanProjectName(projectName, "extracted-project");
-        Path stored = userStorage(userId).resolve(
-                UUID.randomUUID() + "_" + sanitize(cleanedProject) + ".csv");
+        Path directory = metricsStorage(userId, MetricDataset.Type.MANUAL);
+        Path stored = directory.resolve(storedFileName(
+                MetricDataset.Type.MANUAL, cleanedProject, projectVersion, ".csv"));
         Files.copy(generatedCsv, stored, StandardCopyOption.REPLACE_EXISTING);
         try {
             return register(userId, cleanedProject, projectVersion, stored,
@@ -100,10 +103,9 @@ public class DatasetService {
     @Transactional
     public MetricDataset createSystemPredefined(
             String projectName, String projectVersion, Path source) throws IOException {
-        Path systemDirectory = storageRoot.resolve("predefined");
-        Files.createDirectories(systemDirectory);
-        Path stored = systemDirectory.resolve(
-                sanitize(projectName + "-" + projectVersion) + suffixOf(source.getFileName().toString()));
+        Path directory = metricsStorage(null, MetricDataset.Type.PREDEFINED);
+        Path stored = directory.resolve(storedFileName(MetricDataset.Type.PREDEFINED,
+                projectName, projectVersion, suffixOf(source.getFileName().toString())));
         Files.copy(source, stored, StandardCopyOption.REPLACE_EXISTING);
         return register(null, projectName, projectVersion, stored,
                 MetricDataset.Type.PREDEFINED, null);
@@ -251,10 +253,27 @@ public class DatasetService {
         return datasetRepository.countByUserId(userId);
     }
 
-    private Path userStorage(Long userId) throws IOException {
-        Path directory = storageRoot.resolve(userId == null ? "predefined" : String.valueOf(userId));
+    /**
+     * Datasets are stored under metrics/manual/&lt;userId&gt; or
+     * metrics/predefined[/&lt;userId&gt;], split by {@link MetricDataset.Type}
+     * first (so the folder name always matches the dataset type) and then by
+     * owner. Bundled/system predefined datasets have no owner and sit
+     * directly under metrics/predefined.
+     */
+    private Path metricsStorage(Long userId, MetricDataset.Type datasetType) throws IOException {
+        Path typeDirectory = metricsRoot.resolve(
+                datasetType == MetricDataset.Type.MANUAL ? "manual" : "predefined");
+        Path directory = userId == null ? typeDirectory : typeDirectory.resolve(String.valueOf(userId));
         Files.createDirectories(directory);
         return directory;
+    }
+
+    private static String storedFileName(
+            MetricDataset.Type datasetType, String projectName, String projectVersion,
+            String extension) {
+        String typeLabel = datasetType == MetricDataset.Type.MANUAL ? "manual" : "predefined";
+        return UUID.randomUUID() + "_" + typeLabel + "_"
+                + sanitize(projectName) + "-" + sanitize(cleanVersion(projectVersion)) + extension;
     }
 
     private static String validateUpload(MultipartFile file) {

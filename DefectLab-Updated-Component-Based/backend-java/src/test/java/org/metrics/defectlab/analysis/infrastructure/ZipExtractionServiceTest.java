@@ -16,6 +16,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 
 class ZipExtractionServiceTest {
 
@@ -25,7 +26,7 @@ class ZipExtractionServiceTest {
     @Test
     void extractsAJavaProjectZip() throws Exception {
         Path zip = createZip("src/main/java/demo/Example.java", "package demo; class Example {}");
-        Path extracted = new ZipExtractionService().extractArchiveFile(zip);
+        Path extracted = new ZipExtractionService(new StorageRoot("storage")).extractArchiveFile(zip);
         try {
             assertTrue(Files.exists(extracted.resolve("src/main/java/demo/Example.java")));
         } finally {
@@ -36,7 +37,7 @@ class ZipExtractionServiceTest {
     @Test
     void extractsAJavaProjectTarGz() throws Exception {
         Path tarGz = createTarGz("lucene/src/java/demo/Example.java", "package demo; class Example {}");
-        Path extracted = new ZipExtractionService().extractArchiveFile(tarGz);
+        Path extracted = new ZipExtractionService(new StorageRoot("storage")).extractArchiveFile(tarGz);
         try {
             assertTrue(Files.exists(extracted.resolve("lucene/src/java/demo/Example.java")));
         } finally {
@@ -47,7 +48,7 @@ class ZipExtractionServiceTest {
     @Test
     void extractsAJavaProjectTar() throws Exception {
         Path tar = createTar("src/main/java/demo/Example.java", "package demo; class Example {}");
-        Path extracted = new ZipExtractionService().extractArchiveFile(tar);
+        Path extracted = new ZipExtractionService(new StorageRoot("storage")).extractArchiveFile(tar);
         try {
             assertTrue(Files.exists(extracted.resolve("src/main/java/demo/Example.java")));
         } finally {
@@ -58,13 +59,13 @@ class ZipExtractionServiceTest {
     @Test
     void rejectsZipSlipEntries() throws Exception {
         Path zip = createZip("../../outside.java", "class Outside {}");
-        assertThrows(IOException.class, () -> new ZipExtractionService().extractArchiveFile(zip));
+        assertThrows(IOException.class, () -> new ZipExtractionService(new StorageRoot("storage")).extractArchiveFile(zip));
     }
 
     @Test
     void rejectsTarGzSlipEntries() throws Exception {
         Path tarGz = createTarGz("../../outside.java", "class Outside {}");
-        assertThrows(IOException.class, () -> new ZipExtractionService().extractArchiveFile(tarGz));
+        assertThrows(IOException.class, () -> new ZipExtractionService(new StorageRoot("storage")).extractArchiveFile(tarGz));
     }
 
     private Path createZip(String entryName, String content) throws IOException {

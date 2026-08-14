@@ -31,6 +31,7 @@ import org.metrics.defectlab.dataset.domain.FeatureProfile;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 import org.metrics.defectlab.shared.exception.NotFoundException;
 import org.metrics.defectlab.shared.report.PdfReportWriter;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,16 +42,18 @@ public class MetricComparisonService {
     private final DatasetService datasetService;
     private final MetricComparisonRepository comparisonRepository;
     private final ObjectMapper objectMapper;
-    private final Path storageRoot = Paths.get("storage/comparisons");
+    private final Path comparisonsRoot;
 
     public MetricComparisonService(
             DatasetService datasetService,
             MetricComparisonRepository comparisonRepository,
-            ObjectMapper objectMapper) throws IOException {
+            ObjectMapper objectMapper,
+            StorageRoot storageRoot) throws IOException {
         this.datasetService = datasetService;
         this.comparisonRepository = comparisonRepository;
         this.objectMapper = objectMapper;
-        Files.createDirectories(storageRoot);
+        this.comparisonsRoot = storageRoot.resolve("comparisons");
+        Files.createDirectories(comparisonsRoot);
         migrateStaleComparisons();
     }
 
@@ -77,7 +80,7 @@ public class MetricComparisonService {
                 ? aggregate(manual, manualTable, predefinedTable)
                 : instanceWise(manual, manualTable, predefinedTable, config);
 
-        Path directory = storageRoot.resolve(String.valueOf(userId));
+        Path directory = comparisonsRoot.resolve(String.valueOf(userId));
         Files.createDirectories(directory);
         String token = UUID.randomUUID().toString();
         Path pdf = directory.resolve(token + "-metric-comparison.pdf");

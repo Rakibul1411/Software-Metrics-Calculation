@@ -30,6 +30,7 @@ import org.metrics.defectlab.prediction.infrastructure.MlServiceClient;
 import org.metrics.defectlab.prediction.persistence.PredictionRunRepository;
 import org.metrics.defectlab.shared.exception.NotFoundException;
 import org.metrics.defectlab.shared.report.PdfReportWriter;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,17 +44,19 @@ public class PredictionService {
     private final MlServiceClient mlServiceClient;
     private final PredictionRunRepository runRepository;
     private final ObjectMapper objectMapper;
-    private final Path storageRoot = Paths.get("storage/predictions");
+    private final Path predictionsRoot;
 
     public PredictionService(DatasetService datasetService,
                              MlServiceClient mlServiceClient,
                              PredictionRunRepository runRepository,
-                             ObjectMapper objectMapper) throws IOException {
+                             ObjectMapper objectMapper,
+                             StorageRoot storageRoot) throws IOException {
         this.datasetService = datasetService;
         this.mlServiceClient = mlServiceClient;
         this.runRepository = runRepository;
         this.objectMapper = objectMapper;
-        Files.createDirectories(storageRoot);
+        this.predictionsRoot = storageRoot.resolve("predictions");
+        Files.createDirectories(predictionsRoot);
     }
 
     /**
@@ -83,7 +86,7 @@ public class PredictionService {
         Map<String, Object> modelConfig = modelConfig(body, source);
         UUID groupId = manual != null && predefined != null ? UUID.randomUUID() : null;
         DatasetTable sourceTable = datasetService.load(source);
-        Path userDirectory = storageRoot.resolve(String.valueOf(userId));
+        Path userDirectory = predictionsRoot.resolve(String.valueOf(userId));
         Files.createDirectories(userDirectory);
 
         List<GeneratedRun> generated = new ArrayList<>();

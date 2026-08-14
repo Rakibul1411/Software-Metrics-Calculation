@@ -12,7 +12,6 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.UUID;
 import java.util.ArrayList;
@@ -20,6 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,10 +30,12 @@ public class GitHubCloneService {
     private static final long MAX_ZIP_BYTES = 50L * 1024L * 1024L;
     private static final int DOWNLOAD_TIMEOUT_MILLIS = 120_000;
 
-    private final Path cloneLocation = Paths.get("storage/extracted-projects");
-    private final Path downloadLocation = Paths.get("storage/uploads");
+    private final Path cloneLocation;
+    private final Path downloadLocation;
 
-    public GitHubCloneService() throws IOException {
+    public GitHubCloneService(StorageRoot storageRoot) throws IOException {
+        this.cloneLocation = storageRoot.resolve("extracted-projects");
+        this.downloadLocation = storageRoot.resolve("uploads");
         Files.createDirectories(cloneLocation);
         Files.createDirectories(downloadLocation);
     }

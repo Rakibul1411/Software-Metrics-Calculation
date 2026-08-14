@@ -21,6 +21,7 @@ import org.metrics.defectlab.dataset.application.DatasetService;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 import org.metrics.defectlab.prediction.infrastructure.MlServiceClient;
 import org.metrics.defectlab.prediction.persistence.PredictionRunRepository;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class PredictionServiceConfigurationTest {
@@ -34,7 +35,8 @@ class PredictionServiceConfigurationTest {
                 mock(DatasetService.class),
                 mock(MlServiceClient.class),
                 mock(PredictionRunRepository.class),
-                new ObjectMapper());
+                new ObjectMapper(),
+                new StorageRoot("storage"));
         source = mock(MetricDataset.class);
         when(source.getDatasetFamily()).thenReturn(MetricDataset.Family.PROMISE);
     }

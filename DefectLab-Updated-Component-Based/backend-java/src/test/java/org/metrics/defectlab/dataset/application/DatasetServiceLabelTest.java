@@ -13,6 +13,7 @@ import org.metrics.defectlab.comparison.persistence.MetricComparisonRepository;
 import org.metrics.defectlab.dataset.domain.DatasetTable;
 import org.metrics.defectlab.dataset.persistence.MetricDatasetRepository;
 import org.metrics.defectlab.prediction.persistence.PredictionRunRepository;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class DatasetServiceLabelTest {
@@ -24,7 +25,8 @@ class DatasetServiceLabelTest {
         service = new DatasetService(
                 mock(MetricDatasetRepository.class),
                 mock(PredictionRunRepository.class),
-                mock(MetricComparisonRepository.class));
+                mock(MetricComparisonRepository.class),
+                new StorageRoot("storage"));
     }
 
     @Test

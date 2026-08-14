@@ -9,12 +9,13 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 
 class GitHubCloneServiceTest {
 
     @Test
     void acceptsAndNormalizesPublicGitHubUrls() throws Exception {
-        GitHubCloneService service = new GitHubCloneService();
+        GitHubCloneService service = new GitHubCloneService(new StorageRoot("storage"));
         assertEquals("https://github.com/junit-team/junit4",
                 service.validateAndNormalizeUrl("https://www.github.com/junit-team/junit4/"));
         assertEquals("https://github.com/feiwww/PROMISE-backup",
@@ -24,7 +25,7 @@ class GitHubCloneServiceTest {
 
     @Test
     void preservesBranchAndFolderFromGitHubTreeUrls() throws Exception {
-        GitHubCloneService service = new GitHubCloneService();
+        GitHubCloneService service = new GitHubCloneService(new StorageRoot("storage"));
         GitHubCloneService.GitHubTarget target = service.parseTarget(
                 "https://github.com/eclipse-jdt/eclipse.jdt.core/tree/master/org.eclipse.jdt.core");
 
@@ -36,7 +37,7 @@ class GitHubCloneServiceTest {
 
     @Test
     void acceptsGitHubBlobLinksToZipFiles() throws Exception {
-        GitHubCloneService service = new GitHubCloneService();
+        GitHubCloneService service = new GitHubCloneService(new StorageRoot("storage"));
         assertEquals(
                 "https://raw.githubusercontent.com/feiwww/PROMISE-backup/master/source%20code/ant/apache-ant-1.6.0-src.zip",
                 service.validateAndBuildRawZipUrl(
@@ -46,7 +47,7 @@ class GitHubCloneServiceTest {
 
     @Test
     void rejectsNonGitHubAndCredentialBearingUrls() throws Exception {
-        GitHubCloneService service = new GitHubCloneService();
+        GitHubCloneService service = new GitHubCloneService(new StorageRoot("storage"));
         assertThrows(IllegalArgumentException.class,
                 () -> service.validateAndNormalizeUrl("https://example.com/owner/repository"));
         assertThrows(IllegalArgumentException.class,
@@ -60,7 +61,7 @@ class GitHubCloneServiceTest {
 
     @Test
     void aeeemCloneStartsBloblessAndRetainsARegularCloneFallback() throws Exception {
-        GitHubCloneService service = new GitHubCloneService();
+        GitHubCloneService service = new GitHubCloneService(new StorageRoot("storage"));
         List<List<String>> attempts = service.cloneAttempts(
                 "https://github.com/eclipse-jdt/eclipse.jdt.core",
                 Paths.get("storage/extracted-projects/test-clone"),

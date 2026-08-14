@@ -20,6 +20,7 @@ import org.metrics.defectlab.comparison.domain.MetricComparison;
 import org.metrics.defectlab.comparison.persistence.MetricComparisonRepository;
 import org.metrics.defectlab.dataset.application.DatasetService;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 
 class MetricComparisonServiceTest {
 
@@ -41,7 +42,8 @@ class MetricComparisonServiceTest {
                 userId, 11L, 12L)).thenReturn(Optional.of(saved));
 
         MetricComparisonService service =
-                new MetricComparisonService(datasets, repository, new ObjectMapper());
+                new MetricComparisonService(
+                        datasets, repository, new ObjectMapper(), new StorageRoot("storage"));
         Map<String, Object> result = service.execute(userId, Map.of(
                 "manualDatasetId", 11L,
                 "predefinedDatasetId", 12L));
@@ -74,7 +76,8 @@ class MetricComparisonServiceTest {
                 .thenReturn(List.of(saved));
 
         MetricComparisonService service =
-                new MetricComparisonService(datasets, repository, new ObjectMapper());
+                new MetricComparisonService(
+                        datasets, repository, new ObjectMapper(), new StorageRoot("storage"));
         List<Map<String, Object>> pairs = service.eligiblePairs(userId);
 
         assertEquals(1, pairs.size());
