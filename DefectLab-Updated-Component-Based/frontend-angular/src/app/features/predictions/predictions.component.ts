@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { PredictionRunSummary } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
@@ -12,9 +12,6 @@ export class PredictionsComponent implements OnInit {
   runs: PredictionRunSummary[] = [];
   error = '';
   search = '';
-  searchOpen = false;
-
-  @ViewChild('searchInput') private readonly searchInputRef?: ElementRef<HTMLInputElement>;
 
   readonly runsColumns: TableColumn[] = [
     { key: 'run', label: 'Run ID', sticky: 'start', className: 'dl-mono' },
@@ -35,16 +32,6 @@ export class PredictionsComponent implements OnInit {
     const query = this.search.trim().toLowerCase();
     return this.runs.filter(run =>
       !query || run.targetDataset.displayName.toLowerCase().includes(query));
-  }
-
-  openSearch(): void {
-    this.searchOpen = true;
-    setTimeout(() => this.searchInputRef?.nativeElement.focus());
-  }
-
-  closeSearch(): void {
-    this.searchOpen = false;
-    this.search = '';
   }
 
   load(): void {

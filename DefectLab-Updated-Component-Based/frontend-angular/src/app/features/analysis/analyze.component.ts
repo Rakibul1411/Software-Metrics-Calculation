@@ -1,8 +1,10 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { DatasetFamily, DatasetSummary } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { RadioOption } from '../../shared/ui-radio-group/ui-radio-group.model';
 import { SelectOption } from '../../shared/ui-select/ui-select.model';
+import { ToastService } from '../../shared/ui-toast/toast.service';
 
 @Component({
   selector: 'app-analyze',
@@ -34,7 +36,11 @@ export class AnalyzeComponent {
   error = '';
   created: DatasetSummary | null = null;
 
-  constructor(private readonly api: DefectLabApiService) {}
+  constructor(
+    private readonly api: DefectLabApiService,
+    private readonly toast: ToastService,
+    private readonly router: Router
+  ) {}
 
   get modeOptions(): RadioOption[] {
     return [
@@ -169,10 +175,14 @@ export class AnalyzeComponent {
       next: dataset => {
         this.created = dataset;
         this.busy = false;
+        this.toast.success('Dataset analyzed and saved successfully.');
+        this.router.navigate(['/datasets']);
       },
       error: error => {
-        this.error = error?.error?.error ?? 'Metric extraction failed.';
+        const message = error?.error?.error ?? 'Metric extraction failed.';
+        this.error = message;
         this.busy = false;
+        this.toast.error(message);
       }
     });
   }

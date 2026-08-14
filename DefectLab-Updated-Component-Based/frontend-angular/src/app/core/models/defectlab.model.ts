@@ -60,7 +60,6 @@ export interface ModelConfig {
   modelName: 'KNN';
   k: number;
   threshold: number;
-  logTransform: boolean;
   coral: boolean;
   seed: number;
   datasetFamily: DatasetFamily;

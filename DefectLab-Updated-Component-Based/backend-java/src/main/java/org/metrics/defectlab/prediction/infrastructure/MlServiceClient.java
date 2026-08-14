@@ -1,7 +1,6 @@
 package org.metrics.defectlab.prediction.infrastructure;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -39,16 +38,6 @@ public class MlServiceClient {
     }
 
     @SuppressWarnings("unchecked")
-    public Map<String, Object> validateSchema(List<Map<String, String>> rows, String family) {
-        return post("/ml/schema/validate", Map.of("rows", rows, "family", family), Map.class);
-    }
-
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> preprocessingPreview(List<Map<String, String>> rows, String family) {
-        return post("/ml/preprocessing/preview", Map.of("rows", rows, "family", family), Map.class);
-    }
-
-    @SuppressWarnings("unchecked")
     public Map<String, Object> predict(Map<String, Object> request) {
         return post("/ml/predict", request, Map.class);
     }
@@ -56,18 +45,6 @@ public class MlServiceClient {
     @SuppressWarnings("unchecked")
     public Map<String, Object> evaluate(Map<String, Object> request) {
         return post("/ml/evaluate", request, Map.class);
-    }
-
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> compare(Map<String, Object> request) {
-        return post("/ml/compare", request, Map.class);
-    }
-
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> registry(String family) {
-        return restTemplate.exchange(baseUrl + "/ml/registry/" + family,
-                org.springframework.http.HttpMethod.GET,
-                new HttpEntity<>(headers()), Map.class).getBody();
     }
 
     private <T> T post(String path, Object body, Class<T> responseType) {

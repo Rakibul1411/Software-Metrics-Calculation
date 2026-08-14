@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { DatasetFamily, DatasetType } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { RadioOption } from '../../shared/ui-radio-group/ui-radio-group.model';
+import { ToastService } from '../../shared/ui-toast/toast.service';
 
 @Component({
   selector: 'app-dataset-create',
@@ -30,7 +31,8 @@ export class DatasetCreateComponent {
 
   constructor(
     private readonly api: DefectLabApiService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly toast: ToastService
   ) {}
 
   get canSubmit(): boolean {
@@ -61,13 +63,16 @@ export class DatasetCreateComponent {
       family: this.family,
       type: this.origin
     }).subscribe({
-      next: dataset => {
+      next: () => {
         this.uploading = false;
-        this.router.navigate(['/datasets', dataset.id]);
+        this.toast.success('Dataset added successfully.');
+        this.router.navigate(['/datasets']);
       },
       error: error => {
-        this.uploadError = error?.error?.error ?? 'Dataset upload failed.';
+        const message = error?.error?.error ?? 'Dataset upload failed.';
+        this.uploadError = message;
         this.uploading = false;
+        this.toast.error(message);
       }
     });
   }

@@ -4,14 +4,16 @@ The DefectLab pipeline.
 Required order:
     schema validation
     -> missing/invalid handling
-    -> log1p on registered non-negative features
-    -> source-fitted StandardScaler
+    -> StandardScaler fit independently on each domain (zero mean, unit
+       variance -- the only preprocessing CORAL assumes; Sun, Feng & Saenko,
+       Section 2.1: "assuming that all features are normalized to have zero
+       mean and unit variance, mu_t = mu_s = 0 after the normalization step")
     -> optional shallow CORAL (source -> target)
     -> KNN with user-selected K from 1 to 5
     -> probability, label and risk ranking
 
 Target labels are never read during imputation, transformation, CORAL, fitting,
-or prediction. They are used only by :mod:`app.defectlab.evaluation`, and only
+or prediction. They are used only by :mod:`app.domain.evaluation`, and only
 after the caller has saved the predictions.
 """
 
@@ -24,7 +26,7 @@ import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 
-from app.defectlab.preparation import PreparedFrame, SchemaError
+from app.domain.dataset_preparation import PreparedFrame, SchemaError
 from app.services.shallow_coral_service import ShallowCoralService
 
 DEFAULT_THRESHOLD = 0.50
@@ -35,10 +37,7 @@ class PipelineOutcome:
     family: str
     model_name: str
     features: list[str]
-    removed_constant_features: list[str]
-    selected_k: int | None
-    k_candidates: list[int]
-    k_scores: dict[int, float]
+    selected_k: int
     threshold: float
     seed: int
     coral_applied: bool
@@ -53,10 +52,7 @@ class PipelineOutcome:
             "family": self.family,
             "modelName": self.model_name,
             "features": self.features,
-            "removedConstantFeatures": self.removed_constant_features,
             "selectedK": self.selected_k,
-            "kCandidates": self.k_candidates,
-            "kScores": {str(k): v for k, v in self.k_scores.items()},
             "threshold": self.threshold,
             "seed": self.seed,
             "coralApplied": self.coral_applied,
@@ -126,10 +122,6 @@ def run(
     )
     warnings.extend(impute_warnings)
 
-    log_columns = [c for c in source_features.columns if c in source.profile.log_features]
-    source_features[log_columns] = np.log1p(source_features[log_columns])
-    target_features[log_columns] = np.log1p(target_features[log_columns])
-
     source_features, target_features, removed = _drop_constant_features(
         source_features, target_features
     )
@@ -140,10 +132,11 @@ def run(
     if source_features.shape[1] == 0:
         raise SchemaError("Every feature had zero variance in the source dataset.")
 
-    # StandardScaler is fitted on the source only and applied to the target.
-    scaler = StandardScaler().fit(source_features.to_numpy())
-    scaled_source = scaler.transform(source_features.to_numpy())
-    scaled_target = scaler.transform(target_features.to_numpy())
+    # Each domain is standardized with its own mean/variance (not a source-fit
+    # scaler reused on target), matching the paper's assumption that both
+    # domains independently reach zero mean and unit variance before CORAL.
+    scaled_source = StandardScaler().fit_transform(source_features.to_numpy())
+    scaled_target = StandardScaler().fit_transform(target_features.to_numpy())
 
     distance_before: float | None = None
     distance_after: float | None = None
@@ -155,14 +148,12 @@ def run(
 
     labels = np.asarray(source.labels, dtype=int)
     selected_k = int(k)
-    k_scores: dict[int, float] = {}
     if selected_k < 1 or selected_k > 5:
         raise SchemaError("K must be selected from 1 to 5.")
     if selected_k > len(labels):
         raise SchemaError(
             f"K={selected_k} is larger than the {len(labels)} source rows."
         )
-    usable_candidates = [selected_k]
 
     model = KNeighborsClassifier(
         n_neighbors=selected_k, weights="uniform", metric="minkowski", p=2
@@ -192,14 +183,11 @@ def run(
         family=source.profile.family,
         model_name="KNN",
         features=list(source_features.columns),
-        removed_constant_features=removed,
         selected_k=selected_k,
-        k_candidates=usable_candidates,
-        k_scores=k_scores,
         threshold=threshold,
         seed=seed,
         coral_applied=apply_coral,
-        log_applied=True,
+        log_applied=False,
         covariance_distance_before=distance_before,
         covariance_distance_after=distance_after,
         predictions=predictions,

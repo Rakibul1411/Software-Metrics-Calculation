@@ -1,0 +1,8 @@
+<button *ngIf="!open" type="button" class="dl-icon-button" [title]="label"
+        [attr.aria-label]="label" (click)="openSearch()">
+  <ui-icon name="search" [size]="16"></ui-icon>
+</button>
+<input *ngIf="open" #searchInput class="dl-inline-search" type="text"
+       [placeholder]="placeholder" name="search"
+       [ngModel]="query" (ngModelChange)="queryChange.emit($event)"
+       (blur)="closeSearch()">

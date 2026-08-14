@@ -78,10 +78,10 @@ export class ComparisonCreateComponent implements OnInit {
       manualDatasetId: pair.manualDatasetId,
       predefinedDatasetId: pair.predefinedDatasetId
     }).subscribe({
-      next: detail => {
+      next: () => {
         this.busy = false;
         this.toast.success('Comparison completed successfully.');
-        this.router.navigate(['/metric-comparisons', detail.id]);
+        this.router.navigate(['/metric-comparisons']);
       },
       error: error => {
         this.busy = false;

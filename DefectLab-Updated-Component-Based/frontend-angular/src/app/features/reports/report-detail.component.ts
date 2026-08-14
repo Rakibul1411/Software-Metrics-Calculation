@@ -10,6 +10,7 @@ import {
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
+import { ToastService } from '../../shared/ui-toast/toast.service';
 
 interface MatchedPredictionRow {
   identifier: string;
@@ -64,7 +65,8 @@ export class ReportDetailComponent implements OnInit {
   constructor(
     readonly api: DefectLabApiService,
     private readonly route: ActivatedRoute,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly toast: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -112,7 +114,6 @@ export class ReportDetailComponent implements OnInit {
       { label: 'Dataset family', value: run.modelConfig.datasetFamily },
       { label: 'Model', value: this.modelSetting(run) },
       { label: 'Threshold', value: run.modelConfig.threshold },
-      { label: 'Log transform', value: this.enabled(run.modelConfig.logTransform) },
       { label: 'CORAL alignment', value: this.enabled(run.modelConfig.coral) },
       { label: 'Random seed', value: run.modelConfig.seed }
     ];
@@ -240,5 +241,9 @@ export class ReportDetailComponent implements OnInit {
 
   back(): void {
     this.router.navigate(['/reports']);
+  }
+
+  downloadStarted(label: string): void {
+    this.toast.info(`${label} download started.`);
   }
 }

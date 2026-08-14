@@ -15,6 +15,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -62,6 +63,13 @@ public class PredictionController {
         Long userId = currentUser.requireUserId(request);
         PredictionRun run = predictionService.require(userId, id);
         return ResponseEntity.ok(predictionService.detail(userId, run));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> delete(
+            @PathVariable("id") Long id, HttpServletRequest request) throws IOException {
+        predictionService.delete(currentUser.requireUserId(request), id);
+        return ResponseEntity.ok(Map.of("deleted", true));
     }
 
     @GetMapping("/{id}/predictions")

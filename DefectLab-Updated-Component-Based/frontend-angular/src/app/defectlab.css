@@ -1668,11 +1668,13 @@ ui-file-picker,
 ui-metric-card,
 ui-state,
 ui-confirm-dialog,
+ui-delete-action,
 ui-table,
 ui-download-menu,
 ui-radio-group,
 ui-input,
 ui-select,
+ui-search-toggle,
 ui-detail-fields { display: contents; }
 
 /* Labelled row of radio choices — one filled dot per option, accent-tinted. */

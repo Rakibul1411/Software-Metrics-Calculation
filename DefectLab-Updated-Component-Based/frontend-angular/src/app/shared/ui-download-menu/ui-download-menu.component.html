@@ -4,7 +4,7 @@
     {{ label }}
   </ui-button>
   <div class="dl-dropdown-menu" *ngIf="open">
-    <a class="dl-dropdown-item" [href]="csvUrl" (click)="open = false">CSV</a>
-    <a class="dl-dropdown-item" [href]="arffUrl" (click)="open = false">ARFF</a>
+    <a class="dl-dropdown-item" [href]="csvUrl" (click)="open = false; downloaded.emit('CSV')">CSV</a>
+    <a class="dl-dropdown-item" [href]="arffUrl" (click)="open = false; downloaded.emit('ARFF')">ARFF</a>
   </div>
 </div>

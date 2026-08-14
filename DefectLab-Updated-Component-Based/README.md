@@ -245,14 +245,13 @@ Every prediction uses the same deterministic preparation flow:
 3. reject missing required columns;
 4. coerce predictors to numeric values;
 5. impute missing values using source medians only;
-6. apply `log1p` to registered non-negative skewed features;
-7. remove zero-variance source features from both source and target;
-8. fit `StandardScaler` on the source only;
-9. transform source and target with the source-fitted scaler; and
-10. optionally align source covariance to target with shallow/linear CORAL.
+6. remove zero-variance source features from both source and target;
+7. fit an independent `StandardScaler` on each domain (source and target each
+   reach their own zero mean/unit variance, matching CORAL's own assumption
+   rather than reusing a source-fitted scaler on target); and
+8. optionally align source covariance to target with shallow/linear CORAL.
 
-Log transformation is fixed. CORAL alignment is controlled by the dataset
-alignment checkbox for each run.
+CORAL alignment is controlled by the dataset alignment checkbox for each run.
 
 Target labels are never used in imputation, transformation, CORAL, model
 training, or prediction. This prevents target-label leakage.
@@ -377,9 +376,9 @@ run:
 ```text
 Schema validation
   -> source-median imputation
-  -> registered log1p transforms
   -> zero-variance removal
-  -> source-fitted standardization
+  -> independent per-domain standardization (source and target each fit their
+     own StandardScaler)
   -> optional shallow CORAL alignment
   -> KNN with K=1–5
   -> defect probability
@@ -436,6 +435,9 @@ metadata and artifact references.
 - Bundled predefined datasets cannot be deleted.
 - A user-owned dataset cannot be deleted after a saved run or comparison
   references it.
+- A prediction run or metric comparison can be deleted independently; this
+  removes both its database row and its on-disk artifacts (CSV/PDF and
+  metadata sidecar), which then frees any dataset it referenced for deletion.
 
 ### Storage layout
 
@@ -446,11 +448,15 @@ backend-java/storage/
 ├── metrics/
 │   ├── predefined/          copied bundled benchmarks
 │   └── {userId}/            uploaded or extracted metric files
-└── predictions/
+├── predictions/
+│   └── {userId}/
+│       ├── {uuid}-labeled.csv
+│       ├── {uuid}-report.pdf
+│       └── {uuid}-report.pdf.json
+└── comparisons/
     └── {userId}/
-        ├── {uuid}-labeled.csv
-        ├── {uuid}-report.pdf
-        └── {uuid}-report.json
+        ├── {uuid}-metric-comparison.pdf
+        └── {uuid}-metric-comparison.pdf.json
 ```
 
 Production deployment must attach durable storage or replace the local adapter
@@ -673,8 +679,6 @@ plus `projectName`, required `projectVersion`, `datasetFamily`, and
 | `GET` | `/api/datasets/{id}/quality` | Quality issues and warnings |
 | `GET` | `/api/datasets/{id}/download` | Download the original metric file |
 | `DELETE` | `/api/datasets/{id}` | Delete an unused user-owned dataset |
-| `GET` | `/api/preprocessing/{family}` | Family preprocessing registry |
-| `GET` | `/api/preprocessing/datasets/{id}/preview` | Dataset transformation preview |
 
 Dataset upload fields are `datasetFile`, optional `projectName`, optional
 `projectVersion`, `datasetFamily`, and `datasetType`.
@@ -690,6 +694,7 @@ Dataset upload fields are `datasetFile`, optional `projectName`, optional
 | `GET` | `/api/predictions/{id}/predictions` | Ranked prediction rows |
 | `GET` | `/api/predictions/{id}/prediction.csv` | Download a MANUAL labeled CSV |
 | `GET` | `/api/predictions/{id}/report.pdf` | Download the run PDF |
+| `DELETE` | `/api/predictions/{id}` | Delete a prediction run and its artifacts |
 | `GET` | `/api/reports/{id}.pdf` | Alternate authenticated report route |
 
 KNN dual-target request:
@@ -719,6 +724,7 @@ without dataset alignment.
 | `GET` | `/api/metric-comparisons/eligible-pairs` | List compatible pairs |
 | `GET` | `/api/metric-comparisons/{id}` | Comparison details |
 | `GET` | `/api/metric-comparisons/{id}/report.pdf` | Download comparison PDF |
+| `DELETE` | `/api/metric-comparisons/{id}` | Delete a comparison and its artifacts |
 
 Example comparison configuration:
 
@@ -743,12 +749,8 @@ These routes are for Spring Boot, not the browser:
 | Method | Route | Purpose |
 |---|---|---|
 | `GET` | `/ml/health` | Public service health |
-| `POST` | `/ml/schema/validate` | Validate metric rows |
-| `POST` | `/ml/preprocessing/preview` | Preview transformations |
 | `POST` | `/ml/predict` | Run the standard prediction pipeline |
 | `POST` | `/ml/evaluate` | Evaluate predictions |
-| `POST` | `/ml/compare` | Compare metric/prediction results |
-| `GET` | `/ml/registry/{family}` | Return a family feature registry |
 
 ## Project structure
 
@@ -940,8 +942,9 @@ This is expected. AEEEM analysis is serialized to avoid excessive memory use.
 - GitHub analysis supports public repositories only.
 - PROMISE and AEEEM feature families cannot be mixed.
 - AEEEM full extraction requires Git history.
-- Every run applies log transformation and source-fitted scaling; shallow CORAL
-  is optional through the dataset-alignment checkbox.
+- Every run standardizes source and target independently (each fits its own
+  zero-mean/unit-variance scaler); shallow CORAL is optional through the
+  dataset-alignment checkbox.
 - Preprocessing does not use target labels.
 - K is selected manually from 1 to 5; the system does not auto-tune it.
 - Original metric files are immutable during prediction.

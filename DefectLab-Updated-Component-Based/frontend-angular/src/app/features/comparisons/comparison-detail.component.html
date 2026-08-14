@@ -6,7 +6,13 @@
     </nav>
     <h2>{{ comparison ? (comparison.manualDataset.displayName + ' ↔ ' + comparison.predefinedDataset.displayName) : 'Metric comparison' }}</h2>
     <div class="dl-actions" *ngIf="comparison as item">
-      <ui-button icon="download" [href]="api.metricComparisonReportUrl(item.id)">Download PDF Report</ui-button>
+      <ui-button icon="download" [href]="api.metricComparisonReportUrl(item.id)"
+                 (click)="downloadStarted()">Download PDF Report</ui-button>
+      <ui-delete-action label="Delete" dialogTitle="Delete comparison"
+          [confirmMessage]="'Delete the comparison between ' + item.manualDataset.displayName + ' and ' + item.predefinedDataset.displayName + '? This cannot be undone.'"
+          successMessage="Comparison deleted successfully."
+          [deleteFn]="deleteComparison" (deleted)="onDeleted()">
+      </ui-delete-action>
     </div>
   </div>
 

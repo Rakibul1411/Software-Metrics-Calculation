@@ -23,8 +23,10 @@
             <div class="dl-report-panel-sub" *ngIf="manualRun as run">Prediction run #{{ run.id }}</div>
           </div>
           <div class="dl-actions" *ngIf="manualRun as run">
-            <ui-button variant="ghost" icon="download" [href]="api.predictionDownloadUrl(run.id)">Download labeled CSV</ui-button>
-            <ui-button icon="download" [href]="api.reportDownloadUrl(run.id)">Download report</ui-button>
+            <ui-button variant="ghost" icon="download" [href]="api.predictionDownloadUrl(run.id)"
+                       (click)="downloadStarted('Labeled CSV')">Download labeled CSV</ui-button>
+            <ui-button icon="download" [href]="api.reportDownloadUrl(run.id)"
+                       (click)="downloadStarted('PDF report')">Download report</ui-button>
           </div>
         </div>
 
@@ -47,7 +49,8 @@
             <div class="dl-report-panel-sub" *ngIf="predefinedRun as run">Prediction run #{{ run.id }}</div>
           </div>
           <div class="dl-actions" *ngIf="predefinedRun as run">
-            <ui-button icon="download" [href]="api.reportDownloadUrl(run.id)">Download report</ui-button>
+            <ui-button icon="download" [href]="api.reportDownloadUrl(run.id)"
+                       (click)="downloadStarted('PDF report')">Download report</ui-button>
           </div>
         </div>
 

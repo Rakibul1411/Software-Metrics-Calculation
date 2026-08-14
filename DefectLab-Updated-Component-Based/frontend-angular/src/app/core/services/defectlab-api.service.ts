@@ -158,6 +158,10 @@ export class DefectLabApiService {
     return `${this.api}/predictions/${id}/prediction.csv`;
   }
 
+  deletePredictionRun(id: number): Observable<unknown> {
+    return this.http.delete(`${this.api}/predictions/${id}`, this.options);
+  }
+
   reportDownloadUrl(id: number): string {
     return `${this.api}/reports/${id}.pdf`;
   }
@@ -184,6 +188,10 @@ export class DefectLabApiService {
 
   metricComparisonReportUrl(id: number): string {
     return `${this.api}/metric-comparisons/${id}/report.pdf`;
+  }
+
+  deleteMetricComparison(id: number): Observable<unknown> {
+    return this.http.delete(`${this.api}/metric-comparisons/${id}`, this.options);
   }
 
   private metadataForm(

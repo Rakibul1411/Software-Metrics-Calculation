@@ -25,6 +25,7 @@ import { UiBadgeComponent } from './shared/ui-badge/ui-badge.component';
 import { UiButtonComponent } from './shared/ui-button/ui-button.component';
 import { UiCardComponent } from './shared/ui-card/ui-card.component';
 import { UiConfirmDialogComponent } from './shared/ui-confirm-dialog/ui-confirm-dialog.component';
+import { UiDeleteActionComponent } from './shared/ui-delete-action/ui-delete-action.component';
 import { UiDetailFieldsComponent } from './shared/ui-detail-fields/ui-detail-fields.component';
 import { UiDownloadMenuComponent } from './shared/ui-download-menu/ui-download-menu.component';
 import { UiIconComponent } from './shared/ui-icon/ui-icon.component';
@@ -32,6 +33,7 @@ import { UiFilePickerComponent } from './shared/ui-file-picker/ui-file-picker.co
 import { UiInputComponent } from './shared/ui-input/ui-input.component';
 import { UiMetricCardComponent } from './shared/ui-metric-card/ui-metric-card.component';
 import { UiRadioGroupComponent } from './shared/ui-radio-group/ui-radio-group.component';
+import { UiSearchToggleComponent } from './shared/ui-search-toggle/ui-search-toggle.component';
 import { UiSelectComponent } from './shared/ui-select/ui-select.component';
 import { UiStateComponent } from './shared/ui-state/ui-state.component';
 import { UiTableCellDirective } from './shared/ui-table/ui-table-cell.directive';
@@ -48,10 +50,12 @@ import { UiToastComponent } from './shared/ui-toast/ui-toast.component';
     UiMetricCardComponent,
     UiStateComponent,
     UiConfirmDialogComponent,
+    UiDeleteActionComponent,
     UiDetailFieldsComponent,
     UiDownloadMenuComponent,
     UiInputComponent,
     UiRadioGroupComponent,
+    UiSearchToggleComponent,
     UiSelectComponent,
     UiTableComponent,
     UiTableCellDirective,

@@ -14,10 +14,15 @@
     <div class="dl-actions" *ngIf="dataset as item">
       <ui-download-menu label="Download"
           [csvUrl]="api.datasetDownloadUrl(item.id, 'csv')"
-          [arffUrl]="api.datasetDownloadUrl(item.id, 'arff')">
+          [arffUrl]="api.datasetDownloadUrl(item.id, 'arff')"
+          (downloaded)="downloadStarted($event)">
       </ui-download-menu>
-      <ui-button *ngIf="!item.systemDataset" variant="danger" icon="trash"
-                 (pressed)="remove(item)">Delete dataset</ui-button>
+      <ui-delete-action *ngIf="!item.systemDataset"
+          label="Delete dataset" dialogTitle="Delete dataset"
+          [confirmMessage]="'Delete ' + item.displayName + '? This cannot be undone.'"
+          successMessage="Dataset deleted successfully."
+          [deleteFn]="deleteDataset" (deleted)="onDeleted()">
+      </ui-delete-action>
     </div>
   </div>
 
@@ -34,13 +39,3 @@
     </ui-table>
   </div>
 </ui-card>
-
-<ui-confirm-dialog
-    [open]="!!pendingDelete"
-    [busy]="deleting"
-    title="Delete dataset"
-    [message]="pendingDelete ? ('Delete ' + pendingDelete.displayName + '? This cannot be undone.') : ''"
-    confirmLabel="Delete"
-    (confirmed)="confirmDelete()"
-    (cancelled)="cancelDelete()">
-</ui-confirm-dialog>

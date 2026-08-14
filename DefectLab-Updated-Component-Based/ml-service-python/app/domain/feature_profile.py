@@ -11,7 +11,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Iterable
 
-IDENTIFIER = "name"
 PROMISE_LABEL = "bug"
 AEEEM_LABEL = "class"
 
@@ -20,8 +19,9 @@ PROMISE_FEATURES: tuple[str, ...] = (
     "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc", "max_cc", "avg_cc",
 )
 
-# PROMISE counts are skewed, so they get log1p. The four ratios are scale-only.
-PROMISE_LOG_FEATURES: frozenset[str] = frozenset({
+# These 16 are non-negative counts; an unexpected negative value is invalid
+# data. The four ratios (PROMISE_SCALE_ONLY) are checked separately below.
+PROMISE_NONNEGATIVE_FEATURES: frozenset[str] = frozenset({
     "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce",
     "npm", "loc", "moa", "ic", "cbm", "amc", "max_cc", "avg_cc",
 })
@@ -129,23 +129,16 @@ def is_excluded_history_column(header: str) -> bool:
 class FeatureProfile:
     family: str
     features: tuple[str, ...]
-    log_features: frozenset[str]
+    nonnegative_features: frozenset[str]
     label_column: str
     unit_range_features: frozenset[str] = field(default_factory=frozenset)
-
-    @property
-    def scale_only_features(self) -> frozenset[str]:
-        return frozenset(self.features) - self.log_features
-
-    def transform_of(self, column: str) -> str:
-        return "log1p" if column in self.log_features else "scale_only"
 
 
 def promise_profile() -> FeatureProfile:
     return FeatureProfile(
         family="PROMISE",
         features=PROMISE_FEATURES,
-        log_features=PROMISE_LOG_FEATURES,
+        nonnegative_features=PROMISE_NONNEGATIVE_FEATURES,
         label_column=PROMISE_LABEL,
         unit_range_features=PROMISE_UNIT_RANGE,
     )
@@ -153,30 +146,21 @@ def promise_profile() -> FeatureProfile:
 
 def aeeem_profile() -> FeatureProfile:
     features: list[str] = []
-    log_features: set[str] = set()
+    nonnegative_features: set[str] = set()
     for prefix in AEEEM_PREFIXES:
         for base in AEEEM_BASE_METRICS:
             column = f"{prefix}{base}"
             features.append(column)
-            # LDHH values are signed deltas, so they are scale-only.
+            # LDHH values are signed deltas, so they can legitimately be negative.
             if prefix != "ldhh_":
-                log_features.add(column)
+                nonnegative_features.add(column)
     features.extend(AEEEM_ENTROPY_FEATURES)
     return FeatureProfile(
         family="AEEEM",
         features=tuple(features),
-        log_features=frozenset(log_features),
+        nonnegative_features=frozenset(nonnegative_features),
         label_column=AEEEM_LABEL,
     )
-
-
-def profile_for(family: str) -> FeatureProfile:
-    normalized = (family or "").strip().upper()
-    if normalized == "PROMISE":
-        return promise_profile()
-    if normalized == "AEEEM":
-        return aeeem_profile()
-    raise ValueError("Dataset family must be PROMISE or AEEEM.")
 
 
 def detect_profile(headers: Iterable[str]) -> FeatureProfile | None:

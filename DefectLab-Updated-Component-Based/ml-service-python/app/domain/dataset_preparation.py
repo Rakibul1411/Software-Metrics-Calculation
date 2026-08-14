@@ -1,9 +1,9 @@
 """
 Schema validation and the raw-value rules.
 
-The SRS forbids guessing: no ``abs()``, no blanket clipping of negatives, and no
-``log1p`` before validation. Configured missing markers become NaN and are then
-imputed with the source median; anything else unexpected fails the run.
+The SRS forbids guessing: no ``abs()`` and no blanket clipping of negatives.
+Configured missing markers become NaN and are then imputed with the source
+median; anything else unexpected fails the run.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from app.defectlab.registry import (
+from app.domain.feature_profile import (
     FeatureProfile,
     detect_profile,
     find_label_column,
@@ -39,7 +39,6 @@ class PreparedFrame:
     identifiers: list[str]
     labels: np.ndarray | None
     warnings: list[str] = field(default_factory=list)
-    dropped_history_columns: list[str] = field(default_factory=list)
 
 
 _BUGGY_LABELS = {"buggy", "defective", "defect", "true", "yes"}
@@ -136,7 +135,7 @@ def validate(rows: list[dict], family: str | None = None) -> dict:
             issues.append(f"{non_numeric} non-numeric value(s) in '{feature}'")
         if np.isinf(series.to_numpy(dtype="float64", na_value=np.nan)).any():
             issues.append(f"Infinite value(s) in '{feature}'")
-        if feature in profile.log_features and len(negatives) > 0:
+        if feature in profile.nonnegative_features and len(negatives) > 0:
             issues.append(
                 f"{len(negatives)} unexpected negative value(s) in non-negative '{feature}'"
             )
@@ -156,7 +155,6 @@ def validate(rows: list[dict], family: str | None = None) -> dict:
         columns.append(
             {
                 "name": feature,
-                "transform": profile.transform_of(feature),
                 "missing": missing,
                 "nonNumeric": non_numeric,
                 "missingMarkers": marker_hits,
@@ -210,7 +208,7 @@ def prepare(rows: list[dict], family: str | None = None,
     # Configured markers are the only negatives allowed to mean "missing".
     features = features.mask(features.isin(MISSING_MARKERS))
     # Clean up floating-point noise in non-negative columns.
-    for column in profile.log_features:
+    for column in profile.nonnegative_features:
         near_zero = features[column].between(-NEGATIVE_ZERO_TOLERANCE, 0, inclusive="both")
         features.loc[near_zero, column] = 0.0
 
@@ -229,5 +227,4 @@ def prepare(rows: list[dict], family: str | None = None,
         identifiers=identifiers,
         labels=labels,
         warnings=list(report["warnings"]),
-        dropped_history_columns=list(report["excludedHistoryColumns"]),
     )

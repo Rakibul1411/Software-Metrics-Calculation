@@ -471,6 +471,15 @@ public class MetricComparisonService {
         return body;
     }
 
+    @Transactional
+    public void delete(Long userId, Long comparisonId) throws IOException {
+        MetricComparison comparison = require(userId, comparisonId);
+        comparisonRepository.delete(comparison);
+        Path pdf = Paths.get(comparison.getComparisonReportFilePath());
+        Files.deleteIfExists(pdf);
+        Files.deleteIfExists(metadataPath(pdf));
+    }
+
     public Path reportFile(Long userId, Long comparisonId) {
         Path path = Paths.get(require(userId, comparisonId)
                 .getComparisonReportFilePath()).toAbsolutePath().normalize();

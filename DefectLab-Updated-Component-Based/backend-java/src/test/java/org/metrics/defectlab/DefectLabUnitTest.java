@@ -38,9 +38,9 @@ class DefectLabUnitTest {
     void promiseProfileRegistersTwentyPredictorsAndFourScaleOnly() {
         FeatureProfile profile = FeatureProfile.promise();
         assertEquals(20, profile.getFeatures().size());
-        assertEquals(16, profile.getLogFeatures().size());
+        assertEquals(16, profile.getNonNegativeFeatures().size());
         for (String scaleOnly : List.of("lcom3", "dam", "mfa", "cam")) {
-            assertFalse(profile.getLogFeatures().contains(scaleOnly),
+            assertFalse(profile.getNonNegativeFeatures().contains(scaleOnly),
                     scaleOnly + " must be scale-only");
         }
     }
@@ -49,8 +49,8 @@ class DefectLabUnitTest {
     void aeeemProfileRegistersFiftySixFeaturesAndKeepsLdhhScaleOnly() {
         FeatureProfile profile = FeatureProfile.aeeem();
         assertEquals(56, profile.getFeatures().size());
-        assertEquals(34, profile.getLogFeatures().size());
-        assertTrue(profile.getLogFeatures().stream().noneMatch(name -> name.startsWith("ldhh_")));
+        assertEquals(34, profile.getNonNegativeFeatures().size());
+        assertTrue(profile.getNonNegativeFeatures().stream().noneMatch(name -> name.startsWith("ldhh_")));
     }
 
     @Test

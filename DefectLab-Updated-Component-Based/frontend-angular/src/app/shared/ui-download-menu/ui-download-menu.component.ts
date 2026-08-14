@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, Input } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from '@angular/core';
 
 /** A download button that opens a small menu to pick the file format. */
 @Component({
@@ -12,6 +12,7 @@ export class UiDownloadMenuComponent {
   @Input() size: 'md' | 'sm' = 'md';
   @Input({ required: true }) csvUrl!: string;
   @Input({ required: true }) arffUrl!: string;
+  @Output() downloaded = new EventEmitter<'CSV' | 'ARFF'>();
 
   open = false;
 

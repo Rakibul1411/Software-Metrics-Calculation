@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { DatasetFamily, DatasetSummary } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { SelectOption } from '../../shared/ui-select/ui-select.model';
@@ -14,7 +14,6 @@ export class DatasetsComponent implements OnInit {
   loading = true;
   loadError = '';
   search = '';
-  searchOpen = false;
   familyFilter = '';
   originFilter = '';
 
@@ -29,8 +28,6 @@ export class DatasetsComponent implements OnInit {
     { value: 'PREDEFINED', label: 'Predefined dataset' },
     { value: 'MANUAL', label: 'Manually extracted' }
   ];
-
-  @ViewChild('searchInput') private readonly searchInputRef?: ElementRef<HTMLInputElement>;
 
   readonly columns: TableColumn[] = [
     { key: 'projectName', label: 'Project Name', sticky: 'start', width: '28%' },
@@ -68,16 +65,6 @@ export class DatasetsComponent implements OnInit {
         this.loading = false;
       }
     });
-  }
-
-  openSearch(): void {
-    this.searchOpen = true;
-    setTimeout(() => this.searchInputRef?.nativeElement.focus());
-  }
-
-  closeSearch(): void {
-    this.searchOpen = false;
-    this.search = '';
   }
 
   countFamily(family: DatasetFamily): number {

@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { SessionService } from '../../core/services/session.service';
+import { ToastService } from '../../shared/ui-toast/toast.service';
 
 @Component({
   selector: 'app-account',
@@ -18,7 +19,8 @@ export class AccountComponent {
 
   constructor(
     readonly session: SessionService,
-    private readonly api: DefectLabApiService
+    private readonly api: DefectLabApiService,
+    private readonly toast: ToastService
   ) {}
 
   get canSubmit(): boolean {
@@ -40,10 +42,13 @@ export class AccountComponent {
           this.saved = true;
           this.currentPassword = '';
           this.newPassword = '';
+          this.toast.success('Password updated successfully.');
         },
         error: (failure: HttpErrorResponse) => {
-          this.error = typeof failure.error?.error === 'string'
+          const message = typeof failure.error?.error === 'string'
             ? failure.error.error : 'Password could not be updated.';
+          this.error = message;
+          this.toast.error(message);
         }
       });
   }

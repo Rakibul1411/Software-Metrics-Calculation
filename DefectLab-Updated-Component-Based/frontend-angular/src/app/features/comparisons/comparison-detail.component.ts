@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import {
   AggregateMetricComparisonRow,
   InstanceMetricComparisonRow,
@@ -7,6 +8,7 @@ import {
 } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
+import { ToastService } from '../../shared/ui-toast/toast.service';
 
 @Component({
   selector: 'app-comparison-detail',
@@ -38,7 +40,8 @@ export class ComparisonDetailComponent implements OnInit {
   constructor(
     readonly api: DefectLabApiService,
     private readonly route: ActivatedRoute,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly toast: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -112,5 +115,15 @@ export class ComparisonDetailComponent implements OnInit {
 
   back(): void {
     this.router.navigate(['/metric-comparisons']);
+  }
+
+  deleteComparison = (): Observable<unknown> => this.api.deleteMetricComparison(this.comparison!.id);
+
+  onDeleted(): void {
+    this.router.navigate(['/metric-comparisons']);
+  }
+
+  downloadStarted(): void {
+    this.toast.info('PDF report download started.');
   }
 }

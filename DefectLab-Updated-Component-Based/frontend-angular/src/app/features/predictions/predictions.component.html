@@ -3,13 +3,9 @@
     <div class="dl-detail-title-row">
       <div class="dl-heading-search">
         <h2>Saved Prediction Runs</h2>
-        <button *ngIf="!searchOpen" type="button" class="dl-icon-button" title="Search prediction runs"
-                aria-label="Search prediction runs" (click)="openSearch()">
-          <ui-icon name="search" [size]="16"></ui-icon>
-        </button>
-        <input *ngIf="searchOpen" #searchInput class="dl-inline-search" type="text"
-               placeholder="Project name" [(ngModel)]="search" name="search"
-               (blur)="closeSearch()">
+        <ui-search-toggle label="Search prediction runs" placeholder="Project name"
+            [query]="search" (queryChange)="search = $event">
+        </ui-search-toggle>
       </div>
       <div class="dl-actions">
         <ui-button icon="plus" link="/predictions/new">Run Prediction</ui-button>

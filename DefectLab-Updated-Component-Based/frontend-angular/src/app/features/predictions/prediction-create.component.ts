@@ -4,6 +4,7 @@ import { DatasetFamily, DatasetSummary } from '../../core/models/defectlab.model
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { RadioOption } from '../../shared/ui-radio-group/ui-radio-group.model';
 import { SelectOption } from '../../shared/ui-select/ui-select.model';
+import { ToastService } from '../../shared/ui-toast/toast.service';
 
 @Component({
   selector: 'app-prediction-create',
@@ -31,7 +32,8 @@ export class PredictionCreateComponent implements OnInit {
 
   constructor(
     private readonly api: DefectLabApiService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly toast: ToastService
   ) {}
 
   ngOnInit(): void { this.load(); }
@@ -182,14 +184,16 @@ export class PredictionCreateComponent implements OnInit {
       seed: 42
     };
     this.api.runPrediction(payload).subscribe({
-      next: result => {
+      next: () => {
         this.busy = false;
-        const firstRun = result.runs[0];
-        this.router.navigate(firstRun ? ['/predictions', firstRun.id] : ['/predictions']);
+        this.toast.success('Prediction run completed successfully.');
+        this.router.navigate(['/predictions']);
       },
       error: error => {
-        this.error = error?.error?.error ?? 'Prediction run failed.';
+        const message = error?.error?.error ?? 'Prediction run failed.';
+        this.error = message;
         this.busy = false;
+        this.toast.error(message);
       }
     });
   }

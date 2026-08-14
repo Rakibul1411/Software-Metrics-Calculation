@@ -1,10 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import { PredictionRunDetail } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
+import { ToastService } from '../../shared/ui-toast/toast.service';
 
 @Component({
   selector: 'app-prediction-detail',
@@ -21,7 +23,8 @@ export class PredictionDetailComponent implements OnInit {
     readonly api: DefectLabApiService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
-    private readonly datePipe: DatePipe
+    private readonly datePipe: DatePipe,
+    private readonly toast: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -87,5 +90,15 @@ export class PredictionDetailComponent implements OnInit {
 
   back(): void {
     this.router.navigate(['/predictions']);
+  }
+
+  deletePredictionRun = (): Observable<unknown> => this.api.deletePredictionRun(this.run!.id);
+
+  onDeleted(): void {
+    this.router.navigate(['/predictions']);
+  }
+
+  downloadStarted(label: string): void {
+    this.toast.info(`${label} download started.`);
   }
 }

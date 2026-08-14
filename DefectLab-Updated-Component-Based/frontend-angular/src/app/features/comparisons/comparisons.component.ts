@@ -1,9 +1,10 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { MetricComparisonPair } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { SelectOption } from '../../shared/ui-select/ui-select.model';
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
+import { ToastService } from '../../shared/ui-toast/toast.service';
 
 @Component({
   selector: 'app-comparisons',
@@ -15,7 +16,6 @@ export class ComparisonsComponent implements OnInit {
   error = '';
   runningKey: string | null = null;
   search = '';
-  searchOpen = false;
   familyFilter = '';
 
   readonly familyFilterOptions: SelectOption[] = [
@@ -23,8 +23,6 @@ export class ComparisonsComponent implements OnInit {
     { value: 'PROMISE', label: 'PROMISE' },
     { value: 'AEEEM', label: 'AEEEM' }
   ];
-
-  @ViewChild('searchInput') private readonly searchInputRef?: ElementRef<HTMLInputElement>;
 
   readonly columns: TableColumn[] = [
     { key: 'pair', label: 'Dataset pair', sticky: 'start' },
@@ -35,7 +33,8 @@ export class ComparisonsComponent implements OnInit {
 
   constructor(
     readonly api: DefectLabApiService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly toast: ToastService
   ) {}
 
   ngOnInit(): void { this.load(); }
@@ -55,16 +54,6 @@ export class ComparisonsComponent implements OnInit {
     });
   }
 
-  openSearch(): void {
-    this.searchOpen = true;
-    setTimeout(() => this.searchInputRef?.nativeElement.focus());
-  }
-
-  closeSearch(): void {
-    this.searchOpen = false;
-    this.search = '';
-  }
-
   onFamilyFilterChange(value: string | number | null): void {
     this.familyFilter = (value as string) ?? '';
   }
@@ -81,13 +70,16 @@ export class ComparisonsComponent implements OnInit {
       manualDatasetId: pair.manualDatasetId,
       predefinedDatasetId: pair.predefinedDatasetId
     }).subscribe({
-      next: detail => {
+      next: () => {
         this.runningKey = null;
-        this.router.navigate(['/metric-comparisons', detail.id]);
+        this.toast.success('Comparison completed successfully.');
+        this.load();
       },
       error: error => {
         this.runningKey = null;
-        this.error = error?.error?.error ?? 'Metric comparison failed.';
+        const message = error?.error?.error ?? 'Metric comparison failed.';
+        this.error = message;
+        this.toast.error(message);
       }
     });
   }

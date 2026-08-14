@@ -7,8 +7,15 @@
     <h2>{{ run ? ('Run #' + run.id) : 'Prediction run' }}</h2>
     <div class="dl-actions" *ngIf="run as item">
       <ui-button *ngIf="item.predictionFileAvailable" variant="ghost" icon="download"
-                 [href]="api.predictionDownloadUrl(item.id)">Download labeled CSV</ui-button>
-      <ui-button icon="download" [href]="api.reportDownloadUrl(item.id)">Download PDF</ui-button>
+                 [href]="api.predictionDownloadUrl(item.id)"
+                 (click)="downloadStarted('Labeled CSV')">Download labeled CSV</ui-button>
+      <ui-button icon="download" [href]="api.reportDownloadUrl(item.id)"
+                 (click)="downloadStarted('PDF report')">Download PDF</ui-button>
+      <ui-delete-action label="Delete" dialogTitle="Delete prediction run"
+          [confirmMessage]="'Delete Run #' + item.id + '? This cannot be undone.'"
+          successMessage="Prediction run deleted successfully."
+          [deleteFn]="deletePredictionRun" (deleted)="onDeleted()">
+      </ui-delete-action>
     </div>
   </div>
 

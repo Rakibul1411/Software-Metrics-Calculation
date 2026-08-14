@@ -1,8 +1,8 @@
 # DefectLab FastAPI ML Service
 
-This module implements schema validation, preprocessing, optional shallow
-CORAL, KNN prediction, evaluation, and comparison. It is an internal stateless
-service called by Spring Boot.
+This module implements schema validation, preparation, optional shallow
+CORAL, KNN prediction, and evaluation. It is an internal stateless service
+called by Spring Boot.
 
 For the complete product workflow, see the [project README](../README.md).
 
@@ -33,32 +33,41 @@ storage.
 
 ## Source structure
 
+The layout follows the clean-architecture dependency rule: `domain/` is pure
+business logic with zero framework imports, `services/` holds
+domain-independent algorithms, and `api/` is the *only* package allowed to
+import FastAPI and translate HTTP payloads to and from domain calls.
+`domain/` and `services/` never import from `api/`.
+
 ```text
 app/
-├── main.py                         FastAPI app and token middleware
+├── main.py                          composition root: FastAPI app, token middleware, router wiring
 ├── core/
-│   └── config.py                  environment settings
-├── defectlab/
-│   ├── registry.py                PROMISE/AEEEM feature registries
-│   ├── preparation.py             header/schema/label preparation
-│   ├── pipeline.py                preparation + KNN pipeline
-│   ├── evaluation.py              classification evaluation
-│   └── routes.py                  /ml route handlers
-└── services/
-    └── shallow_coral_service.py   covariance alignment
+│   └── config.py                    environment settings
+├── domain/                          framework-free business logic
+│   ├── feature_profile.py           PROMISE/AEEEM feature registries and header aliases
+│   ├── dataset_preparation.py       schema validation, label parsing, PreparedFrame
+│   ├── prediction_pipeline.py       preparation + KNN pipeline (PipelineOutcome)
+│   └── evaluation.py                classification evaluation metrics
+├── services/                        generic, domain-independent algorithms
+│   └── shallow_coral_service.py     covariance alignment (linear CORAL)
+└── api/                             the only package that imports fastapi
+    └── routes.py                    /ml route handlers
 ```
+
+Adding a new capability: put the business rule in `domain/` (or a new module
+there) with no FastAPI import, unit-test it directly, then add a thin
+`api/routes.py` handler that calls it and shapes the JSON response. Removing
+a capability is symmetric — delete the route handler, then the now-unused
+`domain/` function, and the corresponding test file.
 
 ## Internal API
 
 | Method | Route | Purpose |
 |---|---|---|
 | `GET` | `/ml/health` | Public internal-health check |
-| `POST` | `/ml/schema/validate` | Validate family schema and data quality |
-| `POST` | `/ml/preprocessing/preview` | Show registered raw/transformed feature statistics |
 | `POST` | `/ml/predict` | Prepare, train, predict, and rank |
 | `POST` | `/ml/evaluate` | Calculate metrics from actual/predicted results |
-| `POST` | `/ml/compare` | Calculate comparison output |
-| `GET` | `/ml/registry/{family}` | Return PROMISE/AEEEM registry metadata |
 
 `/` and `/health` also return basic service information. Spring Boot uses
 `/ml/health`.
@@ -69,14 +78,12 @@ app/
 
 - canonical identifier: `name`;
 - 20 registered predictors;
-- recognized actual-label aliases;
-- selected non-negative skewed features receive `log1p`.
+- recognized actual-label aliases.
 
 ### AEEEM
 
 - 56 registered static/history predictors;
-- recognized clean/buggy label forms;
-- comparison can operate without portable class identifiers.
+- recognized clean/buggy label forms.
 
 Source and target must use the same family.
 
@@ -89,24 +96,25 @@ Header normalization
   -> family/feature validation
   -> numeric coercion
   -> source-median imputation
-  -> registered log1p transforms
   -> zero-variance source-feature removal
-  -> source-fitted StandardScaler
+  -> StandardScaler fit independently on each domain (zero mean, unit variance)
   -> optional shallow CORAL source-to-target alignment
-  -> KNN fit with user-selected K=1–5
+  -> KNN fit with user-selected K=1-5
   -> probability and thresholded label
   -> descending risk rank
 ```
 
-Log transformation always runs. The `coral` boolean controls whether dataset
-alignment runs before fitting.
+The `coral` boolean controls whether dataset alignment runs before fitting.
+Each domain is standardized with its own mean/variance (not a source-fit
+scaler reused on target), matching CORAL's assumption that both domains
+independently reach zero mean and unit variance before alignment (Sun, Feng
+& Saenko, Section 2.1).
 
 ### Leakage prevention
 
 Target labels are excluded from:
 
 - imputation;
-- log transformation;
 - scaling;
 - CORAL;
 - fitting; and
@@ -137,7 +145,7 @@ Each target row produces:
 }
 ```
 
-The response also includes family, model, used features, removed constants,
+The response also includes family, model, used features, selected K,
 threshold, seed, applied-pipeline flags, covariance distances, and warnings.
 
 ## Evaluation
@@ -164,12 +172,11 @@ Undefined metrics return `value: null` and a reason.
 | Variable | Default | Purpose |
 |---|---|---|
 | `PROJECT_NAME` | `Defect Prediction ML Service` | FastAPI title |
-| `ML_SERVICE_HOST` | `0.0.0.0` | Bind host |
-| `ML_SERVICE_PORT` | `8000` | Bind port |
 | `ML_SERVICE_TOKEN` | local development token | Shared Spring/FastAPI secret |
-| `TEMP_DIR` | `temp` | Temporary-work directory |
 
-Use a long random `ML_SERVICE_TOKEN` outside local development.
+Use a long random `ML_SERVICE_TOKEN` outside local development. Bind host and
+port are fixed in the Dockerfile/uvicorn command, not read from environment
+settings.
 
 ## Install
 
@@ -212,16 +219,21 @@ Compile check:
 venv/bin/python -m compileall -q app tests
 ```
 
-The suite covers schema preparation, labels, user-configured KNN, optional CORAL
-alignment, covariance distance, deterministic output, evaluation, and comparison.
+Test files mirror the `domain/` modules one-to-one (`test_feature_profile.py`,
+`test_dataset_preparation.py`, `test_prediction_pipeline.py`,
+`test_evaluation.py`), plus `test_shallow_coral_service.py` for the
+`services/` layer. Shared row-building fixtures live in `tests/helpers.py`.
 
 ## Development rules
 
 - Keep this service stateless.
 - Do not add database or browser authentication logic.
 - Preserve source-only fitting and target-label isolation.
-- Keep feature aliases/registries in `registry.py`.
+- Keep feature aliases/registries in `domain/feature_profile.py`.
 - Return readable `SchemaError` messages for invalid data.
 - Keep the preparation pipeline fixed unless the product contract explicitly
   changes.
 - Preserve one output prediction for every input target record.
+- Nothing under `domain/` or `services/` may import `fastapi`; only `api/`
+  may. This keeps every business rule directly unit-testable without an HTTP
+  client.

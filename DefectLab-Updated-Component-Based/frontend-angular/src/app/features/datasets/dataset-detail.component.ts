@@ -1,10 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import { DatasetPreview, DatasetSummary } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
+import { ToastService } from '../../shared/ui-toast/toast.service';
 
 @Component({
   selector: 'app-dataset-detail',
@@ -19,14 +21,12 @@ export class DatasetDetailComponent implements OnInit {
   previewLoading = true;
   error = '';
 
-  pendingDelete: DatasetSummary | null = null;
-  deleting = false;
-
   constructor(
     readonly api: DefectLabApiService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
-    private readonly datePipe: DatePipe
+    private readonly datePipe: DatePipe,
+    private readonly toast: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -104,26 +104,14 @@ export class DatasetDetailComponent implements OnInit {
       Object.fromEntries(headers.map((header, index) => [header, row[index]])));
   }
 
-  remove(item: DatasetSummary): void {
-    this.pendingDelete = item;
+  deleteDataset = (): Observable<unknown> => this.api.deleteDataset(this.dataset!.id);
+
+  onDeleted(): void {
+    this.router.navigate(['/datasets']);
   }
 
-  confirmDelete(): void {
-    if (!this.pendingDelete || this.deleting) return;
-    this.deleting = true;
-    this.api.deleteDataset(this.pendingDelete.id).subscribe({
-      next: () => this.router.navigate(['/datasets']),
-      error: error => {
-        this.deleting = false;
-        this.pendingDelete = null;
-        this.error = error?.error?.error ?? 'Dataset could not be deleted.';
-      }
-    });
-  }
-
-  cancelDelete(): void {
-    if (this.deleting) return;
-    this.pendingDelete = null;
+  downloadStarted(format: 'CSV' | 'ARFF'): void {
+    this.toast.info(`${format} download started.`);
   }
 
   back(): void {
