@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -273,44 +274,107 @@ public class MetricComparisonService {
         return metrics;
     }
 
+    private static final int MAX_LISTED_IDENTIFIERS = 30;
+
     private void writePdf(
             Path pdf, MetricDataset manual, MetricDataset predefined,
             Map<String, Object> config, Map<String, Object> result) throws IOException {
-        List<String> lines = new ArrayList<>();
-        lines.add("Manual dataset: " + manual.getDisplayName());
-        lines.add("Predefined dataset: " + predefined.getDisplayName());
-        lines.add("Family: " + manual.getDatasetFamily());
-        lines.add("Configuration: " + config);
-        lines.add("");
-        if ("AGGREGATE".equals(result.get("comparisonMode"))) {
-            lines.add("METRIC | MANUAL STATS | PREDEFINED STATS | MEAN DIFF | SD DIFF | % DIFF");
-            for (Map<String, Object> row : mapList(result.get("metrics"))) {
-                lines.add(row.get("metric") + " | " + row.get("manual") + " | "
-                        + row.get("predefined") + " | " + row.get("meanDifference")
-                        + " | " + row.get("sdDifference") + " | "
-                        + row.get("percentageDifference"));
-            }
-        } else {
-            lines.add("Status counts: " + result.get("statusCounts"));
-            lines.add("Manual-only identifiers: " + result.get("manualOnly"));
-            lines.add("Predefined-only identifiers: " + result.get("predefinedOnly"));
-            lines.add("");
-            lines.add("METRIC | MANUAL STATS | PREDEFINED STATS | MEAN DIFF | SD DIFF | % DIFF");
-            for (Map<String, Object> row : mapList(result.get("metrics"))) {
-                lines.add(row.get("metric") + " | " + row.get("manual") + " | "
-                        + row.get("predefined") + " | " + row.get("meanDifference")
-                        + " | " + row.get("sdDifference") + " | "
-                        + row.get("percentageDifference"));
-            }
-            lines.add("");
-            lines.add("IDENTIFIER | METRIC | MANUAL | PREDEFINED | STATUS");
-            for (Map<String, Object> row : mapList(result.get("comparisons"))) {
-                lines.add(row.get("identifier") + " | " + row.get("metric") + " | "
-                        + row.get("manualValue") + " | " + row.get("predefinedValue")
-                        + " | " + row.get("status"));
-            }
+        List<String> intro = new ArrayList<>();
+        intro.add("Manual dataset: " + manual.getDisplayName());
+        intro.add("Predefined dataset: " + predefined.getDisplayName());
+        intro.add("Family: " + manual.getDatasetFamily());
+        intro.add("Comparison mode: " + result.get("comparisonMode"));
+        intro.add("Absolute tolerance: " + config.get("absoluteTolerance")
+                + "   Relative tolerance: " + config.get("relativeTolerance"));
+
+        List<PdfReportWriter.Table> tables = new ArrayList<>();
+        if (!"AGGREGATE".equals(result.get("comparisonMode"))) {
+            intro.add("Matched identifiers: " + result.get("matchedIdentifiers"));
+            intro.add("Status counts: " + result.get("statusCounts"));
+            intro.add(identifierSummaryLine("Manual-only files", result.get("manualOnly")));
+            intro.add(identifierSummaryLine("Predefined-only files", result.get("predefinedOnly")));
         }
-        PdfReportWriter.write(pdf, "DefectLab Metric Comparison Report", lines);
+
+        tables.add(new PdfReportWriter.Table(
+                "Metric-wise mean & std (manual vs predefined)",
+                List.of("Metric", "Mean Manual", "Mean Predefined",
+                        "Std Manual", "Std Predefined", "% Diff"),
+                metricStatsTableRows(result.get("metrics"))));
+
+        if (!"AGGREGATE".equals(result.get("comparisonMode"))) {
+            tables.add(new PdfReportWriter.Table(
+                    "File-wise comparison",
+                    List.of("File / Identifier", "Metric", "Manual Value",
+                            "Predefined Value", "Status"),
+                    instanceComparisonTableRows(result.get("comparisons"))));
+        }
+
+        PdfReportWriter.writeTables(pdf, "DefectLab Metric Comparison Report", intro, tables);
+    }
+
+    private String identifierSummaryLine(String label, Object rawList) {
+        List<?> identifiers = rawList instanceof List ? (List<?>) rawList : List.of();
+        if (identifiers.isEmpty()) {
+            return label + ": none";
+        }
+        StringBuilder line = new StringBuilder(label + " (" + identifiers.size() + "): ");
+        List<?> shown = identifiers.subList(0, Math.min(MAX_LISTED_IDENTIFIERS, identifiers.size()));
+        line.append(shown.stream().map(String::valueOf).collect(Collectors.joining(", ")));
+        if (identifiers.size() > shown.size()) {
+            line.append(", +").append(identifiers.size() - shown.size()).append(" more");
+        }
+        return line.toString();
+    }
+
+    private List<List<String>> metricStatsTableRows(Object rawRows) {
+        List<List<String>> rows = new ArrayList<>();
+        for (Map<String, Object> row : mapList(rawRows)) {
+            Map<String, Object> manualStats = asMap(row.get("manual"));
+            Map<String, Object> predefinedStats = asMap(row.get("predefined"));
+            rows.add(List.of(
+                    String.valueOf(row.get("metric")),
+                    formatNumber(manualStats.get("mean")),
+                    formatNumber(predefinedStats.get("mean")),
+                    formatNumber(manualStats.get("standardDeviation")),
+                    formatNumber(predefinedStats.get("standardDeviation")),
+                    formatPercentage(row.get("percentageDifference"))));
+        }
+        return rows;
+    }
+
+    private List<List<String>> instanceComparisonTableRows(Object rawRows) {
+        List<List<String>> rows = new ArrayList<>();
+        for (Map<String, Object> row : mapList(rawRows)) {
+            rows.add(List.of(
+                    String.valueOf(row.get("identifier")),
+                    String.valueOf(row.get("metric")),
+                    formatNumber(row.get("manualValue")),
+                    formatNumber(row.get("predefinedValue")),
+                    String.valueOf(row.get("status"))));
+        }
+        return rows;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> asMap(Object value) {
+        return value instanceof Map ? (Map<String, Object>) value : Map.of();
+    }
+
+    private static String formatNumber(Object value) {
+        if (!(value instanceof Number)) {
+            return "-";
+        }
+        double doubleValue = ((Number) value).doubleValue();
+        return Double.isFinite(doubleValue) ? String.format(Locale.ROOT, "%.4f", doubleValue) : "-";
+    }
+
+    private static String formatPercentage(Object value) {
+        if (!(value instanceof Number)) {
+            return "-";
+        }
+        double doubleValue = ((Number) value).doubleValue();
+        return Double.isFinite(doubleValue)
+                ? String.format(Locale.ROOT, "%.2f%%", doubleValue) : "-";
     }
 
     @Transactional(readOnly = true)
@@ -405,6 +469,15 @@ public class MetricComparisonService {
         body.put("result", readResult(comparison));
         body.put("cacheHit", cacheHit);
         return body;
+    }
+
+    @Transactional
+    public void delete(Long userId, Long comparisonId) throws IOException {
+        MetricComparison comparison = require(userId, comparisonId);
+        comparisonRepository.delete(comparison);
+        Path pdf = Paths.get(comparison.getComparisonReportFilePath());
+        Files.deleteIfExists(pdf);
+        Files.deleteIfExists(metadataPath(pdf));
     }
 
     public Path reportFile(Long userId, Long comparisonId) {

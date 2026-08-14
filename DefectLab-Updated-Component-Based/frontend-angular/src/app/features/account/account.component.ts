@@ -3,63 +3,12 @@ import { Component } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { SessionService } from '../../core/services/session.service';
+import { ToastService } from '../../shared/ui-toast/toast.service';
 
 @Component({
   selector: 'app-account',
   standalone: false,
-  template: `
-    <div class="dl-grid dl-grid-2">
-      <section class="dl-card">
-        <div class="dl-card-head">
-          <div>
-            <h2>Profile</h2>
-            <p>Your datasets, runs and comparisons are scoped to this account.</p>
-          </div>
-        </div>
-        <dl class="dl-kv" *ngIf="session.user as user">
-          <dt>Name</dt><dd>{{ user.name }}</dd>
-          <dt>Email</dt><dd>{{ user.email }}</dd>
-          <dt>Member since</dt><dd>{{ user.createdAt | date:'medium' }}</dd>
-        </dl>
-        <div class="dl-actions" style="margin-top:18px">
-          <button type="button" class="dl-btn dl-btn-ghost" (click)="session.signOut()">
-            Sign out
-          </button>
-        </div>
-      </section>
-
-      <section class="dl-card">
-        <div class="dl-card-head">
-          <div>
-            <h2>Change password</h2>
-            <p>Passwords are stored as BCrypt hashes, never in plain text.</p>
-          </div>
-        </div>
-        <form (ngSubmit)="submit()" class="dl-grid" style="gap:14px">
-          <label class="dl-field">
-            <span>Current password</span>
-            <input type="password" autocomplete="current-password"
-                   [(ngModel)]="currentPassword" name="currentPassword" [disabled]="saving">
-          </label>
-          <label class="dl-field">
-            <span>New password</span>
-            <input type="password" autocomplete="new-password"
-                   minlength="8" maxlength="72"
-                   [(ngModel)]="newPassword" name="newPassword" [disabled]="saving">
-            <small>8–72 characters.</small>
-          </label>
-
-          <div class="dl-alert dl-alert-error" *ngIf="error" role="alert">{{ error }}</div>
-          <div class="dl-alert dl-alert-success" *ngIf="saved">Password updated.</div>
-
-          <button type="submit" class="dl-btn" [disabled]="!canSubmit || saving">
-            <span class="dl-spinner" *ngIf="saving" aria-hidden="true"></span>
-            {{ saving ? 'Saving…' : 'Update password' }}
-          </button>
-        </form>
-      </section>
-    </div>
-  `
+  templateUrl: './account.component.html'
 })
 export class AccountComponent {
   currentPassword = '';
@@ -70,11 +19,13 @@ export class AccountComponent {
 
   constructor(
     readonly session: SessionService,
-    private readonly api: DefectLabApiService
+    private readonly api: DefectLabApiService,
+    private readonly toast: ToastService
   ) {}
 
   get canSubmit(): boolean {
-    return this.currentPassword.length > 0 && this.newPassword.length >= 8;
+    return this.currentPassword.length > 0
+      && this.newPassword.length >= 8 && this.newPassword.length <= 12;
   }
 
   submit(): void {
@@ -91,10 +42,13 @@ export class AccountComponent {
           this.saved = true;
           this.currentPassword = '';
           this.newPassword = '';
+          this.toast.success('Password updated successfully.');
         },
         error: (failure: HttpErrorResponse) => {
-          this.error = typeof failure.error?.error === 'string'
+          const message = typeof failure.error?.error === 'string'
             ? failure.error.error : 'Password could not be updated.';
+          this.error = message;
+          this.toast.error(message);
         }
       });
   }

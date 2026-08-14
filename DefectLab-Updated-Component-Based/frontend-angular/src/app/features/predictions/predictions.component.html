@@ -1,0 +1,39 @@
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header">
+    <div class="dl-detail-title-row">
+      <div class="dl-heading-search">
+        <h2>Saved Prediction Runs</h2>
+        <ui-search-toggle label="Search prediction runs" placeholder="Project name"
+            [query]="search" (queryChange)="search = $event">
+        </ui-search-toggle>
+      </div>
+      <div class="dl-actions">
+        <ui-button icon="plus" link="/predictions/new">Run Prediction</ui-button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+    <ui-table *ngIf="filtered.length; else emptyRuns"
+              [columns]="runsColumns" [rows]="filtered" trackByKey="id"
+              scrollClass="dl-prediction-runs-scroll">
+      <ng-template uiTableCell="run" let-row>#{{ row.id }}</ng-template>
+      <ng-template uiTableCell="group" let-row>{{ row.comparisonGroupId || '—' }}</ng-template>
+      <ng-template uiTableCell="target" let-row>{{ row.targetDataset.displayName }}</ng-template>
+      <ng-template uiTableCell="type" let-row>
+        {{ row.targetDataset.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' }}
+      </ng-template>
+      <ng-template uiTableCell="model" let-row>{{ row.modelConfig.modelName }} · {{ setting(row) }}</ng-template>
+      <ng-template uiTableCell="buggy" let-row>{{ row.summary.predictedBuggy }}</ng-template>
+      <ng-template uiTableCell="created" let-row>{{ row.createdAt | date:'medium' }}</ng-template>
+      <ng-template uiTableCell="inspect" let-row>
+        <ui-button variant="ghost" size="sm" icon="view" [link]="['/predictions', row.id]"
+                   title="Inspect" ariaLabel="Inspect run"></ui-button>
+      </ng-template>
+    </ui-table>
+    <ng-template #emptyRuns>
+      <ui-state kind="empty" [message]="runs.length ? 'No matching prediction runs.' : 'No prediction runs yet.'"></ui-state>
+    </ng-template>
+  </div>
+</ui-card>

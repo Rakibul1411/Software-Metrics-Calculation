@@ -25,3 +25,4 @@ ml-service-python/.env
 *.pyc
 sample-data/
 tmp/
+PROMISE-backup-copy/frontend-angular.zip

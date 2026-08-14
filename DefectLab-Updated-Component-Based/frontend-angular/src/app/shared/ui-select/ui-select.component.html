@@ -1,0 +1,18 @@
+<label class="dl-field">
+  <span *ngIf="label">{{ label }}<ng-container *ngIf="required"> *</ng-container></span>
+  <div class="dl-select" [class.dl-select-open]="open">
+    <button type="button" class="dl-select-trigger"
+            [class.dl-select-placeholder]="value === null || value === undefined"
+            [disabled]="disabled" (click)="toggle()">
+      <span>{{ selectedLabel }}</span>
+      <ui-icon name="chevron-right" [size]="14"></ui-icon>
+    </button>
+    <div class="dl-select-menu" *ngIf="open">
+      <button type="button" class="dl-select-option" *ngFor="let option of options"
+              [class.dl-select-option-active]="option.value === value"
+              (click)="select(option)">
+        {{ option.label }}
+      </button>
+    </div>
+  </div>
+</label>

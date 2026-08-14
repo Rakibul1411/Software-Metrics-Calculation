@@ -1,0 +1,41 @@
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header dl-detail-header-grid">
+    <nav class="dl-breadcrumb">
+      <a (click)="back()">Metric Storage</a>
+      <ui-icon name="chevron-right" [size]="14"></ui-icon>
+    </nav>
+    <div class="dl-detail-title" *ngIf="dataset as item">
+      <h2>{{ item.displayName }}</h2>
+      <ui-badge [tone]="item.hasActualLabel ? 'green' : 'amber'">
+        {{ item.hasActualLabel ? 'Labeled' : 'Unlabeled' }}
+      </ui-badge>
+    </div>
+    <h2 *ngIf="!dataset">Dataset details</h2>
+    <div class="dl-actions" *ngIf="dataset as item">
+      <ui-download-menu label="Download"
+          [csvUrl]="api.datasetDownloadUrl(item.id, 'csv')"
+          [arffUrl]="api.datasetDownloadUrl(item.id, 'arff')"
+          (downloaded)="downloadStarted($event)">
+      </ui-download-menu>
+      <ui-delete-action *ngIf="!item.systemDataset"
+          label="Delete dataset" dialogTitle="Delete dataset"
+          [confirmMessage]="'Delete ' + item.displayName + '? This cannot be undone.'"
+          successMessage="Dataset deleted successfully."
+          [deleteFn]="deleteDataset" (deleted)="onDeleted()">
+      </ui-delete-action>
+    </div>
+  </div>
+
+  <ui-state *ngIf="loading" kind="loading" message="Loading dataset details…"></ui-state>
+  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+
+  <ui-detail-fields *ngIf="dataset" [fields]="detailFields"></ui-detail-fields>
+
+  <div class="dl-detail-section" *ngIf="dataset">
+    <h3>Stored values</h3>
+    <ui-state *ngIf="previewLoading" kind="loading" message="Loading preview…"></ui-state>
+    <ui-table *ngIf="preview"
+              [columns]="previewColumns" [rows]="previewRows" scrollClass="dl-scroll-y">
+    </ui-table>
+  </div>
+</ui-card>

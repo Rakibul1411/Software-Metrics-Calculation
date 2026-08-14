@@ -132,7 +132,7 @@ public final class DatasetQuality {
             }
             // A negative raw count is either a missing marker or an extraction bug;
             // the run must stop rather than silently clip it.
-            if (column.negative > 0 && profile.getLogFeatures().contains(feature)) {
+            if (column.negative > 0 && profile.getNonNegativeFeatures().contains(feature)) {
                 quality.blockingIssues.add(column.negative
                         + " negative value(s) in non-negative column '" + feature + "'");
             }

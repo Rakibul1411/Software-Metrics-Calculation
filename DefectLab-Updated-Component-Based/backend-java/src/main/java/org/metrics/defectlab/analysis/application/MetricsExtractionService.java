@@ -160,7 +160,7 @@ public class MetricsExtractionService {
             }
         }
         PromiseInputValidator.requireSingleRelease(sourcePaths);
-        return PromiseProjectAnalyzer.analyzeDirectories(sourcePaths);
+        return new PromiseProjectAnalyzer().analyze(sourcePaths);
     }
 
     private AeeemCalculation calculateAeeemMetricsForDirectories(

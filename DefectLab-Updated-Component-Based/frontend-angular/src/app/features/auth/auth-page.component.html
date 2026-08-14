@@ -1,0 +1,100 @@
+<div class="dl-auth">
+  <button type="button" class="dl-icon-button dl-auth-theme"
+          (click)="toggleTheme()"
+          [attr.title]="theme.isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+          aria-label="Toggle dark mode">
+    <ui-icon [name]="theme.isDark ? 'sun' : 'moon'" [size]="18"></ui-icon>
+  </button>
+  <aside class="dl-auth-aside">
+    <div class="dl-brand">
+      <span class="dl-brand-mark" aria-hidden="true">DL</span>
+      <span>
+        <strong>DefectLab</strong>
+        <small>Cross-project defect prediction</small>
+      </span>
+    </div>
+    <h2>From source code to a defensible prediction.</h2>
+    <p>
+      Extract PROMISE or AEEEM metrics from Java source, validate the schema
+      against a feature registry, then rank target classes with source-fitted
+      scaling, optional shallow CORAL alignment, and user-configured KNN.
+    </p>
+  </aside>
+
+  <section class="dl-auth-form">
+    <div class="dl-auth-card">
+      <div class="dl-tabs" role="tablist" *ngIf="mode !== 'forgot'">
+        <button type="button" role="tab"
+                [class.active]="mode === 'login'"
+                [attr.aria-selected]="mode === 'login'"
+                (click)="setMode('login')">Sign in</button>
+        <button type="button" role="tab"
+                [class.active]="mode === 'register'"
+                [attr.aria-selected]="mode === 'register'"
+                (click)="setMode('register')">Create account</button>
+      </div>
+
+      <ui-card
+        [heading]="mode === 'forgot'
+          ? 'Reset your password'
+          : (mode === 'login' ? 'Sign in to DefectLab' : 'Create your account')"
+        [subtitle]="mode === 'forgot'
+          ? (forgotStep === 'email'
+              ? 'Enter the email address on your account.'
+              : 'Choose a new password of 8-12 characters.')
+          : (mode === 'login'
+              ? 'Your datasets and runs are scoped to your account.'
+              : 'Use 8-12 characters for the password.')">
+
+        <form (ngSubmit)="submit()" class="dl-form-stack">
+          <ui-input *ngIf="mode === 'register'" label="Full name" autocomplete="name"
+                     [maxlength]="100" [disabled]="loading"
+                     [value]="name" (valueChange)="name = $event">
+          </ui-input>
+
+          <ui-input *ngIf="mode !== 'forgot' || forgotStep === 'email'"
+                     label="Email" type="email" autocomplete="email"
+                     [maxlength]="150" [disabled]="loading"
+                     [value]="email" (valueChange)="email = $event">
+          </ui-input>
+
+          <label class="dl-field" *ngIf="mode !== 'forgot' || forgotStep === 'password'">
+            <span>{{ mode === 'forgot' ? 'New password' : 'Password' }}</span>
+            <span class="dl-input-affix">
+              <input [type]="showPassword ? 'text' : 'password'" name="password"
+                     minlength="8" maxlength="12"
+                     [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'"
+                     [(ngModel)]="password" [disabled]="loading">
+              <button type="button" class="dl-affix-button"
+                      (click)="showPassword = !showPassword"
+                      [attr.title]="showPassword ? 'Hide password' : 'Show password'"
+                      [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+                <ui-icon [name]="showPassword ? 'view-off' : 'view'"></ui-icon>
+              </button>
+            </span>
+          </label>
+
+          <ui-state *ngIf="notice" kind="success" [message]="notice"></ui-state>
+          <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+
+          <ui-button type="submit" [disabled]="loading || !canSubmit" [loading]="loading">
+            {{ loading ? 'Working…'
+                : mode === 'forgot'
+                    ? (forgotStep === 'email' ? 'Continue' : 'Update password')
+                    : (mode === 'login' ? 'Sign in' : 'Create account') }}
+      </ui-button>
+          <div class="dl-auth-links">
+            <button type="button" class="dl-link-button"
+                    *ngIf="mode === 'login'" (click)="setMode('forgot')">
+              Forgot password?
+            </button>
+            <button type="button" class="dl-link-button"
+                    *ngIf="mode === 'forgot'" (click)="setMode('login')">
+              Back to sign in
+            </button>
+          </div>
+        </form>
+      </ui-card>
+    </div>
+  </section>
+</div>

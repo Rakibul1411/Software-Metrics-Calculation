@@ -1,0 +1,80 @@
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header dl-detail-header-grid">
+    <nav class="dl-breadcrumb">
+      <a (click)="back()">Compare Metrics</a>
+      <ui-icon name="chevron-right" [size]="14"></ui-icon>
+    </nav>
+    <h2>{{ comparison ? (comparison.manualDataset.displayName + ' ↔ ' + comparison.predefinedDataset.displayName) : 'Metric comparison' }}</h2>
+    <div class="dl-actions" *ngIf="comparison as item">
+      <ui-button icon="download" [href]="api.metricComparisonReportUrl(item.id)"
+                 (click)="downloadStarted()">Download PDF Report</ui-button>
+      <ui-delete-action label="Delete" dialogTitle="Delete comparison"
+          [confirmMessage]="'Delete the comparison between ' + item.manualDataset.displayName + ' and ' + item.predefinedDataset.displayName + '? This cannot be undone.'"
+          successMessage="Comparison deleted successfully."
+          [deleteFn]="deleteComparison" (deleted)="onDeleted()">
+      </ui-delete-action>
+    </div>
+  </div>
+
+  <ui-state *ngIf="loading" kind="loading" message="Loading comparison…"></ui-state>
+  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+
+  <ng-container *ngIf="comparison as comparison">
+    <ng-container *ngIf="comparison.result.comparisonMode === 'AGGREGATE'; else instanceResult">
+      <div class="dl-detail-section">
+        <h3>Overview</h3>
+        <div class="dl-grid dl-grid-3">
+          <ui-metric-card label="Common numeric metrics"
+                          [value]="comparison.result.commonNumericMetricCount"></ui-metric-card>
+          <ui-metric-card label="Dataset A" value="MANUAL"></ui-metric-card>
+          <ui-metric-card label="Dataset B" value="PREDEFINED"></ui-metric-card>
+        </div>
+      </div>
+
+      <div class="dl-detail-section">
+        <h3>Metric-wise mean &amp; std (manual vs predefined)</h3>
+        <ui-table [columns]="metricStatsColumns" [rows]="aggregateRows"
+                  trackByKey="metric" scrollClass="dl-comparison-result-scroll">
+          <ng-template uiTableCell="meanManual" let-row>{{ number(row.manual.mean) }}</ng-template>
+          <ng-template uiTableCell="meanPredefined" let-row>{{ number(row.predefined.mean) }}</ng-template>
+          <ng-template uiTableCell="stdManual" let-row>{{ number(row.manual.standardDeviation) }}</ng-template>
+          <ng-template uiTableCell="stdPredefined" let-row>{{ number(row.predefined.standardDeviation) }}</ng-template>
+          <ng-template uiTableCell="percentageDifference" let-row>{{ percentage(row.percentageDifference) }}</ng-template>
+        </ui-table>
+      </div>
+    </ng-container>
+
+    <ng-template #instanceResult>
+      <div class="dl-detail-section">
+        <h3>Overview</h3>
+        <div class="dl-grid dl-grid-4">
+          <ui-metric-card label="Matched identifiers" [value]="matchedIdentifiers"></ui-metric-card>
+          <ui-metric-card label="Common numeric metrics" [value]="commonMetricCount"></ui-metric-card>
+          <ui-metric-card label="Manual-only files" [value]="manualOnlyCount"></ui-metric-card>
+          <ui-metric-card label="Predefined-only files" [value]="predefinedOnlyCount"></ui-metric-card>
+        </div>
+      </div>
+
+      <div class="dl-detail-section">
+        <h3>Metric-wise mean &amp; std (manual vs predefined)</h3>
+        <ui-table [columns]="metricStatsColumns" [rows]="instanceMetricStats"
+                  trackByKey="metric" scrollClass="dl-comparison-result-scroll">
+          <ng-template uiTableCell="meanManual" let-row>{{ number(row.manual.mean) }}</ng-template>
+          <ng-template uiTableCell="meanPredefined" let-row>{{ number(row.predefined.mean) }}</ng-template>
+          <ng-template uiTableCell="stdManual" let-row>{{ number(row.manual.standardDeviation) }}</ng-template>
+          <ng-template uiTableCell="stdPredefined" let-row>{{ number(row.predefined.standardDeviation) }}</ng-template>
+          <ng-template uiTableCell="percentageDifference" let-row>{{ percentage(row.percentageDifference) }}</ng-template>
+        </ui-table>
+      </div>
+
+      <div class="dl-detail-section">
+        <h3>File-wise comparison</h3>
+        <ui-table [columns]="instanceRowColumns" [rows]="instanceRows"
+                  scrollClass="dl-comparison-result-scroll">
+          <ng-template uiTableCell="manualValue" let-row>{{ number(row.manualValue) }}</ng-template>
+          <ng-template uiTableCell="predefinedValue" let-row>{{ number(row.predefinedValue) }}</ng-template>
+        </ui-table>
+      </div>
+    </ng-template>
+  </ng-container>
+</ui-card>

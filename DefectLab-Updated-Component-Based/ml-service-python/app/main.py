@@ -2,8 +2,8 @@ import secrets
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from app.api import routes
 from app.core.config import settings
-from app.defectlab import routes as defectlab_routes
 
 app = FastAPI(title=settings.project_name, version="2.0.0")
 
@@ -23,7 +23,7 @@ async def require_internal_service_token(request: Request, call_next):
 
 
 # DefectLab owns the documented internal /ml paths.
-app.include_router(defectlab_routes.router, prefix="/ml", tags=["defectlab"])
+app.include_router(routes.router, prefix="/ml", tags=["defectlab"])
 
 
 @app.get("/")

@@ -178,7 +178,11 @@ public class PredictionService {
             }
         }
         if (predefined != null) {
-            validateSameFamily(source, predefined);
+            // A PREDEFINED target must differ from the source just as a MANUAL one
+            // does: ck_prediction_different rejects the row either way, and
+            // without this check the whole model run happens before the insert
+            // fails with an opaque database error.
+            validateDifferentAndFamily(source, predefined);
             if (predefined.getDatasetType() != MetricDataset.Type.PREDEFINED) {
                 throw new IllegalArgumentException(
                         "Predefined target must use dataset type PREDEFINED.");
@@ -220,7 +224,6 @@ public class PredictionService {
         Map<String, Object> config = new LinkedHashMap<>();
         config.put("modelName", modelName);
         config.put("threshold", threshold);
-        config.put("logTransform", true);
         config.put("coral", body.containsKey("coral")
                 ? booleanValue(body.get("coral")) : true);
         config.put("seed", integerValue(body.get("seed"), DEFAULT_SEED));
@@ -358,6 +361,18 @@ public class PredictionService {
     @Transactional(readOnly = true)
     public long countFor(Long userId) {
         return runRepository.countByUserId(userId);
+    }
+
+    @Transactional
+    public void delete(Long userId, Long runId) throws IOException {
+        PredictionRun run = require(userId, runId);
+        runRepository.delete(run);
+        if (run.getPredictionFilePath() != null) {
+            Files.deleteIfExists(Paths.get(run.getPredictionFilePath()));
+        }
+        Path report = Paths.get(run.getReportFilePath());
+        Files.deleteIfExists(report);
+        Files.deleteIfExists(metadataPath(report));
     }
 
     public Map<String, Object> summary(Long userId, PredictionRun run) {

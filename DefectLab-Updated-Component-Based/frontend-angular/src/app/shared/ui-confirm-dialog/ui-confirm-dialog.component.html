@@ -1,0 +1,12 @@
+<div class="dl-modal-scrim" *ngIf="open" (click)="cancel()">
+  <div class="dl-modal" role="alertdialog" aria-modal="true"
+       [attr.aria-label]="title" (click)="$event.stopPropagation()">
+    <h2>{{ title }}</h2>
+    <p *ngIf="message">{{ message }}</p>
+    <div class="dl-actions dl-modal-actions">
+      <ui-button variant="ghost" icon="undo" [disabled]="busy" (pressed)="cancel()">{{ cancelLabel }}</ui-button>
+      <ui-button [variant]="tone === 'danger' ? 'danger' : 'primary'"
+                 [loading]="busy" (pressed)="confirm()">{{ confirmLabel }}</ui-button>
+    </div>
+  </div>
+</div>

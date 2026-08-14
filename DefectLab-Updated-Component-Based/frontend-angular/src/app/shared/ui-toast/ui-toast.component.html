@@ -1,0 +1,9 @@
+<div class="dl-toast-stack" *ngIf="toasts.length" aria-live="polite">
+  <div *ngFor="let toast of toasts" class="dl-toast" [ngClass]="'dl-toast-' + toast.kind" role="status">
+    <ui-icon class="dl-toast-icon" [name]="icon(toast.kind)" [size]="16"></ui-icon>
+    <span>{{ toast.message }}</span>
+    <button type="button" class="dl-toast-close" aria-label="Dismiss" (click)="dismiss(toast.id)">
+      <ui-icon name="close" [size]="12"></ui-icon>
+    </button>
+  </div>
+</div>

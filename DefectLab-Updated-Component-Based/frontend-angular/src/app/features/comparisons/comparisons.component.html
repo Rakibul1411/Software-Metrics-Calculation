@@ -1,0 +1,50 @@
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header">
+    <div class="dl-detail-title-row">
+      <div class="dl-heading-search">
+        <h2>Compare Calculated Metrics</h2>
+        <ui-search-toggle label="Search comparisons" placeholder="Project name"
+            [query]="search" (queryChange)="search = $event">
+        </ui-search-toggle>
+      </div>
+      <div class="dl-actions">
+        <ui-button icon="plus" link="/metric-comparisons/new">New Comparison</ui-button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dl-form-row dl-form-row-3">
+    <ui-select label="Metric family" [options]="familyFilterOptions"
+               [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
+    </ui-select>
+  </div>
+
+  <div class="dl-detail-section">
+    <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+    <ui-table *ngIf="filtered.length; else empty" [columns]="columns" [rows]="filtered" trackByKey="key"
+              scrollClass="dl-dataset-storage-scroll">
+      <ng-template uiTableCell="pair" let-row>
+        <strong>{{ row.displayName }}</strong>
+      </ng-template>
+      <ng-template uiTableCell="family" let-row>
+        <ui-badge tone="blue">{{ row.datasetFamily }}</ui-badge>
+      </ng-template>
+      <ng-template uiTableCell="status" let-row>
+        <ui-badge [tone]="row.cached ? 'green' : 'amber'">{{ row.cached ? 'Compared' : 'Not compared' }}</ui-badge>
+      </ng-template>
+      <ng-template uiTableCell="actions" let-row>
+        <ui-button *ngIf="row.cached" variant="ghost" size="sm" icon="view"
+                   title="View comparison" ariaLabel="View comparison"
+                   (pressed)="view(row)"></ui-button>
+        <ui-button *ngIf="!row.cached" size="sm" icon="chart"
+                   [loading]="runningKey === row.key" [disabled]="!!runningKey"
+                   (pressed)="run(row)">Run comparison</ui-button>
+      </ng-template>
+    </ui-table>
+    <ng-template #empty>
+      <ui-state kind="empty"
+                [message]="pairs.length ? 'No matching comparisons.' : 'No datasets currently have both MANUAL and PREDEFINED metrics.'">
+      </ui-state>
+    </ng-template>
+  </div>
+</ui-card>

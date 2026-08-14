@@ -1,0 +1,60 @@
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header">
+    <div class="dl-detail-title-row">
+      <div class="dl-heading-search">
+        <h2>Dataset Catalog</h2>
+        <ui-search-toggle label="Search datasets" placeholder="Project or version"
+            [query]="search" (queryChange)="search = $event">
+        </ui-search-toggle>
+      </div>
+      <div class="dl-actions">
+        <ui-button icon="plus" link="/datasets/new">Add Dataset</ui-button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dl-form-row dl-form-row-3">
+    <ui-select label="Metric family" [options]="familyFilterOptions"
+               [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
+    </ui-select>
+    <ui-select label="Data source" [options]="originFilterOptions"
+               [value]="originFilter" (valueChange)="onOriginFilterChange($event)">
+    </ui-select>
+  </div>
+
+  <section class="dl-grid dl-grid-3">
+    <ui-metric-card variant="stat" label="Total datasets" [value]="datasets.length"></ui-metric-card>
+    <ui-metric-card variant="stat" label="PROMISE datasets" [value]="countFamily('PROMISE')"></ui-metric-card>
+    <ui-metric-card variant="stat" label="AEEEM datasets" [value]="countFamily('AEEEM')"></ui-metric-card>
+  </section>
+
+  <div class="dl-detail-section">
+    <ui-state *ngIf="loading" kind="loading" message="Loading datasets…"></ui-state>
+    <ui-state *ngIf="loadError" kind="error" [message]="loadError"></ui-state>
+    <ui-table *ngIf="filtered.length; else empty"
+              [columns]="columns" [rows]="filtered" trackByKey="id"
+              scrollClass="dl-dataset-storage-scroll">
+      <ng-template uiTableCell="projectName" let-row>
+        <strong>{{ row.projectName }}</strong><br><small>{{ row.projectVersion || '—' }}</small>
+      </ng-template>
+      <ng-template uiTableCell="datasetFamily" let-row>
+        <ui-badge tone="blue">{{ row.datasetFamily }}</ui-badge>
+      </ng-template>
+      <ng-template uiTableCell="datasetType" let-row>
+        {{ row.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' }}
+      </ng-template>
+      <ng-template uiTableCell="hasActualLabel" let-row>
+        <ui-badge [tone]="row.hasActualLabel ? 'green' : 'amber'">
+          {{ row.hasActualLabel ? 'Labeled' : 'Unlabeled' }}
+        </ui-badge>
+      </ng-template>
+      <ng-template uiTableCell="totalFiles" let-row>{{ row.totalFiles | number }}</ng-template>
+      <ng-template uiTableCell="createdAt" let-row>{{ row.createdAt | date:'mediumDate' }}</ng-template>
+      <ng-template uiTableCell="actions" let-row>
+        <ui-button variant="ghost" size="sm" icon="view" [link]="['/datasets', row.id]"
+                   title="Preview dataset" ariaLabel="Preview dataset"></ui-button>
+      </ng-template>
+    </ui-table>
+    <ng-template #empty><ui-state kind="empty" message="No matching datasets."></ui-state></ng-template>
+  </div>
+</ui-card>

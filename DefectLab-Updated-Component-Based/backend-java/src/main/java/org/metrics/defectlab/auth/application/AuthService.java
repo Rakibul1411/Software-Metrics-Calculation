@@ -1,6 +1,5 @@
 package org.metrics.defectlab.auth.application;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import org.metrics.defectlab.auth.domain.User;
@@ -14,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private static final int MINIMUM_PASSWORD_LENGTH = 8;
-    private static final int MAXIMUM_PASSWORD_BYTES = 72;
+    private static final int MAXIMUM_PASSWORD_LENGTH = 12;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(12);
@@ -79,14 +78,32 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    /** True when an account exists for this address. */
+    public boolean emailRegistered(String email) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+        return userRepository.findByEmail(User.normalizeEmail(email)).isPresent();
+    }
+
+    @Transactional
+    public void resetPassword(String email, String newPassword) {
+        User user = userRepository.findByEmail(User.normalizeEmail(email))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No account uses that email address."));
+        validateNewPassword(newPassword);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
     private static void validateNewPassword(String password) {
         if (password == null || password.length() < MINIMUM_PASSWORD_LENGTH) {
             throw new IllegalArgumentException(
                     "The password must be at least " + MINIMUM_PASSWORD_LENGTH + " characters.");
         }
-        if (password.getBytes(StandardCharsets.UTF_8).length > MAXIMUM_PASSWORD_BYTES) {
+        if (password.length() > MAXIMUM_PASSWORD_LENGTH) {
             throw new IllegalArgumentException(
-                    "The password must not exceed 72 UTF-8 bytes.");
+                    "The password must not exceed " + MAXIMUM_PASSWORD_LENGTH + " characters.");
         }
     }
 

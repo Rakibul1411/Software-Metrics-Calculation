@@ -1,0 +1,58 @@
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header">
+    <nav class="dl-breadcrumb">
+      <a (click)="back()">Predictions</a>
+      <ui-icon name="chevron-right" [size]="14"></ui-icon>
+    </nav>
+    <h2>Run prediction</h2>
+    <p>Train a KNN model and score a target dataset.</p>
+  </div>
+
+  <form class="dl-form-stack dl-prediction-form dl-form-fill" (ngSubmit)="run()">
+    <div class="dl-form-row dl-form-row-3">
+      <ui-radio-group label="Metric family" [options]="familyOptions"
+                       [value]="datasetFamily" (valueChange)="onFamilyChange($event)">
+      </ui-radio-group>
+
+      <ui-select label="Labeled source dataset" [required]="true"
+                 placeholder="Choose source" [options]="sourceSelectOptions"
+                 [value]="sourceId" (valueChange)="onSourceChange($event)">
+      </ui-select>
+
+      <ui-select label="Manual target" [options]="manualSelectOptions"
+                 [value]="manualId" (valueChange)="onManualChange($event)">
+      </ui-select>
+
+      <ui-select label="Predefined target" [options]="predefinedSelectOptions"
+                 [value]="predefinedId" (valueChange)="onPredefinedChange($event)">
+      </ui-select>
+
+      <ui-input label="Decision threshold" type="number" [min]="0.05" [max]="0.95" [step]="0.05"
+                 [value]="threshold.toString()" (valueChange)="onThresholdChange($event)">
+      </ui-input>
+
+      <ui-select label="Neighbors (K)" [options]="kOptions"
+                 [value]="k" (valueChange)="onKChange($event)">
+      </ui-select>
+
+      <ui-input label="Model" [value]="'K-Nearest Neighbors (KNN)'" [disabled]="true"></ui-input>
+
+      <div class="dl-field">
+        <span>Dataset alignment</span>
+        <label class="dl-checkbox-control">
+          <input type="checkbox" [(ngModel)]="coral" name="coral">
+          <span>Apply shallow CORAL alignment</span>
+        </label>
+        <small>Aligns source features with the target before training.</small>
+      </div>
+    </div>
+
+    <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+    <div class="dl-form-actions">
+      <ui-button type="button" variant="ghost" icon="undo" (pressed)="back()">Cancel</ui-button>
+      <ui-button type="submit" [disabled]="busy || !canRun()" [loading]="busy">
+        {{ busy ? 'Training and generating reports…' : 'Run prediction' }}
+      </ui-button>
+    </div>
+  </form>
+</ui-card>

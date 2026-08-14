@@ -40,6 +40,39 @@
             <version>${eclipse-jdt.version}</version>
         </dependency>
 
+        <!--
+            Apache Commons BCEL reads compiled .class files for PROMISE metric
+            extraction. It is a bytecode PARSER only: it exposes fields, methods,
+            descriptors and instruction lists. Every PROMISE metric is derived by
+            our own calculators in analysis/promise/calculator.
+        -->
+        <dependency>
+            <groupId>org.apache.bcel</groupId>
+            <artifactId>bcel</artifactId>
+            <version>6.8.2</version>
+        </dependency>
+
+        <!--
+            javax.xml.bind (JAXB) and javax.activation (JAF) shipped inside the
+            JDK itself through Java 6-10 and were removed in Java 11+ when the
+            Java EE modules were stripped out. PROMISE/AEEEM releases predate
+            Java 11 and routinely reference these APIs assuming the JRE provides
+            them. Since PromiseCompilationService always compiles with whatever
+            JDK hosts this application (17+), these two artifacts restore that
+            assumption on the ECJ compile classpath. See
+            PromiseCompilationService#legacyJdkApiClasspath.
+        -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.activation</groupId>
+            <artifactId>javax.activation-api</artifactId>
+            <version>1.2.0</version>
+        </dependency>
+
         <!-- Apache Commons CSV for CSV export -->
         <dependency>
             <groupId>org.apache.commons</groupId>

@@ -1,0 +1,32 @@
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header">
+    <nav class="dl-breadcrumb">
+      <a (click)="back()">Compare Metrics</a>
+      <ui-icon name="chevron-right" [size]="14"></ui-icon>
+    </nav>
+    <h2>New comparison</h2>
+    <p>Pick a dataset pair that hasn't been compared yet.</p>
+  </div>
+
+  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+
+  <form class="dl-form-stack dl-form-fill" (ngSubmit)="run()">
+    <div class="dl-form-row">
+      <ui-select label="Metric family" [options]="familyFilterOptions"
+                 [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
+      </ui-select>
+
+      <ui-select label="Comparison" [required]="true" [disabled]="!pairOptions.length"
+                 [placeholder]="pairOptions.length ? 'Choose dataset pair' : 'No pairs available to compare'"
+                 [options]="pairOptions" [value]="selectedKey" (valueChange)="onSelectedKeyChange($event)">
+      </ui-select>
+    </div>
+
+    <div class="dl-form-actions">
+      <ui-button type="button" variant="ghost" icon="undo" (pressed)="back()">Cancel</ui-button>
+      <ui-button type="submit" icon="chart" [disabled]="busy || !selectedPair" [loading]="busy">
+        {{ busy ? 'Comparing…' : 'Run comparison' }}
+      </ui-button>
+    </div>
+  </form>
+</ui-card>

@@ -50,6 +50,16 @@ export class DefectLabApiService {
       `${this.api}/auth/password`, { currentPassword, newPassword }, this.options);
   }
 
+  forgotPassword(email: string) {
+    return this.http.post<{ registered: boolean }>(
+      `${this.api}/auth/password/forgot`, { email }, this.options);
+  }
+
+  resetPassword(email: string, newPassword: string) {
+    return this.http.post<{ updated: boolean }>(
+      `${this.api}/auth/password/reset`, { email, newPassword }, this.options);
+  }
+
   dashboard(): Observable<DashboardData> {
     return this.http.get<DashboardData>(`${this.api}/dashboard`, this.options);
   }
@@ -108,8 +118,8 @@ export class DefectLabApiService {
     return this.http.delete(`${this.api}/datasets/${id}`, this.options);
   }
 
-  datasetDownloadUrl(id: number): string {
-    return `${this.api}/datasets/${id}/download`;
+  datasetDownloadUrl(id: number, format?: 'csv' | 'arff'): string {
+    return `${this.api}/datasets/${id}/download` + (format ? `?format=${format}` : '');
   }
 
   listPredictionRuns(): Observable<PredictionRunSummary[]> {
@@ -148,6 +158,10 @@ export class DefectLabApiService {
     return `${this.api}/predictions/${id}/prediction.csv`;
   }
 
+  deletePredictionRun(id: number): Observable<unknown> {
+    return this.http.delete(`${this.api}/predictions/${id}`, this.options);
+  }
+
   reportDownloadUrl(id: number): string {
     return `${this.api}/reports/${id}.pdf`;
   }
@@ -174,6 +188,10 @@ export class DefectLabApiService {
 
   metricComparisonReportUrl(id: number): string {
     return `${this.api}/metric-comparisons/${id}/report.pdf`;
+  }
+
+  deleteMetricComparison(id: number): Observable<unknown> {
+    return this.http.delete(`${this.api}/metric-comparisons/${id}`, this.options);
   }
 
   private metadataForm(

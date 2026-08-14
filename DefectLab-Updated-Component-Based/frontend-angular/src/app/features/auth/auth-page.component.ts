@@ -4,127 +4,61 @@ import { Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { SessionService } from '../../core/services/session.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-auth-page',
   standalone: false,
-  template: `
-    <div class="dl-auth">
-      <aside class="dl-auth-aside">
-        <div class="dl-brand">
-          <span class="dl-brand-mark" aria-hidden="true">DL</span>
-          <span>
-            <strong>DefectLab</strong>
-            <small>Cross-project defect prediction</small>
-          </span>
-        </div>
-        <h2>From source code to a defensible prediction.</h2>
-        <p>
-          Extract PROMISE or AEEEM metrics from Java source, validate the schema
-          against a feature registry, then rank target classes with source-fitted
-          scaling, optional shallow CORAL alignment, and user-configured KNN.
-        </p>
-        <div class="dl-auth-points">
-          <div class="dl-auth-point">
-            <b>Leakage-free</b>
-            <span>Imputation, scaling and model fitting use labeled source data only.</span>
-          </div>
-          <div class="dl-auth-point">
-            <b>Reproducible</b>
-            <span>Every run stores its datasets, alignment choice, threshold, pipeline and seed.</span>
-          </div>
-          <div class="dl-auth-point">
-            <b>Honest metrics</b>
-            <span>An undefined metric reports why, never a fake zero.</span>
-          </div>
-        </div>
-      </aside>
-
-      <section class="dl-auth-form">
-        <div class="dl-auth-card">
-          <div class="dl-tabs" role="tablist">
-            <button type="button" role="tab"
-                    [class.active]="mode === 'login'"
-                    [attr.aria-selected]="mode === 'login'"
-                    (click)="setMode('login')">Sign in</button>
-            <button type="button" role="tab"
-                    [class.active]="mode === 'register'"
-                    [attr.aria-selected]="mode === 'register'"
-                    (click)="setMode('register')">Create account</button>
-          </div>
-
-          <div class="dl-card">
-            <div class="dl-card-head">
-              <div>
-                <h2>{{ mode === 'login' ? 'Sign in to DefectLab' : 'Create your account' }}</h2>
-                <p>{{ mode === 'login'
-                    ? 'Your datasets and runs are scoped to your account.'
-                    : 'Use at least 8 characters for the password.' }}</p>
-              </div>
-            </div>
-
-            <form (ngSubmit)="submit()" class="dl-grid" style="gap:14px">
-              <label class="dl-field" *ngIf="mode === 'register'">
-                <span>Full name</span>
-                <input type="text" name="name" autocomplete="name"
-                       maxlength="100" [(ngModel)]="name" [disabled]="loading">
-              </label>
-
-              <label class="dl-field">
-                <span>Email</span>
-                <input type="email" name="email" autocomplete="email"
-                       maxlength="150" [(ngModel)]="email" [disabled]="loading">
-              </label>
-
-              <label class="dl-field">
-                <span>Password</span>
-                <input type="password" name="password"
-                       minlength="8" maxlength="72"
-                       [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'"
-                       [(ngModel)]="password" [disabled]="loading">
-              </label>
-
-              <div class="dl-alert dl-alert-error" *ngIf="error" role="alert">{{ error }}</div>
-
-              <button type="submit" class="dl-btn" [disabled]="loading || !canSubmit">
-                <span class="dl-spinner" *ngIf="loading" aria-hidden="true"></span>
-                {{ loading
-                    ? 'Working…'
-                    : (mode === 'login' ? 'Sign in' : 'Create account') }}
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
-    </div>
-  `
+  templateUrl: './auth-page.component.html'
 })
 export class AuthPageComponent {
-  mode: 'login' | 'register' = 'login';
+  mode: 'login' | 'register' | 'forgot' = 'login';
   name = '';
   email = '';
   password = '';
   loading = false;
   error: string | null = null;
 
+  /** 'email' asks who they are, 'password' takes the replacement. */
+  forgotStep: 'email' | 'password' = 'email';
+  notice: string | null = null;
+  showPassword = false;
+
   constructor(
     private readonly api: DefectLabApiService,
     private readonly session: SessionService,
+    readonly theme: ThemeService,
     private readonly router: Router
   ) {}
 
+  toggleTheme(): void {
+    this.theme.toggle();
+  }
+
   get canSubmit(): boolean {
+    if (this.mode === 'forgot') {
+      return this.forgotStep === 'email'
+        ? this.email.trim().length > 0
+        : this.password.length >= 8 && this.password.length <= 12;
+    }
     const base = this.email.trim().length > 0 && this.password.length > 0;
     return this.mode === 'login' ? base : base && this.name.trim().length > 0;
   }
 
-  setMode(mode: 'login' | 'register'): void {
+  setMode(mode: 'login' | 'register' | 'forgot'): void {
     this.mode = mode;
     this.error = null;
+    this.notice = null;
+    this.password = '';
+    this.forgotStep = 'email';
   }
 
   submit(): void {
     if (!this.canSubmit || this.loading) {
+      return;
+    }
+    if (this.mode === 'forgot') {
+      this.submitForgot();
       return;
     }
     this.loading = true;
@@ -140,9 +74,43 @@ export class AuthPageComponent {
         this.router.navigate(['/overview']);
       },
       error: (failure: HttpErrorResponse) => {
-        const payload = failure.error as { error?: string } | null;
-        this.error = payload?.error ?? 'The request could not be completed.';
+        this.error = this.messageOf(failure);
       }
     });
+  }
+
+  private submitForgot(): void {
+    this.loading = true;
+    this.error = null;
+
+    if (this.forgotStep === 'email') {
+      this.api.forgotPassword(this.email.trim())
+        .pipe(finalize(() => (this.loading = false)))
+        .subscribe({
+          next: () => {
+            this.forgotStep = 'password';
+            this.notice = 'Account found. Enter a new password.';
+          },
+          error: (failure: HttpErrorResponse) => (this.error = this.messageOf(failure))
+        });
+      return;
+    }
+
+    this.api.resetPassword(this.email.trim(), this.password)
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: () => {
+          this.mode = 'login';
+          this.forgotStep = 'email';
+          this.password = '';
+          this.notice = 'Password updated. Sign in with your new password.';
+        },
+        error: (failure: HttpErrorResponse) => (this.error = this.messageOf(failure))
+      });
+  }
+
+  private messageOf(failure: HttpErrorResponse): string {
+    const payload = failure.error as { error?: string } | null;
+    return payload?.error ?? 'The request could not be completed.';
   }
 }

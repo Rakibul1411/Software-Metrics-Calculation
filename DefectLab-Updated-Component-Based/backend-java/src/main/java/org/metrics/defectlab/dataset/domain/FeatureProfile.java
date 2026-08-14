@@ -24,8 +24,8 @@ public final class FeatureProfile {
             "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce", "npm", "lcom3",
             "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc", "max_cc", "avg_cc");
 
-    /** PROMISE columns that receive log1p before scaling. */
-    public static final Set<String> PROMISE_LOG_FEATURES = new LinkedHashSet<>(Arrays.asList(
+    /** PROMISE columns that are non-negative counts; a negative value is invalid data. */
+    public static final Set<String> PROMISE_NONNEGATIVE_FEATURES = new LinkedHashSet<>(Arrays.asList(
             "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce",
             "npm", "loc", "moa", "ic", "cbm", "amc", "max_cc", "avg_cc"));
 
@@ -49,16 +49,16 @@ public final class FeatureProfile {
 
     private final MetricDataset.Family family;
     private final List<String> features;
-    private final Set<String> logFeatures;
+    private final Set<String> nonNegativeFeatures;
     private final Set<String> unitRangeFeatures;
     private final String labelColumn;
 
     private FeatureProfile(MetricDataset.Family family, List<String> features,
-                           Set<String> logFeatures, Set<String> unitRangeFeatures,
+                           Set<String> nonNegativeFeatures, Set<String> unitRangeFeatures,
                            String labelColumn) {
         this.family = family;
         this.features = Collections.unmodifiableList(features);
-        this.logFeatures = Collections.unmodifiableSet(logFeatures);
+        this.nonNegativeFeatures = Collections.unmodifiableSet(nonNegativeFeatures);
         this.unitRangeFeatures = Collections.unmodifiableSet(unitRangeFeatures);
         this.labelColumn = labelColumn;
     }
@@ -66,25 +66,26 @@ public final class FeatureProfile {
     public static FeatureProfile promise() {
         return new FeatureProfile(MetricDataset.Family.PROMISE,
                 new ArrayList<>(PROMISE_FEATURES),
-                new LinkedHashSet<>(PROMISE_LOG_FEATURES),
+                new LinkedHashSet<>(PROMISE_NONNEGATIVE_FEATURES),
                 Set.of("dam", "mfa", "cam"), PROMISE_LABEL);
     }
 
     public static FeatureProfile aeeem() {
         List<String> features = new ArrayList<>();
-        Set<String> logFeatures = new LinkedHashSet<>();
+        Set<String> nonNegativeFeatures = new LinkedHashSet<>();
         for (String prefix : List.of("ck_oo_", "wchu_", "ldhh_")) {
             for (String base : AEEEM_BASE_METRICS) {
                 String column = prefix + base;
                 features.add(column);
-                // LDHH values are already deltas and can be negative: scale only.
+                // LDHH values are already deltas and can legitimately be negative.
                 if (!"ldhh_".equals(prefix)) {
-                    logFeatures.add(column);
+                    nonNegativeFeatures.add(column);
                 }
             }
         }
         features.addAll(AEEEM_ENTROPY_FEATURES);
-        return new FeatureProfile(MetricDataset.Family.AEEEM, features, logFeatures, Set.of(), "class");
+        return new FeatureProfile(
+                MetricDataset.Family.AEEEM, features, nonNegativeFeatures, Set.of(), "class");
     }
 
     /**
@@ -121,8 +122,8 @@ public final class FeatureProfile {
         return features;
     }
 
-    public Set<String> getLogFeatures() {
-        return logFeatures;
+    public Set<String> getNonNegativeFeatures() {
+        return nonNegativeFeatures;
     }
 
     public Set<String> getUnitRangeFeatures() {

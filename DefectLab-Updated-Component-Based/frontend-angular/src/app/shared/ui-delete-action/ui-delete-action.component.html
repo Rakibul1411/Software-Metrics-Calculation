@@ -1,0 +1,11 @@
+<ui-button variant="danger" icon="trash" [disabled]="disabled" (pressed)="open()">{{ label }}</ui-button>
+
+<ui-confirm-dialog
+    [open]="pendingDelete"
+    [busy]="deleting"
+    [title]="dialogTitle"
+    [message]="confirmMessage"
+    confirmLabel="Delete"
+    (confirmed)="confirm()"
+    (cancelled)="cancel()">
+</ui-confirm-dialog>

@@ -1,22 +1,23 @@
 /* ---------------------------------------------------------------------------
    Design tokens.
 
-   Three typefaces, each with one job:
-     body    Inter          — UI prose, labels, controls
-     heading Manrope        — titles only
-     mono    JetBrains Mono — every identifier and number (metric values, class
-                              names, column names, K, thresholds, file paths)
+   One typeface everywhere — labels, titles, metric values, identifiers,
+   everything. --font-mono keeps its own token (tables still ask for
+   tabular-nums so digits line up in a column) but now resolves to the same
+   stack rather than a separate monospace family.
 
-   The mono family is the point of the system: this is a metrics workbench, and
-   digits that line up in a column are readable as data rather than as text.
+   Roboto is primary; the fallback chain is deliberately just Inter, SF Pro
+   (via its -apple-system/BlinkMacSystemFont aliases), Poppins, and Source
+   Sans 3 — the other modern UI sans-serifs it's paired with — rather than
+   generic OS keywords.
 --------------------------------------------------------------------------- */
 
 :root {
   color-scheme: light;
 
-  --font-body: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-heading: Manrope, var(--font-body);
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-body: Roboto, Inter, -apple-system, BlinkMacSystemFont, Poppins, "Source Sans 3", sans-serif;
+  --font-heading: var(--font-body);
+  --font-mono: var(--font-body);
 
   /* 4px base scale — every margin, padding and gap resolves to one of these. */
   --space-1: 4px;

@@ -1,0 +1,26 @@
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header">
+    <h2>Prediction Reports</h2>
+  </div>
+
+  <div>
+    <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
+    <ui-table *ngIf="groups.length; else empty"
+              [columns]="columns" [rows]="groups" trackByKey="comparisonGroupId">
+      <ng-template uiTableCell="group" let-row>{{ row.comparisonGroupId || groupKey(row) }}</ng-template>
+      <ng-template uiTableCell="source" let-row>{{ row.runs[0].sourceDataset.displayName }}</ng-template>
+      <ng-template uiTableCell="targets" let-row>{{ targetNames(row) }}</ng-template>
+      <ng-template uiTableCell="model" let-row>{{ row.runs[0].modelConfig.modelName }}</ng-template>
+      <ng-template uiTableCell="runs" let-row>{{ row.runs.length }}</ng-template>
+      <ng-template uiTableCell="created" let-row>{{ row.runs[0].createdAt | date:'medium' }}</ng-template>
+      <ng-template uiTableCell="view" let-row>
+        <ui-button variant="ghost" size="sm" icon="view"
+                   title="View report details" ariaLabel="View report details"
+                   (pressed)="view(row)"></ui-button>
+      </ng-template>
+    </ui-table>
+    <ng-template #empty>
+      <ui-state kind="empty" message="No complete dual-target prediction reports yet."></ui-state>
+    </ng-template>
+  </div>
+</ui-card>
