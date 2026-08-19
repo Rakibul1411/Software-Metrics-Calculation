@@ -47,7 +47,6 @@
       </div>
     </div>
 
-    <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
     <div class="dl-form-actions">
       <ui-button type="button" variant="ghost" icon="undo" (pressed)="back()">Cancel</ui-button>
       <ui-button type="submit" [disabled]="busy || !canRun()" [loading]="busy">

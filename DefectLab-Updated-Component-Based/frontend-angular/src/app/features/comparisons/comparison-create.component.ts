@@ -12,7 +12,6 @@ import { ToastService } from '../../shared/ui-toast/toast.service';
 })
 export class ComparisonCreateComponent implements OnInit {
   pairs: MetricComparisonPair[] = [];
-  error = '';
   busy = false;
   familyFilter = '';
   selectedKey = '';
@@ -62,10 +61,9 @@ export class ComparisonCreateComponent implements OnInit {
   }
 
   load(): void {
-    this.error = '';
     this.api.metricComparisonPairs().subscribe({
       next: rows => this.pairs = rows,
-      error: error => this.error = error?.error?.error ?? 'Could not load comparable datasets.'
+      error: () => {}
     });
   }
 
@@ -73,7 +71,6 @@ export class ComparisonCreateComponent implements OnInit {
     const pair = this.selectedPair;
     if (!pair || this.busy) return;
     this.busy = true;
-    this.error = '';
     this.api.runMetricComparison({
       manualDatasetId: pair.manualDatasetId,
       predefinedDatasetId: pair.predefinedDatasetId
@@ -83,11 +80,8 @@ export class ComparisonCreateComponent implements OnInit {
         this.toast.success('Comparison completed successfully.');
         this.router.navigate(['/metric-comparisons']);
       },
-      error: error => {
+      error: () => {
         this.busy = false;
-        const message = error?.error?.error ?? 'Metric comparison failed.';
-        this.error = message;
-        this.toast.error(message);
       }
     });
   }

@@ -4,9 +4,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 import org.metrics.defectlab.analysis.aeeem.history.AeeemAnalysisOptions;
+import org.metrics.defectlab.analysis.aeeem.history.AeeemBenchmarkProfile;
 import org.metrics.defectlab.analysis.infrastructure.FileStorageService;
 import org.metrics.defectlab.analysis.infrastructure.GitHubCloneService;
 import org.metrics.defectlab.analysis.infrastructure.ZipExtractionService;
@@ -28,7 +32,7 @@ public class SourceAnalysisService {
     private final FileStorageService fileStorageService;
     private final ZipExtractionService zipExtractionService;
     private final GitHubCloneService gitHubCloneService;
-    private final AeeemExtractionCoordinator aeeemExtractionCoordinator;
+    private final ExtractionCoordinator extractionCoordinator;
 
     public SourceAnalysisService(
             DatasetService datasetService,
@@ -36,13 +40,13 @@ public class SourceAnalysisService {
             FileStorageService fileStorageService,
             ZipExtractionService zipExtractionService,
             GitHubCloneService gitHubCloneService,
-            AeeemExtractionCoordinator aeeemExtractionCoordinator) {
+            ExtractionCoordinator extractionCoordinator) {
         this.datasetService = datasetService;
         this.metricsExtractionService = metricsExtractionService;
         this.fileStorageService = fileStorageService;
         this.zipExtractionService = zipExtractionService;
         this.gitHubCloneService = gitHubCloneService;
-        this.aeeemExtractionCoordinator = aeeemExtractionCoordinator;
+        this.extractionCoordinator = extractionCoordinator;
     }
 
     public MetricDataset analyze(
@@ -68,14 +72,14 @@ public class SourceAnalysisService {
                     + "Use a public GitHub repository URL.");
         }
 
-        boolean aeeemSlotAcquired = aeeemExtractionCoordinator.acquire(family.name());
+        boolean slotAcquired = extractionCoordinator.acquire(userId, family.name());
         try {
             return hasArchive
                     ? extractArchive(userId, projectName, version, projectArchive, family)
                     : extractGitHub(userId, projectName, version, githubUrl,
                             family, aeeemProfile);
         } finally {
-            aeeemExtractionCoordinator.release(aeeemSlotAcquired);
+            extractionCoordinator.release(userId, family.name(), slotAcquired);
         }
     }
 
@@ -118,21 +122,42 @@ public class SourceAnalysisService {
         if (family == MetricDataset.Family.AEEEM) {
             options.getProfile().requireRecommendedRepository(target.getRepositoryUrl());
         }
+        boolean multiRepository = family == MetricDataset.Family.AEEEM
+                && options.getProfile().isMultiRepositoryBenchmark();
 
-        Path repository = null;
+        List<Path> repositories = new ArrayList<>();
         try {
-            repository = gitHubCloneService.cloneRepository(
-                    target, family == MetricDataset.Family.AEEEM);
-            if (family == MetricDataset.Family.PROMISE) {
-                gitHubCloneService.checkoutHead(repository);
+            String analysisRoots;
+            if (multiRepository) {
+                // Some AEEEM benchmarks (Mylyn) were historically split across
+                // several component repositories rather than one. Clone every
+                // component; MetricsExtractionService analyzes each
+                // independently and merges the resulting classes.
+                for (AeeemBenchmarkProfile.HistoricalRepository component
+                        : options.getProfile().getHistoricalRepositories()) {
+                    GitHubCloneService.GitHubTarget componentTarget =
+                            gitHubCloneService.parseTarget(component.getRepositoryUrl());
+                    repositories.add(gitHubCloneService.cloneRepository(componentTarget, true));
+                }
+                analysisRoots = repositories.stream()
+                        .map(Path::toString)
+                        .collect(Collectors.joining(","));
+            } else {
+                Path repository = gitHubCloneService.cloneRepository(
+                        target, family == MetricDataset.Family.AEEEM);
+                repositories.add(repository);
+                if (family == MetricDataset.Family.PROMISE) {
+                    gitHubCloneService.checkoutHead(repository);
+                }
+                Path analysisRoot = family == MetricDataset.Family.PROMISE
+                        && !target.getModulePath().isBlank()
+                        ? repository.resolve(target.getModulePath()).normalize()
+                        : repository;
+                analysisRoots = analysisRoot.toString();
             }
-            Path analysisRoot = family == MetricDataset.Family.PROMISE
-                    && !target.getModulePath().isBlank()
-                    ? repository.resolve(target.getModulePath()).normalize()
-                    : repository;
             MetricsExtractionService.ExtractionResult result =
                     metricsExtractionService.extractMetrics(
-                            analysisRoot.toString(), family.name(), null, options);
+                            analysisRoots, family.name(), null, options);
             String fallbackName = family == MetricDataset.Family.AEEEM
                     && options.isBenchmarkProfile()
                     ? options.getProfile().getId().toUpperCase(Locale.ROOT)
@@ -140,7 +165,9 @@ public class SourceAnalysisService {
             return register(userId, cleanOrFallback(projectName, fallbackName),
                     version, family, result);
         } finally {
-            FileStorageService.deleteRecursively(repository);
+            for (Path repository : repositories) {
+                FileStorageService.deleteRecursively(repository);
+            }
         }
     }
 

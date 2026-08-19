@@ -248,11 +248,6 @@ public class DatasetService {
         Files.deleteIfExists(Paths.get(dataset.getMetricsFilePath()));
     }
 
-    @Transactional(readOnly = true)
-    public long countFor(Long userId) {
-        return datasetRepository.countByUserId(userId);
-    }
-
     /**
      * Datasets are stored under metrics/manual/&lt;userId&gt; or
      * metrics/predefined[/&lt;userId&gt;], split by {@link MetricDataset.Type}
@@ -322,7 +317,14 @@ public class DatasetService {
         return lower.endsWith(".arff") ? ".arff" : ".csv";
     }
 
+    /**
+     * Normalizes a name for use inside a stored filename: lowercase (users type
+     * project names in any case -- Ant, ant, aNt must all produce the same file
+     * name), blanks removed entirely rather than replaced, and any remaining
+     * unsafe character replaced with an underscore.
+     */
     private static String sanitize(String name) {
-        return name.replaceAll("[^A-Za-z0-9._-]", "_");
+        String withoutBlanks = name.trim().replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+        return withoutBlanks.replaceAll("[^a-z0-9._-]", "_");
     }
 }

@@ -1,10 +1,12 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { HttpClientModule } from '@angular/common/http';
+import { DatePipe } from '@angular/common';
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
+import { ErrorToastInterceptor } from './core/interceptors/error-toast.interceptor';
 import { AuthPageComponent } from './features/auth/auth-page.component';
 import { AnalyzeComponent } from './features/analysis/analyze.component';
 import { AccountComponent } from './features/account/account.component';
@@ -79,7 +81,10 @@ import { UiToastComponent } from './shared/ui-toast/ui-toast.component';
     AccountComponent
   ],
   imports: [BrowserModule, HttpClientModule, FormsModule, AppRoutingModule],
-  providers: [],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: ErrorToastInterceptor, multi: true },
+    DatePipe
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule {}

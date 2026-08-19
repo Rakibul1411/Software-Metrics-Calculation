@@ -8,8 +8,6 @@
     <p>Pick a dataset pair that hasn't been compared yet.</p>
   </div>
 
-  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
-
   <form class="dl-form-stack dl-form-fill" (ngSubmit)="run()">
     <div class="dl-form-row">
       <ui-select label="Metric family" [options]="familyFilterOptions"

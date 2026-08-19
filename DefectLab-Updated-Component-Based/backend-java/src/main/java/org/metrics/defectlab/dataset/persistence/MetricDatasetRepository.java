@@ -31,6 +31,4 @@ public interface MetricDatasetRepository extends JpaRepository<MetricDataset, Lo
             String projectName,
             String projectVersion,
             MetricDataset.Type datasetType);
-
-    long countByUserId(Long userId);
 }

@@ -30,7 +30,6 @@
                     helper="Accepted formats: CSV and ARFF"
                     (fileChange)="selectFile($event)">
     </ui-file-picker>
-    <ui-state *ngIf="uploadError" kind="error" [message]="uploadError"></ui-state>
     <div class="dl-form-actions">
       <ui-button type="button" variant="ghost" icon="undo" (pressed)="back()">Cancel</ui-button>
       <ui-button type="submit" [disabled]="uploading || !canSubmit" [loading]="uploading">

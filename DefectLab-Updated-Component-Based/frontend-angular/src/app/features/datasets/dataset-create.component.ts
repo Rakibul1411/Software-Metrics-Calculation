@@ -1,9 +1,9 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { DatasetFamily, DatasetType } from '../../core/models/defectlab.model';
-import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { RadioOption } from '../../shared/ui-radio-group/ui-radio-group.model';
 import { ToastService } from '../../shared/ui-toast/toast.service';
+import { DatasetsFacade } from './datasets.facade';
 
 @Component({
   selector: 'app-dataset-create',
@@ -17,7 +17,6 @@ export class DatasetCreateComponent {
   origin: DatasetType = 'PREDEFINED';
   file: File | null = null;
   uploading = false;
-  uploadError = '';
 
   readonly familyOptions: RadioOption[] = [
     { value: 'PROMISE', label: 'PROMISE' },
@@ -30,7 +29,7 @@ export class DatasetCreateComponent {
   ];
 
   constructor(
-    private readonly api: DefectLabApiService,
+    private readonly facade: DatasetsFacade,
     private readonly router: Router,
     private readonly toast: ToastService
   ) {}
@@ -55,8 +54,7 @@ export class DatasetCreateComponent {
   upload(): void {
     if (!this.canSubmit || this.uploading) return;
     this.uploading = true;
-    this.uploadError = '';
-    this.api.uploadDataset({
+    this.facade.upload({
       file: this.file!,
       projectName: this.projectName,
       projectVersion: this.projectVersion,
@@ -68,11 +66,8 @@ export class DatasetCreateComponent {
         this.toast.success('Dataset added successfully.');
         this.router.navigate(['/datasets']);
       },
-      error: error => {
-        const message = error?.error?.error ?? 'Dataset upload failed.';
-        this.uploadError = message;
+      error: () => {
         this.uploading = false;
-        this.toast.error(message);
       }
     });
   }

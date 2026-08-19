@@ -10,7 +10,6 @@ import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 export class OverviewComponent implements OnInit {
   data: DashboardData | null = null;
   loading = true;
-  error = '';
 
   constructor(private readonly api: DefectLabApiService) {}
 
@@ -20,8 +19,7 @@ export class OverviewComponent implements OnInit {
         this.data = data;
         this.loading = false;
       },
-      error: error => {
-        this.error = error?.error?.error ?? 'Could not load the dashboard.';
+      error: () => {
         this.loading = false;
       }
     });

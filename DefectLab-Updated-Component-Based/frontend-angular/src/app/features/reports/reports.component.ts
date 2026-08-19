@@ -11,7 +11,6 @@ import { TableColumn } from '../../shared/ui-table/ui-table.model';
 })
 export class ReportsComponent implements OnInit {
   groups: PredictionRunGroup[] = [];
-  error = '';
 
   readonly columns: TableColumn[] = [
     { key: 'group', label: 'Group', sticky: 'start', className: 'dl-mono' },
@@ -33,7 +32,7 @@ export class ReportsComponent implements OnInit {
   load(): void {
     this.api.listPredictionGroups().subscribe({
       next: rows => this.groups = rows.filter(group => this.isCompleteGroup(group)),
-      error: error => this.error = error?.error?.error ?? 'Could not load reports.'
+      error: () => {}
     });
   }
 

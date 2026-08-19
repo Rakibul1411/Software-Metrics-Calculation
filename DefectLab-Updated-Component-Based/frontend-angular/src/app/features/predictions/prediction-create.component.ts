@@ -28,7 +28,6 @@ export class PredictionCreateComponent implements OnInit {
   coral = true;
   threshold = 0.5;
   busy = false;
-  error = '';
 
   constructor(
     private readonly api: DefectLabApiService,
@@ -96,7 +95,7 @@ export class PredictionCreateComponent implements OnInit {
   load(): void {
     this.api.listDatasets().subscribe({
       next: rows => this.datasets = rows,
-      error: error => this.error = error?.error?.error ?? 'Could not load datasets.'
+      error: () => {}
     });
   }
 
@@ -172,7 +171,6 @@ export class PredictionCreateComponent implements OnInit {
   run(): void {
     if (!this.canRun() || this.busy) return;
     this.busy = true;
-    this.error = '';
     const payload: Record<string, unknown> = {
       sourceDatasetId: this.sourceId,
       manualTargetDatasetId: this.manualId,
@@ -189,11 +187,8 @@ export class PredictionCreateComponent implements OnInit {
         this.toast.success('Prediction run completed successfully.');
         this.router.navigate(['/predictions']);
       },
-      error: error => {
-        const message = error?.error?.error ?? 'Prediction run failed.';
-        this.error = message;
+      error: () => {
         this.busy = false;
-        this.toast.error(message);
       }
     });
   }

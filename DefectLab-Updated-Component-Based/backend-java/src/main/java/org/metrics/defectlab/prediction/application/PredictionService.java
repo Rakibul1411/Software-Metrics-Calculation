@@ -55,7 +55,7 @@ public class PredictionService {
         this.mlServiceClient = mlServiceClient;
         this.runRepository = runRepository;
         this.objectMapper = objectMapper;
-        this.predictionsRoot = storageRoot.resolve("predictions");
+        this.predictionsRoot = storageRoot.resolve("prediction-reports");
         Files.createDirectories(predictionsRoot);
     }
 
@@ -103,10 +103,10 @@ public class PredictionService {
             List<PredictionRun> saved = new ArrayList<>();
             for (GeneratedRun item : generated) {
                 saved.add(runRepository.save(new PredictionRun(
-                        userId, groupId, source.getId(), item.target.getId(),
+                        userId, groupId, source.getId(), item.target().getId(),
                         writeJson(modelConfig),
-                        item.predictionCsv == null ? null : absolute(item.predictionCsv),
-                        absolute(item.reportPdf))));
+                        item.predictionCsv() == null ? null : absolute(item.predictionCsv()),
+                        absolute(item.reportPdf()))));
             }
             runRepository.flush();
 
@@ -361,11 +361,6 @@ public class PredictionService {
                 .orElseThrow(() -> new NotFoundException("That prediction run does not exist."));
     }
 
-    @Transactional(readOnly = true)
-    public long countFor(Long userId) {
-        return runRepository.countByUserId(userId);
-    }
-
     @Transactional
     public void delete(Long userId, Long runId) throws IOException {
         PredictionRun run = require(userId, runId);
@@ -552,9 +547,9 @@ public class PredictionService {
 
     private static void deleteArtifacts(GeneratedRun item) {
         try {
-            deleteIfPresent(item.predictionCsv);
-            Files.deleteIfExists(item.reportPdf);
-            Files.deleteIfExists(item.metadataJson);
+            deleteIfPresent(item.predictionCsv());
+            Files.deleteIfExists(item.reportPdf());
+            Files.deleteIfExists(item.metadataJson());
         } catch (IOException ignored) {
             // Original workflow failure is more useful than a cleanup failure.
         }
@@ -615,18 +610,10 @@ public class PredictionService {
                 ? (Boolean) value : Boolean.parseBoolean(String.valueOf(value));
     }
 
-    private static final class GeneratedRun {
-        private final MetricDataset target;
-        private final Path predictionCsv;
-        private final Path reportPdf;
-        private final Path metadataJson;
-
-        private GeneratedRun(MetricDataset target, Path predictionCsv,
-                             Path reportPdf, Path metadataJson) {
-            this.target = target;
-            this.predictionCsv = predictionCsv;
-            this.reportPdf = reportPdf;
-            this.metadataJson = metadataJson;
-        }
-    }
+    private record GeneratedRun(
+            MetricDataset target,
+            Path predictionCsv,
+            Path reportPdf,
+            Path metadataJson
+    ) {}
 }

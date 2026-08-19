@@ -25,8 +25,8 @@ public class FileStorageService {
     private final Path folderLocation;
 
     public FileStorageService(StorageRoot storageRoot) throws IOException {
-        this.uploadLocation = storageRoot.resolve("uploads");
-        this.folderLocation = storageRoot.resolve("uploaded-folders");
+        this.uploadLocation = storageRoot.resolve("source-archives");
+        this.folderLocation = storageRoot.resolve("source-projects");
         Files.createDirectories(uploadLocation);
         Files.createDirectories(folderLocation);
     }

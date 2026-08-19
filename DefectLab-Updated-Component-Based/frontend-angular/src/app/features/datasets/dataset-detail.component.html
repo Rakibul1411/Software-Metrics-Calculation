@@ -13,8 +13,8 @@
     <h2 *ngIf="!dataset">Dataset details</h2>
     <div class="dl-actions" *ngIf="dataset as item">
       <ui-download-menu label="Download"
-          [csvUrl]="api.datasetDownloadUrl(item.id, 'csv')"
-          [arffUrl]="api.datasetDownloadUrl(item.id, 'arff')"
+          [csvUrl]="facade.downloadUrl(item.id, 'csv')"
+          [arffUrl]="facade.downloadUrl(item.id, 'arff')"
           (downloaded)="downloadStarted($event)">
       </ui-download-menu>
       <ui-delete-action *ngIf="!item.systemDataset"
@@ -27,7 +27,6 @@
   </div>
 
   <ui-state *ngIf="loading" kind="loading" message="Loading dataset details…"></ui-state>
-  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
 
   <ui-detail-fields *ngIf="dataset" [fields]="detailFields"></ui-detail-fields>
 

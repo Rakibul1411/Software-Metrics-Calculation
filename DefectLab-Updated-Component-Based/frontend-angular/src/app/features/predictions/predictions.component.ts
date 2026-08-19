@@ -10,7 +10,6 @@ import { TableColumn } from '../../shared/ui-table/ui-table.model';
 })
 export class PredictionsComponent implements OnInit {
   runs: PredictionRunSummary[] = [];
-  error = '';
   search = '';
 
   readonly runsColumns: TableColumn[] = [
@@ -37,7 +36,7 @@ export class PredictionsComponent implements OnInit {
   load(): void {
     this.api.listPredictionRuns().subscribe({
       next: rows => this.runs = rows,
-      error: error => this.error = error?.error?.error ?? 'Could not load prediction runs.'
+      error: () => {}
     });
   }
 

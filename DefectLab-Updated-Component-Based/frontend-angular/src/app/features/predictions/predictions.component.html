@@ -14,7 +14,6 @@
   </div>
 
   <div>
-    <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
     <ui-table *ngIf="filtered.length; else emptyRuns"
               [columns]="runsColumns" [rows]="filtered" trackByKey="id"
               scrollClass="dl-prediction-runs-scroll">

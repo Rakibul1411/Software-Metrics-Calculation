@@ -18,7 +18,6 @@ import { ToastService } from '../../shared/ui-toast/toast.service';
 export class ComparisonDetailComponent implements OnInit {
   comparison: MetricComparisonDetail | null = null;
   loading = true;
-  error = '';
 
   readonly metricStatsColumns: TableColumn[] = [
     { key: 'metric', label: 'Metric', sticky: 'start', className: 'dl-mono', width: '14%' },
@@ -47,7 +46,7 @@ export class ComparisonDetailComponent implements OnInit {
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!id) {
-      this.error = 'The comparison was not specified.';
+      this.toast.error('The comparison was not specified.');
       this.loading = false;
       return;
     }
@@ -56,14 +55,12 @@ export class ComparisonDetailComponent implements OnInit {
 
   load(id: number): void {
     this.loading = true;
-    this.error = '';
     this.api.metricComparison(id).subscribe({
       next: detail => {
         this.comparison = detail;
         this.loading = false;
       },
-      error: error => {
-        this.error = error?.error?.error ?? 'Could not load the comparison.';
+      error: () => {
         this.loading = false;
       }
     });

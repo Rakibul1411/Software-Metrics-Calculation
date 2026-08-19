@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { DatasetFamily, DatasetSummary } from '../../core/models/defectlab.model';
-import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { SelectOption } from '../../shared/ui-select/ui-select.model';
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
+import { DatasetsFacade } from './datasets.facade';
 
 @Component({
   selector: 'app-datasets',
@@ -10,9 +10,7 @@ import { TableColumn } from '../../shared/ui-table/ui-table.model';
   templateUrl: './datasets.component.html'
 })
 export class DatasetsComponent implements OnInit {
-  datasets: DatasetSummary[] = [];
   loading = true;
-  loadError = '';
   search = '';
   familyFilter = '';
   originFilter = '';
@@ -40,35 +38,26 @@ export class DatasetsComponent implements OnInit {
     { key: 'actions', label: 'Actions', sticky: 'end', className: 'dl-col-actions', width: '8%' }
   ];
 
-  constructor(private readonly api: DefectLabApiService) {}
+  constructor(readonly facade: DatasetsFacade) {}
 
   ngOnInit(): void { this.load(); }
 
   get filtered(): DatasetSummary[] {
-    const query = this.search.trim().toLowerCase();
-    return this.datasets.filter(item =>
-      (!query || `${item.projectName} ${item.projectVersion || ''}`.toLowerCase().includes(query)) &&
-      (!this.familyFilter || item.datasetFamily === this.familyFilter) &&
-      (!this.originFilter || item.datasetType === this.originFilter));
+    return this.facade.filterList({
+      search: this.search, family: this.familyFilter, origin: this.originFilter
+    });
   }
 
   load(): void {
     this.loading = true;
-    this.loadError = '';
-    this.api.listDatasets().subscribe({
-      next: rows => {
-        this.datasets = rows;
-        this.loading = false;
-      },
-      error: error => {
-        this.loadError = error?.error?.error ?? 'Could not load metric storage.';
-        this.loading = false;
-      }
+    this.facade.loadList().subscribe({
+      next: () => { this.loading = false; },
+      error: () => { this.loading = false; }
     });
   }
 
   countFamily(family: DatasetFamily): number {
-    return this.datasets.filter(item => item.datasetFamily === family).length;
+    return this.facade.countByFamily(family);
   }
 
   onFamilyFilterChange(value: string | number | null): void {

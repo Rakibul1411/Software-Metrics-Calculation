@@ -20,7 +20,6 @@
   </div>
 
   <div class="dl-detail-section">
-    <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
     <ui-table *ngIf="filtered.length; else empty" [columns]="columns" [rows]="filtered" trackByKey="key"
               scrollClass="dl-dataset-storage-scroll">
       <ng-template uiTableCell="pair" let-row>

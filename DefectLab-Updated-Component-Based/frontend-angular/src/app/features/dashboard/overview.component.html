@@ -11,7 +11,6 @@
   </header>
 
   <ui-state *ngIf="loading" kind="loading" message="Loading dashboard…"></ui-state>
-  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
 
   <ng-container *ngIf="data as dashboard">
     <section class="dl-dash-summary-grid">

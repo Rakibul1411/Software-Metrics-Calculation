@@ -4,7 +4,6 @@
   </div>
 
   <div>
-    <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
     <ui-table *ngIf="groups.length; else empty"
               [columns]="columns" [rows]="groups" trackByKey="comparisonGroupId">
       <ng-template uiTableCell="group" let-row>{{ row.comparisonGroupId || groupKey(row) }}</ng-template>

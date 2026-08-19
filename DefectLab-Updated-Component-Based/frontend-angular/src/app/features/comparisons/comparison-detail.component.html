@@ -17,7 +17,6 @@
   </div>
 
   <ui-state *ngIf="loading" kind="loading" message="Loading comparison…"></ui-state>
-  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
 
   <ng-container *ngIf="comparison as comparison">
     <ng-container *ngIf="comparison.result.comparisonMode === 'AGGREGATE'; else instanceResult">

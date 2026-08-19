@@ -163,21 +163,44 @@ public class MetricsExtractionService {
         return new PromiseProjectAnalyzer().analyze(sourcePaths);
     }
 
+    /**
+     * A multi-repository AEEEM benchmark (Mylyn's history is split across
+     * several component repositories) passes one directory per component
+     * here. Each is analyzed independently -- WCHU/LDHH/entropy are already
+     * per-file history metrics, so there is no cross-repository state to
+     * align. A component that contributes no production classes (Mylyn's
+     * top-level repository is releng/test infrastructure only) is skipped
+     * rather than failing the whole extraction; a single-directory request
+     * keeps today's behavior exactly and still fails loudly.
+     */
     private AeeemCalculation calculateAeeemMetricsForDirectories(
             String[] dirPaths,
             AeeemAnalysisOptions options) throws IOException {
-        List<AeeemMetricResult> allMetrics = new ArrayList<>();
-        AeeemAnalysisSummary summary = null;
-        GitHistoryAnalyzer analyzer = new GitHistoryAnalyzer();
+        List<Path> sourcePaths = new ArrayList<>();
         for (String dirPath : dirPaths) {
             Path sourcePath = Paths.get(dirPath.trim());
             if (Files.exists(sourcePath) && Files.isDirectory(sourcePath)) {
-                GitHistoryAnalyzer.AnalysisResult result =
-                        analyzer.analyzeWithSummary(sourcePath, options);
-                allMetrics.addAll(result.getMetrics());
-                if (summary == null) {
-                    summary = result.getSummary();
+                sourcePaths.add(sourcePath);
+            }
+        }
+        boolean multipleSources = sourcePaths.size() > 1;
+
+        List<AeeemMetricResult> allMetrics = new ArrayList<>();
+        AeeemAnalysisSummary summary = null;
+        GitHistoryAnalyzer analyzer = new GitHistoryAnalyzer();
+        for (Path sourcePath : sourcePaths) {
+            GitHistoryAnalyzer.AnalysisResult result;
+            try {
+                result = analyzer.analyzeWithSummary(sourcePath, options);
+            } catch (IllegalArgumentException exception) {
+                if (multipleSources) {
+                    continue;
                 }
+                throw exception;
+            }
+            allMetrics.addAll(result.getMetrics());
+            if (summary == null) {
+                summary = result.getSummary();
             }
         }
         return new AeeemCalculation(allMetrics, summary);

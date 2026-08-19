@@ -9,7 +9,6 @@
 
   <ui-state *ngIf="loading" kind="loading"
             message="Loading complete prediction details…"></ui-state>
-  <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
 
   <ui-detail-fields *ngIf="group && !loading" [fields]="settingsFields"></ui-detail-fields>
 

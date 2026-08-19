@@ -17,7 +17,6 @@ import { ToastService } from '../../shared/ui-toast/toast.service';
 export class PredictionDetailComponent implements OnInit {
   run: PredictionRunDetail | null = null;
   loading = true;
-  error = '';
 
   constructor(
     readonly api: DefectLabApiService,
@@ -30,7 +29,7 @@ export class PredictionDetailComponent implements OnInit {
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!id) {
-      this.error = 'The prediction run was not specified.';
+      this.toast.error('The prediction run was not specified.');
       this.loading = false;
       return;
     }
@@ -39,14 +38,12 @@ export class PredictionDetailComponent implements OnInit {
 
   load(id: number): void {
     this.loading = true;
-    this.error = '';
     this.api.predictionRun(id).subscribe({
       next: run => {
         this.run = run;
         this.loading = false;
       },
-      error: error => {
-        this.error = error?.error?.error ?? 'Could not load the prediction run.';
+      error: () => {
         this.loading = false;
       }
     });

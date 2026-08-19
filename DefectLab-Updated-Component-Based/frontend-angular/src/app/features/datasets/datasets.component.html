@@ -23,14 +23,13 @@
   </div>
 
   <section class="dl-grid dl-grid-3">
-    <ui-metric-card variant="stat" label="Total datasets" [value]="datasets.length"></ui-metric-card>
+    <ui-metric-card variant="stat" label="Total datasets" [value]="facade.list.length"></ui-metric-card>
     <ui-metric-card variant="stat" label="PROMISE datasets" [value]="countFamily('PROMISE')"></ui-metric-card>
     <ui-metric-card variant="stat" label="AEEEM datasets" [value]="countFamily('AEEEM')"></ui-metric-card>
   </section>
 
   <div class="dl-detail-section">
     <ui-state *ngIf="loading" kind="loading" message="Loading datasets…"></ui-state>
-    <ui-state *ngIf="loadError" kind="error" [message]="loadError"></ui-state>
     <ui-table *ngIf="filtered.length; else empty"
               [columns]="columns" [rows]="filtered" trackByKey="id"
               scrollClass="dl-dataset-storage-scroll">

@@ -114,7 +114,7 @@ class MetricComparisonServiceTest {
                 + "\"hasIdentifierColumn\":true,\"identifierColumnName\":\"name\","
                 + "\"absoluteTolerance\":0.0001,\"relativeTolerance\":0.01}");
         when(comparison.getComparisonReportFilePath()).thenReturn(
-                Path.of("storage", "comparisons", "missing.pdf").toString());
+                Path.of("storage", "comparison-reports", "missing.pdf").toString());
         when(comparison.getCreatedAt()).thenReturn(
                 Instant.parse("2026-07-31T00:00:00Z"));
         return comparison;

@@ -35,7 +35,6 @@ export class ReportDetailComponent implements OnInit {
   predefinedRows: PredictionRow[] = [];
   matchedRows: MatchedPredictionRow[] = [];
   loading = true;
-  error = '';
 
   readonly manualColumns: TableColumn[] = [
     { key: 'riskRank', label: 'Rank', sticky: 'start', width: '10%' },
@@ -72,7 +71,7 @@ export class ReportDetailComponent implements OnInit {
   ngOnInit(): void {
     const key = this.route.snapshot.paramMap.get('groupKey');
     if (!key) {
-      this.error = 'The report group was not specified.';
+      this.toast.error('The report group was not specified.');
       this.loading = false;
       return;
     }
@@ -126,7 +125,7 @@ export class ReportDetailComponent implements OnInit {
         const group = groups.find(item =>
           this.groupKey(item) === key && this.isCompleteGroup(item));
         if (!group) {
-          this.error = 'A report requires both MANUAL and PREDEFINED target runs.';
+          this.toast.error('A report requires both MANUAL and PREDEFINED target runs.');
           this.loading = false;
           return;
         }
@@ -137,8 +136,7 @@ export class ReportDetailComponent implements OnInit {
           run => run.targetDataset.datasetType === 'PREDEFINED') ?? null;
         this.loadPredictions(group);
       },
-      error: error => {
-        this.error = error?.error?.error ?? 'Could not load the report group.';
+      error: () => {
         this.loading = false;
       }
     });
@@ -159,8 +157,7 @@ export class ReportDetailComponent implements OnInit {
           this.manualRows, this.predefinedRows);
         this.loading = false;
       },
-      error: error => {
-        this.error = error?.error?.error ?? 'Could not load prediction rows.';
+      error: () => {
         this.loading = false;
       }
     });

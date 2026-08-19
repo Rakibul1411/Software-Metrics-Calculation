@@ -52,7 +52,7 @@ public class MetricComparisonService {
         this.datasetService = datasetService;
         this.comparisonRepository = comparisonRepository;
         this.objectMapper = objectMapper;
-        this.comparisonsRoot = storageRoot.resolve("comparisons");
+        this.comparisonsRoot = storageRoot.resolve("comparison-reports");
         Files.createDirectories(comparisonsRoot);
         migrateStaleComparisons();
     }
@@ -697,24 +697,14 @@ public class MetricComparisonService {
         return path.toAbsolutePath().normalize().toString();
     }
 
-    private static final class Stats {
-        private final int count;
-        private final Double mean;
-        private final Double standardDeviation;
-        private final Double median;
-        private final Double minimum;
-        private final Double maximum;
-
-        private Stats(int count, Double mean, Double standardDeviation,
-                      Double median, Double minimum, Double maximum) {
-            this.count = count;
-            this.mean = mean;
-            this.standardDeviation = standardDeviation;
-            this.median = median;
-            this.minimum = minimum;
-            this.maximum = maximum;
-        }
-
+    private record Stats(
+            int count,
+            Double mean,
+            Double standardDeviation,
+            Double median,
+            Double minimum,
+            Double maximum
+    ) {
         private Map<String, Object> toMap() {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("recordCount", count);

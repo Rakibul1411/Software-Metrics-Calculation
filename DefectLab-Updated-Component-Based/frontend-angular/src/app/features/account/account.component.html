@@ -21,7 +21,6 @@
                  [value]="newPassword" (valueChange)="newPassword = $event">
       </ui-input>
 
-      <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
       <ui-state *ngIf="saved" kind="success" message="Password updated."></ui-state>
 
       <ui-button type="submit" [disabled]="!canSubmit || saving" [loading]="saving">

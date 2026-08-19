@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
@@ -15,7 +14,6 @@ export class AccountComponent {
   newPassword = '';
   saving = false;
   saved = false;
-  error: string | null = null;
 
   constructor(
     readonly session: SessionService,
@@ -33,7 +31,6 @@ export class AccountComponent {
       return;
     }
     this.saving = true;
-    this.error = null;
     this.saved = false;
     this.api.changePassword(this.currentPassword, this.newPassword)
       .pipe(finalize(() => (this.saving = false)))
@@ -44,12 +41,7 @@ export class AccountComponent {
           this.newPassword = '';
           this.toast.success('Password updated successfully.');
         },
-        error: (failure: HttpErrorResponse) => {
-          const message = typeof failure.error?.error === 'string'
-            ? failure.error.error : 'Password could not be updated.';
-          this.error = message;
-          this.toast.error(message);
-        }
+        error: () => {}
       });
   }
 }

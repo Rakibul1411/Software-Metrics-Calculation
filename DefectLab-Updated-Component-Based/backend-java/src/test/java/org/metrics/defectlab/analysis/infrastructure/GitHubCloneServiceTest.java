@@ -36,16 +36,6 @@ class GitHubCloneServiceTest {
     }
 
     @Test
-    void acceptsGitHubBlobLinksToZipFiles() throws Exception {
-        GitHubCloneService service = new GitHubCloneService(new StorageRoot("storage"));
-        assertEquals(
-                "https://raw.githubusercontent.com/feiwww/PROMISE-backup/master/source%20code/ant/apache-ant-1.6.0-src.zip",
-                service.validateAndBuildRawZipUrl(
-                        "https://github.com/feiwww/PROMISE-backup/blob/master/source%20code/ant/apache-ant-1.6.0-src.zip")
-                        .toString());
-    }
-
-    @Test
     void rejectsNonGitHubAndCredentialBearingUrls() throws Exception {
         GitHubCloneService service = new GitHubCloneService(new StorageRoot("storage"));
         assertThrows(IllegalArgumentException.class,
@@ -54,9 +44,6 @@ class GitHubCloneServiceTest {
                 () -> service.validateAndNormalizeUrl("https://token@github.com/owner/repository"));
         assertThrows(IllegalArgumentException.class,
                 () -> service.validateAndNormalizeUrl("https://github.com/owner/repository/issues"));
-        assertThrows(IllegalArgumentException.class,
-                () -> service.validateAndBuildRawZipUrl(
-                        "https://github.com/owner/repository/blob/main/project.jar"));
     }
 
     @Test

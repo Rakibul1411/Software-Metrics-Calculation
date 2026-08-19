@@ -16,9 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.metrics.defectlab.auth.security.CurrentUser;
 import org.metrics.defectlab.dataset.application.DatasetService;
 import org.metrics.defectlab.dataset.application.DatasetSummaryMapper;
-import org.metrics.defectlab.dataset.domain.DatasetQuality;
 import org.metrics.defectlab.dataset.domain.DatasetTable;
-import org.metrics.defectlab.dataset.domain.FeatureProfile;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 import org.metrics.defectlab.dataset.infrastructure.DatasetFileWriter;
 import org.springframework.core.io.ByteArrayResource;
@@ -105,23 +103,6 @@ public class DatasetController {
         body.put("headers", table.getHeaders());
         body.put("rows", table.getRows().subList(0, Math.min(PREVIEW_ROWS, table.getRowCount())));
         body.put("totalRows", table.getRowCount());
-        return ResponseEntity.ok(body);
-    }
-
-    @GetMapping("/{id}/quality")
-    public ResponseEntity<Map<String, Object>> quality(
-            @PathVariable("id") Long id, HttpServletRequest request) throws IOException {
-        MetricDataset dataset = datasetService.require(
-                currentUser.requireUserId(request), id);
-        DatasetTable table = datasetService.load(dataset);
-        FeatureProfile profile = datasetService.profileFor(dataset);
-        DatasetQuality quality = DatasetQuality.inspect(table, profile);
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("usable", quality.isUsable());
-        body.put("blockingIssues", quality.getBlockingIssues());
-        body.put("warnings", quality.getWarnings());
-        body.put("columns", quality.getColumns());
-        body.put("hasActualLabel", dataset.hasActualLabel());
         return ResponseEntity.ok(body);
     }
 

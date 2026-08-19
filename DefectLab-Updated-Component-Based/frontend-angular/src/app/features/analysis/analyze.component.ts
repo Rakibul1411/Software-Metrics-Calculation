@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { DatasetFamily, DatasetSummary } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
+import { PendingExtractionService } from '../../core/services/pending-extraction.service';
 import { RadioOption } from '../../shared/ui-radio-group/ui-radio-group.model';
 import { SelectOption } from '../../shared/ui-select/ui-select.model';
 import { ToastService } from '../../shared/ui-toast/toast.service';
@@ -33,13 +34,13 @@ export class AnalyzeComponent {
     { value: 'ml', label: 'Mylyn 3.1' }
   ];
   busy = false;
-  error = '';
   created: DatasetSummary | null = null;
 
   constructor(
     private readonly api: DefectLabApiService,
     private readonly toast: ToastService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly pendingExtraction: PendingExtractionService
   ) {}
 
   get modeOptions(): RadioOption[] {
@@ -59,14 +60,12 @@ export class AnalyzeComponent {
 
   selectFamily(family: DatasetFamily): void {
     this.family = family;
-    this.error = '';
     if (family === 'AEEEM') {
       this.mode = 'github';
     }
   }
 
   selectMode(mode: 'archive' | 'github'): void {
-    this.error = '';
     this.mode = this.family === 'AEEEM' ? 'github' : mode;
   }
 
@@ -83,10 +82,9 @@ export class AnalyzeComponent {
     if (!supported) {
       this.archive = null;
       input.value = '';
-      this.error = 'Choose a ZIP, TAR, TGZ, TAR.GZ or GZ source archive.';
+      this.toast.error('Choose a ZIP, TAR, TGZ, TAR.GZ or GZ source archive.');
       return;
     }
-    this.error = '';
     this.archive = selected;
   }
 
@@ -141,7 +139,6 @@ export class AnalyzeComponent {
     this.archive = null;
     this.githubUrl = '';
     this.aeeemProfile = 'current';
-    this.error = '';
   }
 
   canSubmit(): boolean {
@@ -155,8 +152,12 @@ export class AnalyzeComponent {
   submit(): void {
     if (!this.canSubmit()) return;
     this.busy = true;
-    this.error = '';
     this.created = null;
+    // Extraction runs synchronously on the backend and can take a while
+    // (AEEEM especially). If the user refreshes or navigates away before
+    // this request returns, the backend keeps working -- this marker lets
+    // us tell them once it's done even though this page is gone by then.
+    this.pendingExtraction.start(this.family, this.projectName, this.projectVersion);
     const request = this.mode === 'archive'
       ? this.api.analyzeArchive({
           file: this.archive!,
@@ -175,14 +176,13 @@ export class AnalyzeComponent {
       next: dataset => {
         this.created = dataset;
         this.busy = false;
+        this.pendingExtraction.clear();
         this.toast.success('Dataset analyzed and saved successfully.');
         this.router.navigate(['/datasets']);
       },
-      error: error => {
-        const message = error?.error?.error ?? 'Metric extraction failed.';
-        this.error = message;
+      error: () => {
         this.busy = false;
-        this.toast.error(message);
+        this.pendingExtraction.clear();
       }
     });
   }
