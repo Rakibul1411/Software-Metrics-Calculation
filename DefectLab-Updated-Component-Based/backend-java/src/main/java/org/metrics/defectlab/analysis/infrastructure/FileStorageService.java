@@ -11,12 +11,13 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.metrics.defectlab.analysis.usecase.port.SourceArchiveStorage;
 import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
-public class FileStorageService {
+public class FileStorageService implements SourceArchiveStorage {
 
     private static final int MAX_FOLDER_FILES = 20_000;
     private static final long MAX_FOLDER_BYTES = 250L * 1024L * 1024L;
@@ -31,6 +32,7 @@ public class FileStorageService {
         Files.createDirectories(folderLocation);
     }
 
+    @Override
     public Path storeUploadedFile(MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Choose a non-empty project archive file.");
@@ -146,6 +148,11 @@ public class FileStorageService {
         return lower.endsWith(".zip") || lower.endsWith(".tar")
                 || lower.endsWith(".tar.gz") || lower.endsWith(".tgz")
                 || lower.endsWith(".gz");
+    }
+
+    @Override
+    public void delete(Path path) {
+        deleteRecursively(path);
     }
 
     public static void deleteRecursively(Path path) {

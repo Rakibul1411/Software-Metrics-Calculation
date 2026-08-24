@@ -15,11 +15,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.metrics.defectlab.analysis.usecase.port.GitHubRepositoryClient;
 import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.stereotype.Service;
 
 @Service
-public class GitHubCloneService {
+public class GitHubCloneService implements GitHubRepositoryClient {
 
     private static final long CLONE_TIMEOUT_SECONDS = 600;
     private static final int MAX_COMMAND_OUTPUT_BYTES = 16_384;
@@ -39,6 +40,7 @@ public class GitHubCloneService {
         return cloneRepository(parseTarget(gitUrl), fullHistory);
     }
 
+    @Override
     public Path cloneRepository(GitHubTarget target, boolean fullHistory) throws IOException {
         Path targetPath = cloneLocation.resolve("git_" + UUID.randomUUID()).toAbsolutePath().normalize();
         try {
@@ -61,6 +63,7 @@ public class GitHubCloneService {
     }
 
     /** Materialises the default branch after the intentionally no-checkout clone. */
+    @Override
     public void checkoutHead(Path repository) throws IOException {
         Process process = null;
         try {
@@ -168,6 +171,7 @@ public class GitHubCloneService {
         return parseTarget(gitUrl).getRepositoryUrl();
     }
 
+    @Override
     public GitHubTarget parseTarget(String gitUrl) {
         if (gitUrl == null || gitUrl.trim().isEmpty()) {
             throw new IllegalArgumentException("Enter a GitHub repository URL.");
@@ -233,31 +237,6 @@ public class GitHubCloneService {
             }
         } catch (IOException ignored) {
             // The process exit code still gives the caller a reliable failure signal.
-        }
-    }
-
-    public static final class GitHubTarget {
-        private final String repositoryUrl;
-        private final String branch;
-        private final String modulePath;
-
-        private GitHubTarget(String repositoryUrl, String branch, String modulePath) {
-            this.repositoryUrl = repositoryUrl;
-            this.branch = branch == null || branch.trim().isEmpty() ? null : branch.trim();
-            this.modulePath = org.metrics.defectlab.analysis.aeeem.history.AeeemAnalysisOptions
-                    .normalizeModulePath(modulePath);
-        }
-
-        public String getRepositoryUrl() {
-            return repositoryUrl;
-        }
-
-        public String getBranch() {
-            return branch;
-        }
-
-        public String getModulePath() {
-            return modulePath;
         }
     }
 }

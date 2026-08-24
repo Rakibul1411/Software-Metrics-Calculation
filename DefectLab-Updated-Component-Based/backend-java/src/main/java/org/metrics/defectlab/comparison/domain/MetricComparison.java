@@ -2,53 +2,37 @@ package org.metrics.defectlab.comparison.domain;
 
 import java.time.Instant;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-import org.hibernate.annotations.ColumnTransformer;
-
-@Entity
-@Table(name = "metric_comparisons")
+/**
+ * Enterprise Business Rule: a saved metric comparison, free of any
+ * persistence or framework annotations.
+ */
 public class MetricComparison {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private final Long id;
+    private final Long userId;
+    private final Long manualDatasetId;
+    private final Long predefinedDatasetId;
+    private final String comparisonConfig;
+    private final String comparisonReportFilePath;
+    private final Instant createdAt;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
-
-    @Column(name = "manual_dataset_id", nullable = false)
-    private Long manualDatasetId;
-
-    @Column(name = "predefined_dataset_id", nullable = false)
-    private Long predefinedDatasetId;
-
-    @Column(name = "comparison_config", nullable = false, columnDefinition = "jsonb")
-    @ColumnTransformer(read = "comparison_config::text", write = "?::jsonb")
-    private String comparisonConfig;
-
-    @Column(name = "comparison_report_file_path", nullable = false, columnDefinition = "text")
-    private String comparisonReportFilePath;
-
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
-
-    protected MetricComparison() {
-    }
-
-    public MetricComparison(Long userId, Long manualDatasetId, Long predefinedDatasetId,
-                            String comparisonConfig, String comparisonReportFilePath) {
+    public MetricComparison(Long id, Long userId, Long manualDatasetId, Long predefinedDatasetId,
+                            String comparisonConfig, String comparisonReportFilePath,
+                            Instant createdAt) {
+        this.id = id;
         this.userId = userId;
         this.manualDatasetId = manualDatasetId;
         this.predefinedDatasetId = predefinedDatasetId;
         this.comparisonConfig = comparisonConfig;
         this.comparisonReportFilePath = comparisonReportFilePath;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
+    }
+
+    /** A brand-new comparison; the id is assigned once the repository persists it. */
+    public static MetricComparison newComparison(Long userId, Long manualDatasetId,
+            Long predefinedDatasetId, String comparisonConfig, String comparisonReportFilePath) {
+        return new MetricComparison(null, userId, manualDatasetId, predefinedDatasetId,
+                comparisonConfig, comparisonReportFilePath, Instant.now());
     }
 
     public Long getId() { return id; }

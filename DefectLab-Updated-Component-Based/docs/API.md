@@ -13,6 +13,8 @@ directly by the browser.
 |---|---|---|
 | `POST` | `/api/auth/register` | Create an account and start a session |
 | `POST` | `/api/auth/login` | Authenticate and start a session |
+| `POST` | `/api/auth/password/forgot` | Confirm an address is registered (step 1 of reset) |
+| `POST` | `/api/auth/password/reset` | Set a new password for that address (step 2) |
 | `POST` | `/api/auth/logout` | Invalidate the current session |
 | `GET` | `/api/auth/me` | Return the signed-in user or `401` |
 | `POST` | `/api/auth/password` | Change the current user's password |
@@ -28,7 +30,9 @@ Registration body:
 ```
 
 Login body contains `email` and `password`. Password change contains
-`currentPassword` and `newPassword`.
+`currentPassword` and `newPassword`. Forgot-password contains `email` and
+responds `{"email": "...", "registered": true}`, or a `400` if no account uses
+that address. Reset-password contains `email` and `newPassword`.
 
 ## Dashboard
 
@@ -64,7 +68,6 @@ because its history predictors require Git commits.
 | `GET` | `/api/datasets` | List owned plus shared predefined datasets |
 | `GET` | `/api/datasets/{id}` | Dataset details and feature names |
 | `GET` | `/api/datasets/{id}/preview` | Preview up to 25 rows |
-| `GET` | `/api/datasets/{id}/quality` | Quality issues, warnings, and columns |
 | `GET` | `/api/datasets/{id}/download` | Download the stored source metrics |
 | `DELETE` | `/api/datasets/{id}` | Delete an unused user-owned dataset |
 
@@ -81,16 +84,6 @@ Upload is `multipart/form-data`:
 Bundled predefined datasets cannot be deleted. A user-owned dataset cannot be
 deleted while referenced by a saved prediction or metric comparison.
 
-## Preprocessing inspection
-
-| Method | Route | Purpose |
-|---|---|---|
-| `GET` | `/api/preprocessing/{family}` | Return PROMISE/AEEEM preprocessing registry |
-| `GET` | `/api/preprocessing/datasets/{id}/preview` | Return raw/transformed feature preview |
-
-These routes inspect the fixed standard pipeline. They do not configure
-pipeline alternatives.
-
 ## Predictions
 
 | Method | Route | Purpose |
@@ -99,6 +92,7 @@ pipeline alternatives.
 | `GET` | `/api/predictions` | List target-specific saved runs |
 | `GET` | `/api/predictions/groups` | List grouped dual-target runs |
 | `GET` | `/api/predictions/{id}` | Complete run details |
+| `DELETE` | `/api/predictions/{id}` | Delete a saved run and its artifacts |
 | `GET` | `/api/predictions/{id}/predictions` | Ranked prediction rows |
 | `GET` | `/api/predictions/{id}/prediction.csv` | Download MANUAL labeled CSV |
 | `GET` | `/api/predictions/{id}/report.pdf` | Download prediction PDF |
@@ -135,8 +129,9 @@ Rules:
 - `coral` optionally enables/disables dataset alignment;
 - threshold must be strictly between `0` and `1`.
 
-Log preprocessing is automatic. Dataset alignment is controlled by the public
-`coral` boolean field.
+Every domain is independently standardized to zero mean/unit variance before
+the optional CORAL step; there is no log1p transform in the current pipeline.
+Dataset alignment is controlled by the public `coral` boolean field.
 
 A dual response contains:
 
@@ -159,6 +154,7 @@ group ID.
 | `GET` | `/api/metric-comparisons` | List saved comparisons |
 | `GET` | `/api/metric-comparisons/eligible-pairs` | List compatible dataset pairs |
 | `GET` | `/api/metric-comparisons/{id}` | Comparison details |
+| `DELETE` | `/api/metric-comparisons/{id}` | Delete a saved comparison and its PDF |
 | `GET` | `/api/metric-comparisons/{id}/report.pdf` | Download comparison PDF |
 
 Example:
@@ -188,14 +184,13 @@ FastAPI normally listens at `http://localhost:8000`. Spring Boot sends
 | Method | Route | Token | Purpose |
 |---|---|---:|---|
 | `GET` | `/ml/health` | No | Internal service health |
-| `POST` | `/ml/schema/validate` | Yes | Validate rows against a family registry |
-| `POST` | `/ml/preprocessing/preview` | Yes | Preview registered transformations |
-| `POST` | `/ml/predict` | Yes | Prepare, fit, predict, and rank |
+| `POST` | `/ml/predict` | Yes | Prepare, standardize, optionally align, fit, predict, and rank |
 | `POST` | `/ml/evaluate` | Yes | Evaluate predictions against actual labels |
-| `POST` | `/ml/compare` | Yes | Compare metric/prediction results |
-| `GET` | `/ml/registry/{family}` | Yes | Return family registry information |
 
-FastAPI does not access the database or user file storage.
+These are the only routes FastAPI exposes; there is no schema-validation,
+preprocessing-preview, comparison, or registry endpoint. Metric comparison
+(`/api/metric-comparisons`) is computed entirely in Spring Boot and never
+calls FastAPI. FastAPI does not access the database or user file storage.
 
 ## Error behavior
 

@@ -38,43 +38,61 @@ flowchart TD
 All Java code is under `org.metrics.defectlab`; no legacy `org.metrics.service`,
 `org.metrics.controller`, or mixed root packages remain.
 
+Every business component follows the same Clean Architecture layering:
+`api/` and `infrastructure/` depend inward on `usecase/`, `usecase/` depends
+only on `domain/` and its own `usecase/port/` interfaces, and `domain/` stays
+free of any framework import. Concrete infrastructure classes are never
+imported directly from `usecase/` or `api/` — they implement a port interface
+instead, so the dependency arrow always points inward. See
+[backend-java/README.md](../backend-java/README.md#component-structure) for
+the fully annotated package-by-package tree.
+
 ```text
 org.metrics.defectlab
 ├── DefectLabApplication.java
 ├── analysis
 │   ├── api                    source-analysis HTTP boundary
-│   ├── application            extraction orchestration
+│   ├── usecase                 AnalyzeSourceUseCase + SourceAnalysisInteractor
+│   │   └── port                 storage/extractor/GitHub/metrics/slot ports
 │   ├── infrastructure         GitHub, ZIP, and temporary file adapters
 │   ├── javaparser             Eclipse JDT configuration
 │   ├── promise                PROMISE metric engine
-│   └── aeeem                 AEEEM static/history metric engine
+│   └── aeeem                  AEEEM static/history metric engine
 ├── auth
 │   ├── api
-│   ├── application
 │   ├── domain
-│   ├── persistence
-│   └── security
+│   ├── usecase
+│   │   └── port                 UserRepository, PasswordHasher
+│   ├── infrastructure         persistence, security adapters
+│   └── security                CurrentUser (used by every component's api/)
 ├── dataset
 │   ├── api
-│   ├── application
 │   ├── domain
-│   ├── infrastructure
-│   └── persistence
+│   ├── usecase
+│   │   └── port                 MetricDatasetRepository, DatasetFileReader
+│   └── infrastructure         persistence, DatasetFileParser, seeder
 ├── prediction
 │   ├── api
-│   ├── application
 │   ├── domain
-│   ├── infrastructure
-│   └── persistence
-├── dashboard/api
-├── report/api
-└── shared
+│   ├── usecase
+│   │   └── port                 PredictionRunRepository, MlServiceClient
+│   └── infrastructure         persistence, RestMlServiceClient
+├── comparison
+│   ├── api
+│   ├── domain
+│   ├── usecase
+│   │   └── port                 MetricComparisonRepository
+│   └── infrastructure         persistence
+└── shared                     cross-cutting only — no domain, no use cases
+    ├── api                     DashboardController, ReportController
     ├── config
     ├── csv
     ├── database
     ├── exception
     ├── export
-    └── model
+    ├── model
+    ├── report
+    └── storage
 ```
 
 ## Responsibility rules
@@ -85,8 +103,14 @@ org.metrics.defectlab
 | `dataset` | Dataset validation, file registration, preview, download | Model fitting |
 | `prediction` | Source/target selection, KNN request, immutable run result | Metric extraction |
 | `auth` | User account, BCrypt, HTTP session | Dataset or ML rules |
-| `report` | Read-only report rendering | New model execution |
-| `shared` | Cross-cutting configuration and error/database contracts | Feature-specific business flow |
+| `comparison` | Independent MANUAL/PREDEFINED metric comparison | Prediction fitting |
+| `shared` | Cross-cutting configuration, error/database contracts, and the read-only Dashboard/Report presenters that compose other components' use cases | Feature-specific business flow, any domain entity |
+
+`dashboard` and `report` are responsibilities, not components: each is a
+single controller with no domain or use case of its own — the same rule that
+keeps `dataset/api/DatasetSummaryMapper` a presenter rather than a service —
+so both live under `shared/api` next to the config and error-mapping code
+every component depends on.
 
 The browser calls Spring Boot only. Spring Boot calls FastAPI using the internal
 service token. FastAPI cannot access PostgreSQL or user sessions.
@@ -123,6 +147,8 @@ sequenceDiagram
 Target labels are excluded from preprocessing, CORAL, training, and prediction.
 They are used only after prediction for evaluation.
 
-The standard pipeline always performs registered log1p transformations,
-source-fitted scaling, and shallow CORAL. There is no preprocessing selector in
-the Angular UI or public prediction request.
+The standard pipeline always standardizes source and target independently to
+zero mean/unit variance (there is no log1p transform, and neither domain's
+scaler is fit on the other's statistics), then optionally applies shallow
+CORAL. There is no preprocessing selector in the Angular UI or public
+prediction request.

@@ -608,6 +608,7 @@ Open <http://localhost:4200>.
 | `ML_SERVICE_BASE_URL` | Spring Boot | FastAPI base URL | `http://localhost:8000` |
 | `ML_SERVICE_TOKEN` | Spring Boot and FastAPI | Shared internal API token | same long random value |
 | `PREDEFINED_DATA_DIR` | Spring Boot | Directory containing benchmark manifest | `../sample-data/predefined` |
+| `STORAGE_ROOT` | Spring Boot | Root for uploads, extracted projects, metrics, and predictions | `storage` locally; an absolute path in production |
 | `DEFECTLAB_SESSION_SECURE` | Spring Boot | Sends session cookie only over HTTPS | `false` locally, `true` in production |
 | `SPRING_PROFILES_ACTIVE` | Spring Boot | Spring profile | `local` |
 | `POSTGRES_DB` | Docker Compose | Docker PostgreSQL database | `defectlab` |
@@ -653,6 +654,8 @@ authenticated session cookie.
 |---|---|---|
 | `POST` | `/api/auth/register` | Create an account and session |
 | `POST` | `/api/auth/login` | Authenticate and start a session |
+| `POST` | `/api/auth/password/forgot` | Confirm an address is registered |
+| `POST` | `/api/auth/password/reset` | Set a new password for that address |
 | `POST` | `/api/auth/logout` | End the session |
 | `GET` | `/api/auth/me` | Read the current account |
 | `POST` | `/api/auth/password` | Change the password |
@@ -668,7 +671,10 @@ authenticated session cookie.
 plus `projectName`, required `projectVersion`, `datasetFamily`, and
 `aeeemProfile`.
 
-### Datasets and preprocessing
+### Datasets
+
+Quality is inspected at upload/registration time (blocking issues reject the
+file; non-blocking warnings are stored), not through a separate route.
 
 | Method | Route | Purpose |
 |---|---|---|
@@ -676,7 +682,6 @@ plus `projectName`, required `projectVersion`, `datasetFamily`, and
 | `GET` | `/api/datasets` | List visible datasets |
 | `GET` | `/api/datasets/{id}` | Dataset details and feature list |
 | `GET` | `/api/datasets/{id}/preview` | Preview up to 25 rows |
-| `GET` | `/api/datasets/{id}/quality` | Quality issues and warnings |
 | `GET` | `/api/datasets/{id}/download` | Download the original metric file |
 | `DELETE` | `/api/datasets/{id}` | Delete an unused user-owned dataset |
 
@@ -775,7 +780,10 @@ DefectLab-Updated-Component-Based/
 
 ### Spring Boot component packages
 
-All backend code is under `org.metrics.defectlab`.
+All backend code is under `org.metrics.defectlab`, and every business
+component follows Clean Architecture layering: `api`/`infrastructure` depend
+inward on `usecase`, `usecase` depends only on `domain` and its own
+`usecase/port` interfaces, and `domain` stays free of any framework import.
 
 | Package | Responsibility |
 |---|---|
@@ -784,17 +792,22 @@ All backend code is under `org.metrics.defectlab`.
 | `dataset` | Dataset validation, storage, preview, download, deletion |
 | `prediction` | Selection rules, ML orchestration, immutable runs |
 | `comparison` | Independent MANUAL/PREDEFINED metric comparison |
-| `dashboard` | Read-only workspace summary |
-| `report` | Authenticated report download |
-| `shared` | Configuration, database contract, errors, CSV/export/report utilities |
+| `shared` | Configuration, database/error contracts, plus the read-only Dashboard and Report presenters, which have no domain or use case of their own |
 
 Within a business component:
 
-- `api` contains HTTP controllers;
-- `application` coordinates use cases;
-- `domain` contains entities and business rules;
-- `persistence` contains JPA repositories; and
-- `infrastructure` contains file, Git, ML, or other external adapters.
+- `api` — controllers that translate HTTP requests into use-case calls and back;
+- `usecase` — one interactor per component implementing every use-case
+  interface, depending only on `domain` and `usecase/port`;
+- `usecase/port` — output-port interfaces for anything outside the process
+  (a repository, a hasher, an HTTP client);
+- `domain` — entities and business rules, with zero framework imports; and
+- `infrastructure` — adapters that fulfil a port: JPA repositories, file/Git/
+  ZIP handling, the ML REST client.
+
+`dashboard` and `report` are not top-level packages: each was a single
+controller with no domain or use case of its own, so both now live under
+`shared/api` as cross-component presenters.
 
 ## Implementation documentation
 

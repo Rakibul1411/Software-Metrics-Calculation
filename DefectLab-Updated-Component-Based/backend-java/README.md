@@ -37,60 +37,76 @@ The browser never calls FastAPI directly.
 
 ## Component structure
 
-All code is under `org.metrics.defectlab`.
+All code is under `org.metrics.defectlab`. Every business component follows
+Clean Architecture layering: `api` and `infrastructure` may depend inward on
+`usecase`, and `usecase` may depend on `domain`, but never the reverse — a
+use case never imports a concrete infrastructure class, only the
+`usecase/port` interface that class implements.
 
 ```text
 src/main/java/org/metrics/defectlab/
 ├── DefectLabApplication.java
 ├── analysis/
 │   ├── api/                  POST /api/analysis
-│   ├── application/          extraction coordination
+│   ├── usecase/               AnalyzeSourceUseCase + SourceAnalysisInteractor
+│   │   └── port/               storage/extractor/GitHub/metrics/slot ports
 │   ├── infrastructure/       GitHub, ZIP, and temporary-file adapters
 │   ├── javaparser/           Eclipse JDT configuration
 │   ├── promise/              20-feature PROMISE extraction
 │   └── aeeem/                static/history AEEEM extraction
 ├── auth/
 │   ├── api/
-│   ├── application/
 │   ├── domain/
-│   ├── persistence/
-│   └── security/
+│   ├── usecase/
+│   │   └── port/               UserRepository, PasswordHasher
+│   ├── infrastructure/       persistence/, security/
+│   └── security/              CurrentUser (used by every component's api/)
 ├── dataset/
 │   ├── api/
-│   ├── application/
 │   ├── domain/
-│   ├── infrastructure/
-│   └── persistence/
+│   ├── usecase/
+│   │   └── port/               MetricDatasetRepository, DatasetFileReader
+│   └── infrastructure/       persistence/, DatasetFileParser, seeder
 ├── prediction/
 │   ├── api/
-│   ├── application/
 │   ├── domain/
-│   ├── infrastructure/
-│   └── persistence/
+│   ├── usecase/
+│   │   └── port/               PredictionRunRepository, MlServiceClient
+│   └── infrastructure/       persistence/, RestMlServiceClient
 ├── comparison/
 │   ├── api/
-│   ├── application/
 │   ├── domain/
-│   └── persistence/
-├── dashboard/api/
-├── report/api/
-└── shared/
+│   ├── usecase/
+│   │   └── port/               MetricComparisonRepository
+│   └── infrastructure/       persistence/
+└── shared/                   cross-cutting only — no domain, no use cases
+    ├── api/                   DashboardController, ReportController
     ├── config/
     ├── csv/
     ├── database/
     ├── exception/
     ├── export/
     ├── model/
-    └── report/
+    ├── report/
+    └── storage/
 ```
 
 Within a component:
 
-- `api` defines the HTTP boundary;
-- `application` coordinates use cases;
-- `domain` contains entities and business rules;
-- `persistence` contains repositories;
-- `infrastructure` integrates files, Git, and FastAPI.
+- `api` — controllers translate HTTP requests into use-case calls and back;
+- `usecase` — one interactor per component implements every use-case
+  interface and orchestrates the workflow, depending only on `domain` and its
+  own `usecase/port` interfaces;
+- `usecase/port` — output-port interfaces: the abstractions a use case needs
+  for anything outside the process (a repository, a hasher, an HTTP client);
+- `domain` — entities and business rules, free of any framework import;
+- `infrastructure` — adapters that fulfil a port: JPA repositories, the ML
+  REST client, filesystem/Git/ZIP handling.
+
+`dashboard` and `report` are not components in their own right — each is a
+single controller with no domain or use case of its own, so both live under
+`shared/api` as cross-component presenters, next to the config, error
+mapping, and storage-path code every component depends on.
 
 ## Public API groups
 
@@ -99,10 +115,9 @@ Within a component:
 | `/api/auth` | Registration, session, logout, password |
 | `/api/dashboard` | Workspace summary |
 | `/api/analysis` | Java ZIP/GitHub metric extraction |
-| `/api/datasets` | Dataset upload, list, preview, quality, download, delete |
-| `/api/preprocessing` | Registry and transformation preview |
-| `/api/predictions` | Execute, list, group, inspect, and download runs |
-| `/api/metric-comparisons` | Independent dataset comparison |
+| `/api/datasets` | Dataset upload, list, preview, download, delete |
+| `/api/predictions` | Execute, list, group, inspect, delete, and download runs |
+| `/api/metric-comparisons` | Independent dataset comparison, delete |
 | `/api/reports` | Authenticated prediction PDF download |
 
 See [docs/API.md](../docs/API.md) for fields and examples.
@@ -155,7 +170,7 @@ The source metric file is never modified by prediction.
 
 ## Prediction orchestration
 
-`PredictionService` requires:
+`PredictionInteractor` requires:
 
 - a labeled source;
 - at least one target;
@@ -171,8 +186,9 @@ The prediction contract uses:
 - threshold strictly between 0 and 1;
 - optional seed, default 42.
 
-The backend always records log transformation and stores whether CORAL
-alignment was selected for the run.
+The backend always records that standardization ran (there is no log
+transform in the current pipeline) and stores whether CORAL alignment was
+selected for the run.
 
 For each target:
 
@@ -217,6 +233,7 @@ Use environment variables:
 | `ML_SERVICE_BASE_URL` | FastAPI URL | `http://localhost:8000` |
 | `ML_SERVICE_TOKEN` | Shared internal token | same value as FastAPI |
 | `PREDEFINED_DATA_DIR` | Benchmark manifest directory | `../sample-data/predefined` |
+| `STORAGE_ROOT` | Root for uploads, extracted projects, metrics, and predictions | `storage` locally; an absolute path in production |
 | `DEFECTLAB_SESSION_SECURE` | HTTPS-only session cookie | `false` locally |
 | `SPRING_PROFILES_ACTIVE` | Spring profile | `local` |
 

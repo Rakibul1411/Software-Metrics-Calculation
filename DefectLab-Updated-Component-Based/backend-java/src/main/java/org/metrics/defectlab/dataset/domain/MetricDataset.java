@@ -2,66 +2,33 @@ package org.metrics.defectlab.dataset.domain;
 
 import java.time.Instant;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-@Entity
-@Table(name = "metric_datasets")
+/**
+ * Enterprise Business Rule: a registered metric dataset, free of any
+ * persistence or framework annotations.
+ */
 public class MetricDataset {
 
     public enum Family { PROMISE, AEEEM }
 
     public enum Type { MANUAL, PREDEFINED }
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private final Long id;
+    private final Long userId;
+    private final Family datasetFamily;
+    private final String projectName;
+    private final String projectVersion;
+    private final Type datasetType;
+    private final boolean hasActualLabel;
+    private final int totalFiles;
+    private final int totalMetrics;
+    private final String metricsFilePath;
+    private final Instant createdAt;
 
-    @Column(name = "user_id")
-    private Long userId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "dataset_family", nullable = false, length = 20)
-    private Family datasetFamily;
-
-    @Column(name = "project_name", nullable = false, length = 150)
-    private String projectName;
-
-    @Column(name = "project_version", nullable = false, length = 50)
-    private String projectVersion;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "dataset_type", nullable = false, length = 20)
-    private Type datasetType;
-
-    @Column(name = "has_actual_label", nullable = false)
-    private boolean hasActualLabel;
-
-    @Column(name = "total_files", nullable = false)
-    private int totalFiles;
-
-    @Column(name = "total_metrics", nullable = false)
-    private int totalMetrics;
-
-    @Column(name = "metrics_file_path", nullable = false, columnDefinition = "text")
-    private String metricsFilePath;
-
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
-
-    protected MetricDataset() {
-    }
-
-    public MetricDataset(Long userId, Family datasetFamily, String projectName,
+    public MetricDataset(Long id, Long userId, Family datasetFamily, String projectName,
                          String projectVersion, Type datasetType,
                          boolean hasActualLabel, int totalFiles, int totalMetrics,
-                         String metricsFilePath) {
+                         String metricsFilePath, Instant createdAt) {
+        this.id = id;
         this.userId = userId;
         this.datasetFamily = datasetFamily;
         this.projectName = projectName;
@@ -71,7 +38,16 @@ public class MetricDataset {
         this.totalFiles = totalFiles;
         this.totalMetrics = totalMetrics;
         this.metricsFilePath = metricsFilePath;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
+    }
+
+    /** A brand-new registration; the id is assigned once the repository persists it. */
+    public static MetricDataset newRegistration(Long userId, Family datasetFamily, String projectName,
+                         String projectVersion, Type datasetType,
+                         boolean hasActualLabel, int totalFiles, int totalMetrics,
+                         String metricsFilePath) {
+        return new MetricDataset(null, userId, datasetFamily, projectName, projectVersion,
+                datasetType, hasActualLabel, totalFiles, totalMetrics, metricsFilePath, Instant.now());
     }
 
     public Long getId() { return id; }

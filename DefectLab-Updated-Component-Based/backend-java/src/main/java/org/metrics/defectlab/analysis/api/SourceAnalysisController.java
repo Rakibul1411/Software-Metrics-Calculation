@@ -5,9 +5,9 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.metrics.defectlab.analysis.application.SourceAnalysisService;
+import org.metrics.defectlab.analysis.usecase.AnalyzeSourceUseCase;
 import org.metrics.defectlab.auth.security.CurrentUser;
-import org.metrics.defectlab.dataset.application.DatasetSummaryMapper;
+import org.metrics.defectlab.dataset.api.DatasetSummaryMapper;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,13 +24,13 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/analysis")
 public class SourceAnalysisController {
 
-    private final SourceAnalysisService sourceAnalysisService;
+    private final AnalyzeSourceUseCase analyzeSourceUseCase;
     private final CurrentUser currentUser;
 
     public SourceAnalysisController(
-            SourceAnalysisService sourceAnalysisService,
+            AnalyzeSourceUseCase analyzeSourceUseCase,
             CurrentUser currentUser) {
-        this.sourceAnalysisService = sourceAnalysisService;
+        this.analyzeSourceUseCase = analyzeSourceUseCase;
         this.currentUser = currentUser;
     }
 
@@ -46,7 +46,7 @@ public class SourceAnalysisController {
             @RequestParam(value = "aeeemProfile", defaultValue = "current")
                     String aeeemProfile,
             HttpServletRequest request) throws IOException {
-        MetricDataset dataset = sourceAnalysisService.analyze(
+        MetricDataset dataset = analyzeSourceUseCase.analyze(
                 currentUser.requireUserId(request),
                 projectArchive,
                 githubUrl,

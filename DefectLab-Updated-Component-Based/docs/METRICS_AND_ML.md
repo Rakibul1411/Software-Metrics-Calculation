@@ -35,8 +35,9 @@ The deterministic sequence is:
 2. reject missing required columns;
 3. coerce predictors to numeric values;
 4. impute missing values using source medians;
-5. apply log1p only to configured non-negative skewed features;
-6. standardize using source statistics;
+5. drop any source feature with zero variance (from both source and target);
+6. standardize source and target independently to zero mean/unit variance,
+   the normalization CORAL's derivation assumes — there is no log1p step;
 7. optionally align source covariance to target with shallow CORAL;
 8. fit KNN with the user-selected K from 1 to 5;
 9. calculate a defect score and thresholded label;
@@ -62,8 +63,9 @@ Every run saves:
 - the three dataset IDs;
 - prediction CSV paths and result summaries.
 
-Log transformation is always part of preparation. CORAL is applied only when
-the user enables dataset alignment.
+Independent per-domain standardization is always part of preparation; there is
+no log transform in the current pipeline. CORAL is applied only when the user
+enables dataset alignment.
 
 ## Evaluation
 
