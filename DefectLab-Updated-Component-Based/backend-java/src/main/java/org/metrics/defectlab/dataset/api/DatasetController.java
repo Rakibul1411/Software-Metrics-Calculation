@@ -113,14 +113,26 @@ public class DatasetController {
 
     @GetMapping("/{id}/preview")
     public ResponseEntity<Map<String, Object>> preview(
-            @PathVariable("id") Long id, HttpServletRequest request) throws IOException {
+            @PathVariable("id") Long id,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "0") int size,
+            HttpServletRequest request) throws IOException {
         MetricDataset dataset = getDatasetUseCase.require(
                 currentUser.requireUserId(request), id);
         DatasetTable table = loadDatasetTableUseCase.load(dataset);
+        int totalRows = table.getRowCount();
+        List<List<String>> rows = table.getRows();
+        if (size > 0) {
+            int safePage = Math.max(1, page);
+            int fromIndex = Math.min((safePage - 1) * size, totalRows);
+            int toIndex = Math.min(fromIndex + size, totalRows);
+            rows = rows.subList(fromIndex, toIndex);
+        }
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("headers", table.getHeaders());
-        body.put("rows", table.getRows().subList(0, Math.min(PREVIEW_ROWS, table.getRowCount())));
-        body.put("totalRows", table.getRowCount());
+        body.put("rows", rows);
+        body.put("totalRows", totalRows);
         return ResponseEntity.ok(body);
     }
 

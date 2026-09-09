@@ -82,6 +82,12 @@ public final class BytecodeProjectAnalyzer {
                         + ": " + exception.getMessage());
             }
         }
+        for (String fqn : projectClassNames) {
+            if (!model.isAnalyzedClass(fqn)) {
+                String pkg = fqn.contains(".") ? fqn.substring(0, fqn.lastIndexOf('.')) : "";
+                model.add(new BytecodeClassModel(fqn, pkg, "java.lang.Object", List.of(), false, false));
+            }
+        }
         resolveExternalAncestors(model, classpathJars);
         model.freeze();
         return model;

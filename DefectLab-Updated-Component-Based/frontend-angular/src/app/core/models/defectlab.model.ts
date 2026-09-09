@@ -27,6 +27,8 @@ export interface DatasetPreview {
   headers: string[];
   rows: string[][];
   totalRows: number;
+  page?: number;
+  size?: number;
 }
 
 export interface MetricValue {

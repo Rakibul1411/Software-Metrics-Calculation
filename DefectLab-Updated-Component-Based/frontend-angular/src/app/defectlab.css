@@ -883,6 +883,16 @@ button.dl-footer-link:hover {
   background: var(--surface);
 }
 
+/* Detail section tables fit their row content snugly without an empty gap above pagination */
+.dl-detail-section > .dl-table-box {
+  flex: none;
+}
+
+.dl-detail-section > .dl-table-box .dl-table-wrap {
+  flex: none;
+  max-height: max(360px, calc(100vh - 330px));
+}
+
 /* Full width, but table-layout:auto still sizes each column from its content
    and any TableColumn.width hint — explicit widths beat guessing which
    column should absorb the leftover space. */
@@ -1006,6 +1016,14 @@ button.dl-footer-link:hover {
 .dl-table td.dl-col-identifier { white-space: normal; }
 
 .dl-col-identifier { font-family: var(--font-mono); font-size: 12px; word-break: break-all; }
+
+/* Wide identifier column (such as fully qualified Java class names in dataset previews) */
+.dl-table th.dl-col-name,
+.dl-table td.dl-col-name {
+  min-width: 320px;
+  white-space: nowrap;
+  word-break: normal;
+}
 
 /* A result table takes the height the viewport actually offers. The former
    flat 460px cut a row in half and then left the rest of the card empty on

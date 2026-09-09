@@ -23,10 +23,6 @@ final class ProductionSourceSelector {
             "target", "test", "tests", "testcase", "testcases"
     ));
 
-    private static final Set<String> CAMEL_1_0_EXCLUDED_MODULES = new HashSet<>(Arrays.asList(
-            "camel-ftp", "camel-irc", "camel-jpa", "camel-saxon", "tooling"
-    ));
-
     List<Path> select(Path requestedRoot) throws IOException {
         Path root = requestedRoot.toAbsolutePath().normalize();
         List<Path> allFiles;
@@ -100,6 +96,19 @@ final class ProductionSourceSelector {
             candidates.add(root.resolve("src/java"));
         } else if (name.startsWith("synapse-")) {
             candidates.add(root.resolve("modules/core/src/main/java"));
+            Path modulesDir = root.resolve("modules");
+            if (Files.isDirectory(modulesDir)) {
+                try (Stream<Path> stream = Files.list(modulesDir)) {
+                    stream.filter(Files::isDirectory)
+                            .forEach(mod -> {
+                                Path p = mod.resolve("src/main/java");
+                                if (Files.isDirectory(p)) {
+                                    candidates.add(p);
+                                }
+                            });
+                } catch (IOException ignored) {
+                }
+            }
         }
         return candidates.stream()
                 .map(path -> path.toAbsolutePath().normalize())
@@ -132,53 +141,12 @@ final class ProductionSourceSelector {
     private boolean excludedFromPromiseRelease(Path file) throws IOException {
         List<String> segments = segments(file);
 
-        if (isApacheAntSource(segments)
-                && !segments.contains("apache-ant-1.7.0")
-                && excludedFromAntCoreArtifact(segments)) {
-            return true;
-        }
-
-        if (segments.contains("camel-camel-1.0.0")) {
-            for (String module : CAMEL_1_0_EXCLUDED_MODULES) {
-                if (segments.contains(module)) {
-                    return true;
-                }
-            }
-        }
-
         if (isJeditSourceTree(file)
                 && (segments.contains("installer") || segments.contains("jars"))) {
             return true;
         }
 
         return isJedit32ReflectManager(file, segments);
-    }
-
-    private boolean isApacheAntSource(List<String> segments) {
-        return containsSequence(segments, "org", "apache", "tools", "ant");
-    }
-
-    private boolean excludedFromAntCoreArtifact(List<String> segments) {
-        if (segments.contains("optional")
-                || containsSequence(segments, "ant", "launch")
-                || containsSequence(segments, "ant", "util", "depend")) {
-            return true;
-        }
-
-        String fileName = lastSegment(segments);
-        if (containsSequence(segments, "ant", "listener")) {
-            return "commonslogginglistener.java".equals(fileName)
-                    || "log4jlistener.java".equals(fileName);
-        }
-        if (containsSequence(segments, "ant", "taskdefs", "email")) {
-            return "mimemailer.java".equals(fileName);
-        }
-        if (containsSequence(segments, "ant", "util", "regexp")) {
-            return fileName.startsWith("jakarta") || fileName.startsWith("jdk14");
-        }
-        return "filescanner.java".equals(fileName)
-                || (segments.contains("jakarta-ant-1.3")
-                    && "sendemail.java".equals(fileName));
     }
 
     private boolean isJedit32ReflectManager(Path file, List<String> segments) throws IOException {

@@ -56,6 +56,10 @@ class PromiseProjectAnalyzerTest {
                 .collect(Collectors.toList());
 
         assertEquals(List.of(
+                "org.apache.tools.ant.launch.Launcher",
+                "org.apache.tools.ant.taskdefs.SendEmail",
+                "org.apache.tools.ant.taskdefs.optional.OptionalTask",
+                "org.apache.tools.ant.util.regexp.JakartaRegexpMatcher",
                 "org.apache.tools.ant.util.regexp.Regexp",
                 "org.example.Additional",
                 "org.example.Core",
@@ -94,8 +98,9 @@ class PromiseProjectAnalyzerTest {
         List<PromiseMetricResult> synapseResults =
                 PromiseProjectAnalyzer.analyzeDirectories(
                         java.util.Collections.singletonList(synapse));
-        assertEquals(List.of("demo.SynapseCore"), synapseResults.stream()
+        assertEquals(List.of("demo.SynapseCore", "demo.Transport"), synapseResults.stream()
                 .map(PromiseMetricResult::getFullyQualifiedName)
+                .sorted()
                 .collect(Collectors.toList()));
     }
 

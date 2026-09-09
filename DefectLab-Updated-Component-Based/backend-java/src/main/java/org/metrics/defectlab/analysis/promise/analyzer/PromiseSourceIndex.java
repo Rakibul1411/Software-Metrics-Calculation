@@ -48,18 +48,23 @@ public final class PromiseSourceIndex {
     }
 
     /**
-     * Row-eligible class names, excluding every class whose source failed to
-     * compile.
+     * All top-level class names declared across all production source files.
      */
-    public Set<String> rowEligibleClassNames(Set<Path> failedSources) {
+    public Set<String> allDeclaredClassNames() {
         Set<String> names = new LinkedHashSet<>();
-        for (Map.Entry<Path, List<String>> entry : typesBySource.entrySet()) {
-            if (failedSources.contains(entry.getKey())) {
-                continue;
-            }
-            names.addAll(entry.getValue());
+        for (List<String> types : typesBySource.values()) {
+            names.addAll(types);
         }
         return names;
+    }
+
+    /**
+     * Row-eligible class names. In accordance with PROMISE benchmark datasets,
+     * all top-level types declared in the release source files are eligible rows
+     * and are not discarded due to compilation diagnostics.
+     */
+    public Set<String> rowEligibleClassNames(Set<Path> failedSources) {
+        return allDeclaredClassNames();
     }
 
     /** Class names declared by sources that failed to compile. */

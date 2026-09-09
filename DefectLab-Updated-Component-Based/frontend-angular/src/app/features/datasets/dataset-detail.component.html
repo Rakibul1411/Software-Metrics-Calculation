@@ -35,8 +35,16 @@
   <div class="dl-detail-section" *ngIf="dataset">
     <h3>Stored values</h3>
     <ui-state *ngIf="previewLoading" kind="loading" message="Loading preview…"></ui-state>
-    <ui-table *ngIf="preview"
-              [columns]="previewColumns" [rows]="previewRows" scrollClass="dl-scroll-y">
-    </ui-table>
+    <div class="dl-table-box" *ngIf="preview">
+      <ui-table [columns]="previewColumns" [rows]="previewRows">
+      </ui-table>
+      <ui-pagination [total]="totalRows"
+                     [page]="page"
+                     [pageSize]="pageSize"
+                     noun="stored rows"
+                     (pageChange)="onPageChange($event)"
+                     (pageSizeChange)="onPageSizeChange($event)">
+      </ui-pagination>
+    </div>
   </div>
 </ui-card>
