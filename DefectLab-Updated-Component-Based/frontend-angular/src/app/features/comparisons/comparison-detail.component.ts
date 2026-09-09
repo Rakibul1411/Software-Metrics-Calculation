@@ -1,126 +1,78 @@
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
+import { BaseDetailComponent } from '../../core/base';
 import {
   AggregateMetricComparisonRow,
   InstanceMetricComparisonRow,
   MetricComparisonDetail
 } from '../../core/models/defectlab.model';
-import { DefectLabApiService } from '../../core/services/defectlab-api.service';
-import { TableColumn } from '../../shared/ui-table/ui-table.model';
-import { ToastService } from '../../shared/ui-toast/toast.service';
+import { ComparisonsFacade } from './comparisons.facade';
 
 @Component({
   selector: 'app-comparison-detail',
   standalone: false,
   templateUrl: './comparison-detail.component.html'
 })
-export class ComparisonDetailComponent implements OnInit {
-  comparison: MetricComparisonDetail | null = null;
-  loading = true;
+export class ComparisonDetailComponent extends BaseDetailComponent<MetricComparisonDetail> {
+  protected readonly listRoute = ['/metric-comparisons'];
+  protected readonly missingMessage = 'The comparison was not specified.';
 
-  readonly metricStatsColumns: TableColumn[] = [
-    { key: 'metric', label: 'Metric', sticky: 'start', className: 'dl-mono', width: '14%' },
-    { key: 'meanManual', label: 'Mean Manual', width: '18%' },
-    { key: 'meanPredefined', label: 'Mean Predefined', width: '18%' },
-    { key: 'stdManual', label: 'Std Manual', width: '16%' },
-    { key: 'stdPredefined', label: 'Std Predefined', width: '16%' },
-    { key: 'percentageDifference', label: 'Percentage Difference', sticky: 'end', width: '18%' }
-  ];
-
-  readonly instanceRowColumns: TableColumn[] = [
-    { key: 'identifier', label: 'File / Identifier', sticky: 'start', className: 'dl-mono', width: '34%' },
-    { key: 'metric', label: 'Metric', className: 'dl-mono', width: '14%' },
-    { key: 'manualValue', label: 'Manual Value', width: '18%' },
-    { key: 'predefinedValue', label: 'Predefined Value', width: '18%' },
-    { key: 'status', label: 'Status', sticky: 'end', width: '16%' }
-  ];
-
-  constructor(
-    readonly api: DefectLabApiService,
-    private readonly route: ActivatedRoute,
-    private readonly router: Router,
-    private readonly toast: ToastService
-  ) {}
-
-  ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (!id) {
-      this.toast.error('The comparison was not specified.');
-      this.loading = false;
-      return;
-    }
-    this.load(id);
+  constructor(readonly facade: ComparisonsFacade) {
+    super();
   }
 
-  load(id: number): void {
-    this.loading = true;
-    this.api.metricComparison(id).subscribe({
-      next: detail => {
-        this.comparison = detail;
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-      }
-    });
+  /** Template alias for the base class's resolved record. */
+  get comparison(): MetricComparisonDetail | null {
+    return this.item;
+  }
+
+  get metricStatsColumns() {
+    return this.facade.metricStatsColumns;
+  }
+
+  get instanceRowColumns() {
+    return this.facade.instanceRowColumns;
   }
 
   get aggregateRows(): AggregateMetricComparisonRow[] {
-    const result = this.comparison?.result;
-    return result?.comparisonMode === 'AGGREGATE' ? result.metrics : [];
+    return this.facade.aggregateRows(this.item);
   }
 
   get instanceRows(): InstanceMetricComparisonRow[] {
-    const result = this.comparison?.result;
-    return result?.comparisonMode === 'INSTANCE_WISE' ? result.comparisons : [];
+    return this.facade.instanceRows(this.item);
   }
 
   get instanceMetricStats(): AggregateMetricComparisonRow[] {
-    const result = this.comparison?.result;
-    return result?.comparisonMode === 'INSTANCE_WISE' ? result.metrics : [];
+    return this.facade.instanceMetricStats(this.item);
   }
 
   get matchedIdentifiers(): number {
-    const result = this.comparison?.result;
-    return result?.comparisonMode === 'INSTANCE_WISE' ? result.matchedIdentifiers : 0;
+    return this.facade.matchedIdentifiers(this.item);
   }
 
   get commonMetricCount(): number {
-    return this.comparison?.result.commonNumericMetricCount ?? 0;
+    return this.facade.commonMetricCount(this.item);
   }
 
   get manualOnlyCount(): number {
-    const result = this.comparison?.result;
-    return result?.comparisonMode === 'INSTANCE_WISE' ? result.manualOnly.length : 0;
+    return this.facade.manualOnlyCount(this.item);
   }
 
   get predefinedOnlyCount(): number {
-    const result = this.comparison?.result;
-    return result?.comparisonMode === 'INSTANCE_WISE' ? result.predefinedOnly.length : 0;
+    return this.facade.predefinedOnlyCount(this.item);
   }
 
   number(value: number | null | undefined): string {
-    return value === null || value === undefined || !Number.isFinite(value)
-      ? '—' : value.toFixed(4);
+    return this.facade.number(value);
   }
 
   percentage(value: number | null | undefined): string {
-    return value === null || value === undefined || !Number.isFinite(value)
-      ? '—' : `${value.toFixed(2)}%`;
+    return this.facade.percentage(value);
   }
 
-  back(): void {
-    this.router.navigate(['/metric-comparisons']);
-  }
+  deleteComparison = (): Observable<unknown> => this.facade.delete(this.item!.id);
 
-  deleteComparison = (): Observable<unknown> => this.api.deleteMetricComparison(this.comparison!.id);
-
-  onDeleted(): void {
-    this.router.navigate(['/metric-comparisons']);
-  }
-
-  downloadStarted(): void {
-    this.toast.info('PDF report download started.');
+  protected fetch(id: number): Observable<MetricComparisonDetail> {
+    return this.facade.get(id);
   }
 }

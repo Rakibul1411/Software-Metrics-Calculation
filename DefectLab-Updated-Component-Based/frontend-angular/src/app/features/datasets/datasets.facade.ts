@@ -1,7 +1,6 @@
-import { Injectable } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
 import {
   DatasetFamily,
   DatasetPreview,
@@ -19,38 +18,42 @@ export interface DatasetListFilter {
 }
 
 /**
- * Owns dataset list state and every non-presentational computation the
- * Datasets feature needs (filtering, counts, detail/preview view-model
- * mapping), so the components stay limited to wiring user input to this
- * service and binding its results to their templates.
+ * Owns every non-presentational decision the Datasets feature makes:
+ * filtering rules, counts, and the detail/preview view models. It holds no
+ * list state of its own -- the screen keeps that through its base class --
+ * so the same rules serve any screen that loads datasets.
  */
 @Injectable({ providedIn: 'root' })
 export class DatasetsFacade {
-  private datasets: DatasetSummary[] = [];
+  readonly columns: TableColumn[] = [
+    { key: 'projectName', label: 'Project name', sticky: 'start', width: '28%' },
+    { key: 'datasetFamily', label: 'Metric family', width: '10%' },
+    { key: 'datasetType', label: 'Data source', width: '14%' },
+    { key: 'hasActualLabel', label: 'Labeled', width: '10%' },
+    { key: 'totalFiles', label: 'Instances', align: 'right', width: '8%' },
+    { key: 'totalMetrics', label: 'Features', align: 'right', width: '9%' },
+    { key: 'createdAt', label: 'Created at', width: '13%' },
+    { key: 'actions', label: 'Actions', sticky: 'end', className: 'dl-col-actions', width: '8%' }
+  ];
 
   constructor(
     private readonly api: DefectLabApiService,
     private readonly datePipe: DatePipe
   ) {}
 
-  get list(): DatasetSummary[] {
-    return this.datasets;
+  list(): Observable<DatasetSummary[]> {
+    return this.api.listDatasets();
   }
 
-  loadList(): Observable<DatasetSummary[]> {
-    return this.api.listDatasets().pipe(tap(rows => (this.datasets = rows)));
+  matches(item: DatasetSummary, criteria: DatasetListFilter): boolean {
+    const haystack = `${item.projectName} ${item.projectVersion || ''}`.toLowerCase();
+    return (!criteria.search || haystack.includes(criteria.search))
+      && (!criteria.family || item.datasetFamily === criteria.family)
+      && (!criteria.origin || item.datasetType === criteria.origin);
   }
 
-  filterList(criteria: DatasetListFilter): DatasetSummary[] {
-    const query = criteria.search.trim().toLowerCase();
-    return this.datasets.filter(item =>
-      (!query || `${item.projectName} ${item.projectVersion || ''}`.toLowerCase().includes(query)) &&
-      (!criteria.family || item.datasetFamily === criteria.family) &&
-      (!criteria.origin || item.datasetType === criteria.origin));
-  }
-
-  countByFamily(family: DatasetFamily): number {
-    return this.datasets.filter(item => item.datasetFamily === family).length;
+  countByFamily(items: DatasetSummary[], family: DatasetFamily): number {
+    return items.filter(item => item.datasetFamily === family).length;
   }
 
   get(id: number): Observable<DatasetSummary> {
@@ -96,15 +99,17 @@ export class DatasetsFacade {
     ];
   }
 
+  /**
+   * Only the identifier column pins. Pinning the last one too parked an
+   * arbitrary metric over the right edge, where it hid whichever column
+   * happened to be underneath — the neighbouring header read as truncated.
+   */
   previewColumns(preview: DatasetPreview | null): TableColumn[] {
-    const headers = preview?.headers ?? [];
-    return headers.map((header, index) => ({
+    return (preview?.headers ?? []).map((header, index) => ({
       key: header,
       label: header,
       className: 'dl-mono',
-      sticky: index === 0
-        ? 'start'
-        : (index === headers.length - 1 && headers.length > 1 ? 'end' : undefined)
+      sticky: index === 0 ? 'start' : undefined
     }));
   }
 

@@ -21,17 +21,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-import org.metrics.defectlab.dataset.api.DatasetSummaryMapper;
 import org.metrics.defectlab.dataset.domain.DatasetTable;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
+import org.metrics.defectlab.dataset.usecase.DatasetSummaryMapper;
 import org.metrics.defectlab.dataset.usecase.GetDatasetUseCase;
 import org.metrics.defectlab.dataset.usecase.LoadDatasetTableUseCase;
 import org.metrics.defectlab.prediction.domain.PredictionRun;
+import org.metrics.defectlab.prediction.usecase.port.ArtifactStorage;
 import org.metrics.defectlab.prediction.usecase.port.MlServiceClient;
+import org.metrics.defectlab.prediction.usecase.port.PredictionReportRenderer;
 import org.metrics.defectlab.prediction.usecase.port.PredictionRunRepository;
 import org.metrics.defectlab.shared.exception.NotFoundException;
-import org.metrics.defectlab.shared.report.PdfReportWriter;
-import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +47,7 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
     private final LoadDatasetTableUseCase loadDatasetTableUseCase;
     private final MlServiceClient mlServiceClient;
     private final PredictionRunRepository runRepository;
+    private final PredictionReportRenderer reportRenderer;
     private final ObjectMapper objectMapper;
     private final Path predictionsRoot;
 
@@ -54,15 +55,16 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
                              LoadDatasetTableUseCase loadDatasetTableUseCase,
                              MlServiceClient mlServiceClient,
                              PredictionRunRepository runRepository,
+                             PredictionReportRenderer reportRenderer,
                              ObjectMapper objectMapper,
-                             StorageRoot storageRoot) throws IOException {
+                             ArtifactStorage artifactStorage) throws IOException {
         this.getDatasetUseCase = getDatasetUseCase;
         this.loadDatasetTableUseCase = loadDatasetTableUseCase;
         this.mlServiceClient = mlServiceClient;
         this.runRepository = runRepository;
+        this.reportRenderer = reportRenderer;
         this.objectMapper = objectMapper;
-        this.predictionsRoot = storageRoot.resolve("prediction-reports");
-        Files.createDirectories(predictionsRoot);
+        this.predictionsRoot = artifactStorage.rootFor("prediction-reports");
     }
 
     /**
@@ -353,7 +355,7 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
             }
             lines.add(line);
         }
-        PdfReportWriter.write(report, "DefectLab Prediction Report", lines);
+        reportRenderer.write(report, "DefectLab Prediction Report", lines);
     }
 
     @Override

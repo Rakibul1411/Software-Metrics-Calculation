@@ -7,8 +7,8 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import org.metrics.defectlab.auth.security.CurrentUser;
-import org.metrics.defectlab.dataset.api.DatasetSummaryMapper;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
+import org.metrics.defectlab.dataset.usecase.DatasetSummaryMapper;
 import org.metrics.defectlab.dataset.usecase.ListDatasetsUseCase;
 import org.metrics.defectlab.prediction.domain.PredictionRun;
 import org.metrics.defectlab.prediction.usecase.GetPredictionSummaryUseCase;

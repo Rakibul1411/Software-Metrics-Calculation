@@ -2,24 +2,35 @@
   <div class="dl-detail-header">
     <div class="dl-detail-title-row">
       <div class="dl-heading-search">
-        <h2>Saved Prediction Runs</h2>
+        <h2>Saved prediction runs</h2>
         <ui-search-toggle label="Search prediction runs" placeholder="Project name"
             [query]="search" (queryChange)="search = $event">
         </ui-search-toggle>
       </div>
       <div class="dl-actions">
-        <ui-button icon="plus" link="/predictions/new">Run Prediction</ui-button>
+        <ui-button icon="plus" link="/predictions/new">Run prediction</ui-button>
       </div>
     </div>
   </div>
 
-  <div>
-    <ui-table *ngIf="filtered.length; else emptyRuns"
-              [columns]="runsColumns" [rows]="filtered" trackByKey="id"
-              scrollClass="dl-prediction-runs-scroll">
+  <div class="dl-form-row dl-form-row-3">
+    <ui-select label="Metric family" [options]="familyFilterOptions"
+               [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
+    </ui-select>
+  </div>
+
+  <div class="dl-fill">
+    <ui-state *ngIf="loading" kind="loading" message="Loading prediction runs…"></ui-state>
+    <ui-table *ngIf="!loading && filtered.length; else emptyRuns"
+              [columns]="runsColumns" [rows]="pageRows" trackByKey="id">
       <ng-template uiTableCell="run" let-row>#{{ row.id }}</ng-template>
-      <ng-template uiTableCell="group" let-row>{{ row.comparisonGroupId || '—' }}</ng-template>
+      <ng-template uiTableCell="group" let-row>
+        <span [title]="row.comparisonGroupId || ''">{{ groupLabel(row) }}</span>
+      </ng-template>
       <ng-template uiTableCell="target" let-row>{{ row.targetDataset.displayName }}</ng-template>
+      <ng-template uiTableCell="family" let-row>
+        <ui-badge tone="blue">{{ row.modelConfig.datasetFamily }}</ui-badge>
+      </ng-template>
       <ng-template uiTableCell="type" let-row>
         {{ row.targetDataset.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' }}
       </ng-template>
@@ -32,7 +43,13 @@
       </ng-template>
     </ui-table>
     <ng-template #emptyRuns>
-      <ui-state kind="empty" [message]="runs.length ? 'No matching prediction runs.' : 'No prediction runs yet.'"></ui-state>
+      <ui-state *ngIf="!loading" kind="empty"
+                [message]="runs.length ? 'No matching prediction runs.' : 'No prediction runs yet.'">
+      </ui-state>
     </ng-template>
+    <ui-pagination *ngIf="!loading && filtered.length"
+                   [total]="filtered.length" [page]="page" [pageSize]="pageSize" noun="prediction runs"
+                   (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+    </ui-pagination>
   </div>
 </ui-card>

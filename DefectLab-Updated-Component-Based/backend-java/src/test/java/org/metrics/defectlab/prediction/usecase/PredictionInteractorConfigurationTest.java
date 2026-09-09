@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -20,9 +21,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 import org.metrics.defectlab.dataset.usecase.GetDatasetUseCase;
 import org.metrics.defectlab.dataset.usecase.LoadDatasetTableUseCase;
+import org.metrics.defectlab.prediction.usecase.port.ArtifactStorage;
 import org.metrics.defectlab.prediction.usecase.port.MlServiceClient;
+import org.metrics.defectlab.prediction.usecase.port.PredictionReportRenderer;
 import org.metrics.defectlab.prediction.usecase.port.PredictionRunRepository;
-import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class PredictionInteractorConfigurationTest {
@@ -32,13 +34,17 @@ class PredictionInteractorConfigurationTest {
 
     @BeforeEach
     void setUp() throws IOException {
+        ArtifactStorage artifactStorage = mock(ArtifactStorage.class);
+        when(artifactStorage.rootFor(anyString()))
+                .thenReturn(java.nio.file.Path.of("storage", "prediction-reports"));
         interactor = new PredictionInteractor(
                 mock(GetDatasetUseCase.class),
                 mock(LoadDatasetTableUseCase.class),
                 mock(MlServiceClient.class),
                 mock(PredictionRunRepository.class),
+                mock(PredictionReportRenderer.class),
                 new ObjectMapper(),
-                new StorageRoot("storage"));
+                artifactStorage);
         source = mock(MetricDataset.class);
         when(source.getDatasetFamily()).thenReturn(MetricDataset.Family.PROMISE);
     }

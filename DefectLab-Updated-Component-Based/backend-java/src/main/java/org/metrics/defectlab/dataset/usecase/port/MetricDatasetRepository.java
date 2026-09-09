@@ -21,4 +21,11 @@ public interface MetricDatasetRepository {
 
     boolean existsDuplicate(Long userId, MetricDataset.Family datasetFamily, String projectName,
             String projectVersion, MetricDataset.Type datasetType);
+
+    /** Raised when a concurrent save conflicts with an existing row, free of any persistence-framework type. */
+    class SaveConflictException extends RuntimeException {
+        public SaveConflictException(Throwable cause) {
+            super(cause);
+        }
+    }
 }

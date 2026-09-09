@@ -24,17 +24,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.metrics.defectlab.comparison.domain.MetricComparison;
 import org.metrics.defectlab.comparison.usecase.port.MetricComparisonRepository;
-import org.metrics.defectlab.dataset.api.DatasetSummaryMapper;
 import org.metrics.defectlab.dataset.domain.DatasetTable;
 import org.metrics.defectlab.dataset.domain.FeatureProfile;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
+import org.metrics.defectlab.dataset.usecase.DatasetSummaryMapper;
 import org.metrics.defectlab.dataset.usecase.GetDatasetUseCase;
 import org.metrics.defectlab.dataset.usecase.ListDatasetsUseCase;
 import org.metrics.defectlab.dataset.usecase.LoadDatasetTableUseCase;
+import org.metrics.defectlab.comparison.usecase.port.ArtifactStorage;
+import org.metrics.defectlab.comparison.usecase.port.ComparisonReportRenderer;
 import org.metrics.defectlab.shared.exception.NotFoundException;
-import org.metrics.defectlab.shared.report.PdfReportWriter;
-import org.metrics.defectlab.shared.storage.StorageRoot;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +48,7 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
     private final LoadDatasetTableUseCase loadDatasetTableUseCase;
     private final ListDatasetsUseCase listDatasetsUseCase;
     private final MetricComparisonRepository comparisonRepository;
+    private final ComparisonReportRenderer reportRenderer;
     private final ObjectMapper objectMapper;
     private final Path comparisonsRoot;
 
@@ -57,15 +57,16 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
             LoadDatasetTableUseCase loadDatasetTableUseCase,
             ListDatasetsUseCase listDatasetsUseCase,
             MetricComparisonRepository comparisonRepository,
+            ComparisonReportRenderer reportRenderer,
             ObjectMapper objectMapper,
-            StorageRoot storageRoot) throws IOException {
+            ArtifactStorage artifactStorage) throws IOException {
         this.getDatasetUseCase = getDatasetUseCase;
         this.loadDatasetTableUseCase = loadDatasetTableUseCase;
         this.listDatasetsUseCase = listDatasetsUseCase;
         this.comparisonRepository = comparisonRepository;
+        this.reportRenderer = reportRenderer;
         this.objectMapper = objectMapper;
-        this.comparisonsRoot = storageRoot.resolve("comparison-reports");
-        Files.createDirectories(comparisonsRoot);
+        this.comparisonsRoot = artifactStorage.rootFor("comparison-reports");
         migrateStaleComparisons();
     }
 
@@ -103,7 +104,7 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
             MetricComparison saved = comparisonRepository.save(MetricComparison.newComparison(
                     userId, manual.getId(), predefined.getId(), writeJson(config), absolute(pdf)));
             return detail(userId, saved, false);
-        } catch (DataIntegrityViolationException exception) {
+        } catch (MetricComparisonRepository.SaveConflictException exception) {
             Files.deleteIfExists(pdf);
             Files.deleteIfExists(json);
             Optional<MetricComparison> cached = comparisonRepository
@@ -299,7 +300,7 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
         intro.add("Absolute tolerance: " + config.get("absoluteTolerance")
                 + "   Relative tolerance: " + config.get("relativeTolerance"));
 
-        List<PdfReportWriter.Table> tables = new ArrayList<>();
+        List<ComparisonReportRenderer.Table> tables = new ArrayList<>();
         if (!"AGGREGATE".equals(result.get("comparisonMode"))) {
             intro.add("Matched identifiers: " + result.get("matchedIdentifiers"));
             intro.add("Status counts: " + result.get("statusCounts"));
@@ -307,21 +308,21 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
             intro.add(identifierSummaryLine("Predefined-only files", result.get("predefinedOnly")));
         }
 
-        tables.add(new PdfReportWriter.Table(
+        tables.add(new ComparisonReportRenderer.Table(
                 "Metric-wise mean & std (manual vs predefined)",
                 List.of("Metric", "Mean Manual", "Mean Predefined",
                         "Std Manual", "Std Predefined", "% Diff"),
                 metricStatsTableRows(result.get("metrics"))));
 
         if (!"AGGREGATE".equals(result.get("comparisonMode"))) {
-            tables.add(new PdfReportWriter.Table(
+            tables.add(new ComparisonReportRenderer.Table(
                     "File-wise comparison",
                     List.of("File / Identifier", "Metric", "Manual Value",
                             "Predefined Value", "Status"),
                     instanceComparisonTableRows(result.get("comparisons"))));
         }
 
-        PdfReportWriter.writeTables(pdf, "DefectLab Metric Comparison Report", intro, tables);
+        reportRenderer.writeTables(pdf, "DefectLab Metric Comparison Report", intro, tables);
     }
 
     private String identifierSummaryLine(String label, Object rawList) {

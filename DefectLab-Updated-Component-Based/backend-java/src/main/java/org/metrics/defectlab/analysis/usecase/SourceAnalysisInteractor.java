@@ -20,7 +20,6 @@ import org.metrics.defectlab.dataset.domain.MetricDataset;
 import org.metrics.defectlab.dataset.usecase.RegisterExtractedDatasetUseCase;
 import org.metrics.defectlab.shared.model.DatasetFileFormat;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Coordinates source acquisition, metric extraction, and metric-dataset
@@ -54,13 +53,13 @@ public class SourceAnalysisInteractor implements AnalyzeSourceUseCase {
     @Override
     public MetricDataset analyze(
             Long userId,
-            MultipartFile projectArchive,
+            UploadedArchive projectArchive,
             String githubUrl,
             String projectName,
             String projectVersion,
             String familyValue,
             String aeeemProfile) throws IOException {
-        boolean hasArchive = projectArchive != null && !projectArchive.isEmpty();
+        boolean hasArchive = projectArchive != null && projectArchive.hasContent();
         boolean hasGitHubUrl = githubUrl != null && !githubUrl.trim().isEmpty();
         if (hasArchive == hasGitHubUrl) {
             throw new IllegalArgumentException(
@@ -90,7 +89,7 @@ public class SourceAnalysisInteractor implements AnalyzeSourceUseCase {
             Long userId,
             String projectName,
             String version,
-            MultipartFile archive,
+            UploadedArchive archive,
             MetricDataset.Family family) throws IOException {
         Path uploaded = null;
         Path sourceDirectory = null;
@@ -102,7 +101,7 @@ public class SourceAnalysisInteractor implements AnalyzeSourceUseCase {
                             sourceDirectory.toString(), family.name(), null,
                             AeeemAnalysisOptions.current());
             String derivedName = cleanOrFallback(
-                    projectName, stripArchiveSuffix(archive.getOriginalFilename()));
+                    projectName, stripArchiveSuffix(archive.originalFilename()));
             return register(userId, derivedName, version, family, result);
         } finally {
             fileStorageService.delete(sourceDirectory);

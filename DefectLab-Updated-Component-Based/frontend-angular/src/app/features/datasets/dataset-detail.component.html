@@ -18,7 +18,7 @@
           (downloaded)="downloadStarted($event)">
       </ui-download-menu>
       <ui-delete-action *ngIf="!item.systemDataset"
-          label="Delete dataset" dialogTitle="Delete dataset"
+          label="Delete" dialogTitle="Delete dataset"
           [confirmMessage]="'Delete ' + item.displayName + '? This cannot be undone.'"
           successMessage="Dataset deleted successfully."
           [deleteFn]="deleteDataset" (deleted)="onDeleted()">
@@ -27,6 +27,8 @@
   </div>
 
   <ui-state *ngIf="loading" kind="loading" message="Loading dataset details…"></ui-state>
+
+  <ui-state *ngIf="failed" kind="empty" [message]="notFoundMessage"></ui-state>
 
   <ui-detail-fields *ngIf="dataset" [fields]="detailFields"></ui-detail-fields>
 

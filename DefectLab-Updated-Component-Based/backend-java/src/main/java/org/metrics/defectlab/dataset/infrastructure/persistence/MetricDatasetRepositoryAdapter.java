@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 import org.metrics.defectlab.dataset.usecase.port.MetricDatasetRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 /** Gateway: fulfils the {@link MetricDatasetRepository} port on top of Spring Data JPA. */
@@ -19,7 +20,11 @@ public class MetricDatasetRepositoryAdapter implements MetricDatasetRepository {
 
     @Override
     public MetricDataset save(MetricDataset dataset) {
-        return toDomain(jpaRepository.saveAndFlush(toJpaEntity(dataset)));
+        try {
+            return toDomain(jpaRepository.saveAndFlush(toJpaEntity(dataset)));
+        } catch (DataIntegrityViolationException exception) {
+            throw new MetricDatasetRepository.SaveConflictException(exception);
+        }
     }
 
     @Override

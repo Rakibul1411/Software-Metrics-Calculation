@@ -1,58 +1,49 @@
-import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component } from '@angular/core';
+import { Observable } from 'rxjs';
+import { BaseListComponent } from '../../core/base';
 import { PredictionRunGroup } from '../../core/models/defectlab.model';
-import { DefectLabApiService } from '../../core/services/defectlab-api.service';
-import { TableColumn } from '../../shared/ui-table/ui-table.model';
+import { ReportsFacade } from './reports.facade';
 
 @Component({
   selector: 'app-reports',
   standalone: false,
   templateUrl: './reports.component.html'
 })
-export class ReportsComponent implements OnInit {
-  groups: PredictionRunGroup[] = [];
+export class ReportsComponent extends BaseListComponent<PredictionRunGroup> {
+  constructor(private readonly facade: ReportsFacade) {
+    super();
+  }
 
-  readonly columns: TableColumn[] = [
-    { key: 'group', label: 'Group', sticky: 'start', className: 'dl-mono' },
-    { key: 'source', label: 'Source' },
-    { key: 'targets', label: 'Targets' },
-    { key: 'model', label: 'Model' },
-    { key: 'runs', label: 'Runs', align: 'right' },
-    { key: 'created', label: 'Created at' },
-    { key: 'view', label: 'View', sticky: 'end', className: 'dl-col-actions', width: '8%' }
-  ];
+  /** Template alias for the base class's loaded collection. */
+  get groups(): PredictionRunGroup[] {
+    return this.rows;
+  }
 
-  constructor(
-    readonly api: DefectLabApiService,
-    private readonly router: Router
-  ) {}
+  get columns() {
+    return this.facade.listColumns;
+  }
 
-  ngOnInit(): void { this.load(); }
-
-  load(): void {
-    this.api.listPredictionGroups().subscribe({
-      next: rows => this.groups = rows.filter(group => this.isCompleteGroup(group)),
-      error: () => {}
-    });
+  groupLabel(group: PredictionRunGroup): string {
+    return this.facade.groupLabel(group);
   }
 
   groupKey(group: PredictionRunGroup): string {
-    return group.comparisonGroupId || `run-${group.runs[0].id}`;
+    return this.facade.groupKey(group);
   }
 
   targetNames(group: PredictionRunGroup): string {
-    return group.runs
-      .map(run => `${run.targetDataset.displayName} (${run.targetDataset.datasetType})`)
-      .join(' + ');
+    return this.facade.targetNames(group);
   }
 
   view(group: PredictionRunGroup): void {
-    this.router.navigate(['/reports', this.groupKey(group)]);
+    this.navigateTo(['/reports', this.groupKey(group)]);
   }
 
-  private isCompleteGroup(group: PredictionRunGroup): boolean {
-    return !!group.comparisonGroupId &&
-      group.runs.some(run => run.targetDataset.datasetType === 'MANUAL') &&
-      group.runs.some(run => run.targetDataset.datasetType === 'PREDEFINED');
+  protected fetch(): Observable<PredictionRunGroup[]> {
+    return this.facade.listReportableGroups();
+  }
+
+  protected override matches(row: PredictionRunGroup, query: string): boolean {
+    return this.facade.matches(row, query);
   }
 }

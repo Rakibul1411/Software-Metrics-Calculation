@@ -1,19 +1,8 @@
 <ui-card cardClass="dl-page-card">
   <div class="dl-detail-header">
-    <h2>{{ mode === 'archive' ? 'Analyze java archive' : 'Analyze GitHub repository' }}</h2>
+    <h2>{{ mode === 'archive' ? 'Analyze Java archive' : 'Analyze GitHub repository' }}</h2>
+    <p>Extracted metrics are saved to Metric Storage automatically.</p>
   </div>
-
-  <section class="dl-grid dl-grid-3">
-    <ui-metric-card variant="stat" label="01" value="Source code archive" [clickable]="true" [compact]="true"
-                    [selected]="mode === 'archive'" [disabled]="family === 'AEEEM'"
-                    (pressed)="selectMode('archive')">
-    </ui-metric-card>
-    <ui-metric-card variant="stat" label="02" value="GitHub repository" [clickable]="true" [compact]="true"
-                    [selected]="mode === 'github'" (pressed)="selectMode('github')">
-    </ui-metric-card>
-    <ui-metric-card variant="stat" label="03" value="Auto-saved to Metric Storage" [compact]="true">
-    </ui-metric-card>
-  </section>
 
   <div class="dl-detail-section dl-form-fill">
     <form class="dl-form-stack dl-form-fill" (ngSubmit)="submit()">

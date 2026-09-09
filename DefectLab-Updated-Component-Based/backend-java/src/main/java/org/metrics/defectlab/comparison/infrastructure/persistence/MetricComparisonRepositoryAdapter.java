@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.metrics.defectlab.comparison.domain.MetricComparison;
 import org.metrics.defectlab.comparison.usecase.port.MetricComparisonRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 /** Gateway: fulfils the {@link MetricComparisonRepository} port on top of Spring Data JPA. */
@@ -19,7 +20,11 @@ public class MetricComparisonRepositoryAdapter implements MetricComparisonReposi
 
     @Override
     public MetricComparison save(MetricComparison comparison) {
-        return toDomain(jpaRepository.saveAndFlush(toJpaEntity(comparison)));
+        try {
+            return toDomain(jpaRepository.saveAndFlush(toJpaEntity(comparison)));
+        } catch (DataIntegrityViolationException exception) {
+            throw new MetricComparisonRepository.SaveConflictException(exception);
+        }
     }
 
     @Override

@@ -5,20 +5,20 @@
       <h2>Research workspace</h2>
     </div>
     <div class="dl-dash-actions">
-      <ui-button icon="plus" link="/analyze">Analyze Source</ui-button>
-      <ui-button variant="ghost" icon="chart" link="/predictions">New Prediction</ui-button>
+      <ui-button icon="plus" link="/analyze">Analyze source</ui-button>
+      <ui-button variant="ghost" icon="chart" link="/predictions">New prediction</ui-button>
     </div>
   </header>
 
   <ui-state *ngIf="loading" kind="loading" message="Loading dashboard…"></ui-state>
 
-  <ng-container *ngIf="data as dashboard">
+  <ng-container *ngIf="view as view">
     <section class="dl-dash-summary-grid">
       <article class="dl-dash-panel">
         <div class="dl-dash-card-head">
           <div>
             <span class="dl-dash-eyebrow">Dataset portfolio</span>
-            <strong>{{ dashboard.totalDatasets | number }}</strong>
+            <strong>{{ view.data.totalDatasets | number }}</strong>
             <small>Total metric assets</small>
           </div>
           <span class="dl-dash-live"><i></i> Live</span>
@@ -26,25 +26,25 @@
 
         <div class="dl-dash-mix" aria-label="Dataset origin distribution">
           <span class="manual"
-                [style.width.%]="percent(dashboard.manualDatasets, dashboard.totalDatasets)"></span>
+                [style.width.%]="percent(view.data.manualDatasets, view.data.totalDatasets)"></span>
           <span class="predefined"
-                [style.width.%]="percent(dashboard.predefinedDatasets, dashboard.totalDatasets)"></span>
+                [style.width.%]="percent(view.data.predefinedDatasets, view.data.totalDatasets)"></span>
         </div>
         <div class="dl-dash-legend">
-          <span><i class="manual"></i>Manual {{ dashboard.manualDatasets }}</span>
-          <span><i class="predefined"></i>Predefined {{ dashboard.predefinedDatasets }}</span>
+          <span><i class="manual"></i>Manual {{ view.data.manualDatasets }}</span>
+          <span><i class="predefined"></i>Predefined {{ view.data.predefinedDatasets }}</span>
         </div>
 
         <footer>
           <span>Prediction ready</span>
-          <strong>{{ percent(dashboard.labeledDatasets, dashboard.totalDatasets) | number:'1.0-0' }}%</strong>
+          <strong>{{ percent(view.data.labeledDatasets, view.data.totalDatasets) | number:'1.0-0' }}%</strong>
         </footer>
       </article>
 
       <article class="dl-dash-metric">
         <div class="dl-dash-metric-icon">M</div>
         <span>Manual extractions</span>
-        <strong>{{ dashboard.manualDatasets | number }}</strong>
+        <strong>{{ view.data.manualDatasets | number }}</strong>
         <small>Source archives and GitHub</small>
         <a routerLink="/analyze">Add source <b>→</b></a>
       </article>
@@ -52,7 +52,7 @@
       <article class="dl-dash-metric">
         <div class="dl-dash-metric-icon alt">P</div>
         <span>Predefined datasets</span>
-        <strong>{{ dashboard.predefinedDatasets | number }}</strong>
+        <strong>{{ view.data.predefinedDatasets | number }}</strong>
         <small>Labeled training sources</small>
         <a routerLink="/datasets">Open storage <b>→</b></a>
       </article>
@@ -63,38 +63,41 @@
         <div class="dl-dash-section-head">
           <div>
             <span class="dl-dash-eyebrow">Metric volume</span>
-            <h3>Recent dataset size</h3>
+            <h3>Classes per dataset</h3>
           </div>
-          <span class="dl-dash-period">Latest</span>
+          <span class="dl-dash-period">Top {{ view.volume.categories.length }}</span>
         </div>
 
         <div class="dl-dash-chart-total">
-          <strong>{{ totalRecentRows(dashboard.recentDatasets) | number }}</strong>
-          <span>classes across recent datasets</span>
+          <strong>{{ view.volumeTotal | number }}</strong>
+          <span>classes stored across {{ view.datasets.length }} datasets</span>
         </div>
 
-        <div class="dl-dash-chart-stage" *ngIf="dashboard.recentDatasets.length; else noChart">
-          <svg viewBox="0 0 600 190" role="img" aria-label="Recent dataset row counts">
-            <line x1="20" y1="35" x2="580" y2="35"/>
-            <line x1="20" y1="95" x2="580" y2="95"/>
-            <line x1="20" y1="155" x2="580" y2="155"/>
-            <polygon class="dl-dash-chart-area"
-                     [attr.points]="chartAreaPoints(dashboard.recentDatasets)"></polygon>
-            <polyline [attr.points]="chartPoints(dashboard.recentDatasets)"></polyline>
-            <circle *ngFor="let point of chartDots(dashboard.recentDatasets)"
-                    [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
-          </svg>
-          <div class="dl-dash-chart-labels">
-            <span *ngFor="let item of dashboard.recentDatasets">
-              {{ item.projectName }}
-            </span>
-          </div>
-        </div>
-        <ng-template #noChart>
-          <div class="dl-dash-chart-empty">Analyze a project to begin the volume chart.</div>
+        <ui-bar-chart *ngIf="view.volume.categories.length; else noVolume"
+                      [data]="view.volume" orientation="horizontal" [categoryWidth]="190"
+                      caption="Number of classes stored in each dataset">
+        </ui-bar-chart>
+        <ng-template #noVolume>
+          <div class="dl-chart-empty">Analyze a project to begin the volume chart.</div>
         </ng-template>
       </article>
 
+      <div class="dl-dash-stack">
+        <article class="dl-dash-panel">
+          <div class="dl-dash-section-head">
+            <div>
+              <span class="dl-dash-eyebrow">Portfolio</span>
+            <h3>Datasets by family</h3>
+          </div>
+        </div>
+        <span class="dl-dash-run-label">Manual extractions against the predefined benchmarks
+          they are compared with.</span>
+
+        <ui-bar-chart [data]="view.composition" orientation="horizontal" mode="stacked"
+                      [categoryWidth]="90"
+                      caption="Datasets in each metric family, split by data source">
+        </ui-bar-chart>
+      </article>
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
@@ -103,16 +106,16 @@
           </div>
           <span class="dl-dash-status-dot"></span>
         </div>
-        <strong class="dl-dash-run-count">{{ dashboard.comparisonRuns | number }}</strong>
+        <strong class="dl-dash-run-count">{{ view.data.comparisonRuns | number }}</strong>
         <span class="dl-dash-run-label">comparison reports</span>
 
         <div class="dl-dash-readiness">
           <div>
             <span>Labeled coverage</span>
-            <strong>{{ dashboard.labeledDatasets }} / {{ dashboard.totalDatasets }}</strong>
+            <strong>{{ view.data.labeledDatasets }} / {{ view.data.totalDatasets }}</strong>
           </div>
           <div class="dl-dash-progress-track">
-            <span [style.width.%]="percent(dashboard.labeledDatasets, dashboard.totalDatasets)"></span>
+            <span [style.width.%]="percent(view.data.labeledDatasets, view.data.totalDatasets)"></span>
           </div>
         </div>
 
@@ -120,6 +123,48 @@
           <ui-button icon="chart" link="/predictions">Run model</ui-button>
           <ui-button variant="ghost" icon="view" link="/reports">Reports</ui-button>
         </div>
+      </article>
+      </div>
+    </section>
+
+    <section class="dl-dash-analytics-grid">
+      <article class="dl-dash-panel">
+        <div class="dl-dash-section-head">
+          <div>
+            <span class="dl-dash-eyebrow">Model quality</span>
+            <h3>Evaluation by run</h3>
+          </div>
+          <span class="dl-dash-period">0–1 scale</span>
+        </div>
+
+        <ui-bar-chart *ngIf="view.quality.series.length; else noQuality"
+                      [data]="view.quality" orientation="vertical" valueFormat="decimal"
+                      caption="Accuracy, precision, recall, F1 and ROC-AUC for each scored prediction run">
+        </ui-bar-chart>
+        <ng-template #noQuality>
+          <div class="dl-chart-empty">
+            No scored runs yet — a run is scored when its target carries actual labels.
+          </div>
+        </ng-template>
+      </article>
+
+      <article class="dl-dash-panel">
+        <div class="dl-dash-section-head">
+          <div>
+            <span class="dl-dash-eyebrow">Class balance</span>
+            <h3>Predicted outcome per run</h3>
+          </div>
+        </div>
+        <span class="dl-dash-run-label">Share of each run's classes predicted buggy.</span>
+
+        <ui-bar-chart *ngIf="view.balance.categories.length; else noBalance"
+                      [data]="view.balance" orientation="horizontal" mode="stacked"
+                      [normalize]="true" valueFormat="percent" [categoryWidth]="110"
+                      caption="Share of classes each run predicted buggy against clean">
+        </ui-bar-chart>
+        <ng-template #noBalance>
+          <div class="dl-chart-empty">Run a prediction to see its class balance.</div>
+        </ng-template>
       </article>
     </section>
 
@@ -133,8 +178,8 @@
           <a routerLink="/datasets">View all</a>
         </div>
 
-        <div class="dl-dash-assets" *ngIf="dashboard.recentDatasets.length; else emptyData">
-          <a *ngFor="let item of dashboard.recentDatasets" routerLink="/datasets"
+        <div class="dl-dash-assets" *ngIf="view.data.recentDatasets.length; else emptyData">
+          <a *ngFor="let item of view.data.recentDatasets" routerLink="/datasets"
              class="dl-dash-asset">
             <span class="dl-dash-asset-mark">{{ item.datasetFamily === 'PROMISE' ? 'P' : 'A' }}</span>
             <span class="dl-dash-asset-copy">
@@ -161,8 +206,8 @@
           <a routerLink="/reports">View reports</a>
         </div>
 
-        <div class="dl-dash-assets" *ngIf="dashboard.recentRuns.length; else emptyRuns">
-          <a *ngFor="let run of dashboard.recentRuns" routerLink="/reports"
+        <div class="dl-dash-assets" *ngIf="view.data.recentRuns.length; else emptyRuns">
+          <a *ngFor="let run of view.data.recentRuns" routerLink="/reports"
              class="dl-dash-asset">
             <span class="dl-dash-asset-mark run">{{ run.modelConfig.modelName.charAt(0) }}</span>
             <span class="dl-dash-asset-copy">

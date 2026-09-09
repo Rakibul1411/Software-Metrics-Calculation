@@ -2,6 +2,7 @@ package org.metrics.defectlab.comparison.usecase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -22,7 +23,8 @@ import org.metrics.defectlab.dataset.domain.MetricDataset;
 import org.metrics.defectlab.dataset.usecase.GetDatasetUseCase;
 import org.metrics.defectlab.dataset.usecase.ListDatasetsUseCase;
 import org.metrics.defectlab.dataset.usecase.LoadDatasetTableUseCase;
-import org.metrics.defectlab.shared.storage.StorageRoot;
+import org.metrics.defectlab.comparison.usecase.port.ArtifactStorage;
+import org.metrics.defectlab.comparison.usecase.port.ComparisonReportRenderer;
 
 class ComparisonInteractorTest {
 
@@ -47,7 +49,8 @@ class ComparisonInteractorTest {
 
         ComparisonInteractor interactor = new ComparisonInteractor(
                 getDatasetUseCase, loadDatasetTableUseCase, listDatasetsUseCase,
-                repository, new ObjectMapper(), new StorageRoot("storage"));
+                repository, mock(ComparisonReportRenderer.class), new ObjectMapper(),
+                artifactStorage());
         Map<String, Object> result = interactor.execute(userId, Map.of(
                 "manualDatasetId", 11L,
                 "predefinedDatasetId", 12L));
@@ -83,7 +86,8 @@ class ComparisonInteractorTest {
 
         ComparisonInteractor interactor = new ComparisonInteractor(
                 getDatasetUseCase, loadDatasetTableUseCase, listDatasetsUseCase,
-                repository, new ObjectMapper(), new StorageRoot("storage"));
+                repository, mock(ComparisonReportRenderer.class), new ObjectMapper(),
+                artifactStorage());
         List<Map<String, Object>> pairs = interactor.eligiblePairs(userId);
 
         assertEquals(1, pairs.size());
@@ -91,6 +95,13 @@ class ComparisonInteractorTest {
         assertEquals(12L, pairs.get(0).get("predefinedDatasetId"));
         assertEquals(41L, pairs.get(0).get("comparisonId"));
         assertTrue((Boolean) pairs.get(0).get("cached"));
+    }
+
+    private static ArtifactStorage artifactStorage() throws Exception {
+        ArtifactStorage artifactStorage = mock(ArtifactStorage.class);
+        when(artifactStorage.rootFor(anyString()))
+                .thenReturn(Path.of("storage", "comparison-reports"));
+        return artifactStorage;
     }
 
     private static MetricDataset dataset(

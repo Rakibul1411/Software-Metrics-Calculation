@@ -7,7 +7,7 @@
       <span>{{ selectedLabel }}</span>
       <ui-icon name="chevron-right" [size]="14"></ui-icon>
     </button>
-    <div class="dl-select-menu" *ngIf="open">
+    <div class="dl-select-menu" [class.dl-select-menu-up]="dropUp" *ngIf="open">
       <button type="button" class="dl-select-option" *ngFor="let option of options"
               [class.dl-select-option-active]="option.value === value"
               (click)="select(option)">
@@ -15,4 +15,5 @@
       </button>
     </div>
   </div>
+  <small *ngIf="helper">{{ helper }}</small>
 </label>

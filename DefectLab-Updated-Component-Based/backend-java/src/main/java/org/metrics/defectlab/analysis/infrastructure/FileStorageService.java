@@ -11,6 +11,7 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.metrics.defectlab.analysis.usecase.UploadedArchive;
 import org.metrics.defectlab.analysis.usecase.port.SourceArchiveStorage;
 import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.stereotype.Service;
@@ -33,11 +34,11 @@ public class FileStorageService implements SourceArchiveStorage {
     }
 
     @Override
-    public Path storeUploadedFile(MultipartFile file) throws IOException {
-        if (file == null || file.isEmpty()) {
+    public Path storeUploadedFile(UploadedArchive file) throws IOException {
+        if (file == null || !file.hasContent()) {
             throw new IllegalArgumentException("Choose a non-empty project archive file.");
         }
-        String originalName = file.getOriginalFilename() == null ? "project-archive.zip" : file.getOriginalFilename();
+        String originalName = file.originalFilename() == null ? "project-archive.zip" : file.originalFilename();
         String safeName = Paths.get(originalName).getFileName().toString();
         if (!isSupportedArchive(safeName)) {
             throw new IllegalArgumentException(
@@ -45,7 +46,7 @@ public class FileStorageService implements SourceArchiveStorage {
         }
         String filename = UUID.randomUUID().toString() + "_" + safeName;
         Path targetPath = uploadLocation.resolve(filename);
-        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(file.content(), targetPath, StandardCopyOption.REPLACE_EXISTING);
         return targetPath;
     }
 

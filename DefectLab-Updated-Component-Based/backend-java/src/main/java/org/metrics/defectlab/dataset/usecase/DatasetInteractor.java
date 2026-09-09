@@ -10,18 +10,16 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
-import org.metrics.defectlab.comparison.usecase.port.MetricComparisonRepository;
 import org.metrics.defectlab.dataset.domain.DatasetQuality;
 import org.metrics.defectlab.dataset.domain.DatasetTable;
 import org.metrics.defectlab.dataset.domain.FeatureProfile;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
+import org.metrics.defectlab.dataset.usecase.port.ArtifactStorage;
 import org.metrics.defectlab.dataset.usecase.port.DatasetFileReader;
+import org.metrics.defectlab.dataset.usecase.port.DatasetUsageGuard;
 import org.metrics.defectlab.dataset.usecase.port.MetricDatasetRepository;
-import org.metrics.defectlab.prediction.usecase.port.PredictionRunRepository;
 import org.metrics.defectlab.shared.exception.ConflictException;
 import org.metrics.defectlab.shared.exception.NotFoundException;
-import org.metrics.defectlab.shared.storage.StorageRoot;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,23 +37,19 @@ public class DatasetInteractor implements UploadDatasetUseCase, RegisterExtracte
             "", "?", "na", "nan", "none", "null");
 
     private final MetricDatasetRepository datasetRepository;
-    private final PredictionRunRepository predictionRunRepository;
-    private final MetricComparisonRepository metricComparisonRepository;
+    private final DatasetUsageGuard datasetUsageGuard;
     private final DatasetFileReader datasetFileReader;
     private final Path metricsRoot;
 
     public DatasetInteractor(MetricDatasetRepository datasetRepository,
-                          PredictionRunRepository predictionRunRepository,
-                          MetricComparisonRepository metricComparisonRepository,
+                          DatasetUsageGuard datasetUsageGuard,
                           DatasetFileReader datasetFileReader,
-                          StorageRoot storageRoot)
+                          ArtifactStorage artifactStorage)
             throws IOException {
         this.datasetRepository = datasetRepository;
-        this.predictionRunRepository = predictionRunRepository;
-        this.metricComparisonRepository = metricComparisonRepository;
+        this.datasetUsageGuard = datasetUsageGuard;
         this.datasetFileReader = datasetFileReader;
-        this.metricsRoot = storageRoot.resolve("metrics");
-        Files.createDirectories(metricsRoot);
+        this.metricsRoot = artifactStorage.rootFor("metrics");
     }
 
     @Override
@@ -164,7 +158,7 @@ public class DatasetInteractor implements UploadDatasetUseCase, RegisterExtracte
                     table.getRowCount(),
                     profile.getFeatures().size(),
                     stored.toAbsolutePath().normalize().toString()));
-        } catch (DataIntegrityViolationException exception) {
+        } catch (MetricDatasetRepository.SaveConflictException exception) {
             // The pre-check gives a useful fast response. The database remains
             // authoritative when two identical uploads arrive concurrently.
             throw duplicateDataset(profile.getFamily(), cleanedProjectName,
@@ -247,8 +241,7 @@ public class DatasetInteractor implements UploadDatasetUseCase, RegisterExtracte
         if (dataset.getUserId() == null) {
             throw new IllegalArgumentException("Bundled predefined datasets cannot be deleted.");
         }
-        if (predictionRunRepository.existsByDatasetId(datasetId)
-                || metricComparisonRepository.existsByDatasetId(datasetId)) {
+        if (datasetUsageGuard.isReferencedElsewhere(datasetId)) {
             throw new IllegalArgumentException(
                     "This dataset is used by a saved prediction report and cannot be deleted.");
         }

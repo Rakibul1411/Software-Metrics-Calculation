@@ -1,41 +1,40 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { BaseFormComponent } from '../../core/base';
+import { FAMILY_FILTER_OPTIONS } from '../../core/constants/dataset-filter.options';
 import { MetricComparisonPair } from '../../core/models/defectlab.model';
-import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { SelectOption } from '../../shared/ui-select/ui-select.model';
-import { ToastService } from '../../shared/ui-toast/toast.service';
+import { ComparisonsFacade } from './comparisons.facade';
 
 @Component({
   selector: 'app-comparison-create',
   standalone: false,
   templateUrl: './comparison-create.component.html'
 })
-export class ComparisonCreateComponent implements OnInit {
+export class ComparisonCreateComponent extends BaseFormComponent implements OnInit {
   pairs: MetricComparisonPair[] = [];
-  busy = false;
   familyFilter = '';
   selectedKey = '';
 
-  readonly familyFilterOptions: SelectOption[] = [
-    { value: '', label: 'All families' },
-    { value: 'PROMISE', label: 'PROMISE' },
-    { value: 'AEEEM', label: 'AEEEM' }
-  ];
+  readonly familyFilterOptions = FAMILY_FILTER_OPTIONS;
 
-  constructor(
-    private readonly api: DefectLabApiService,
-    private readonly router: Router,
-    private readonly toast: ToastService
-  ) {}
+  protected override readonly listRoute = ['/metric-comparisons'];
 
-  ngOnInit(): void { this.load(); }
+  constructor(private readonly facade: ComparisonsFacade) {
+    super();
+  }
 
+  ngOnInit(): void {
+    this.load();
+  }
+
+  /** Only pairs without a stored result are worth offering here. */
   get uncomparedPairs(): MetricComparisonPair[] {
     return this.pairs.filter(pair => !pair.cached);
   }
 
   get filteredPairs(): MetricComparisonPair[] {
-    return this.uncomparedPairs.filter(pair => !this.familyFilter || pair.datasetFamily === this.familyFilter);
+    return this.uncomparedPairs.filter(
+      pair => !this.familyFilter || pair.datasetFamily === this.familyFilter);
   }
 
   get pairOptions(): SelectOption[] {
@@ -61,32 +60,20 @@ export class ComparisonCreateComponent implements OnInit {
   }
 
   load(): void {
-    this.api.metricComparisonPairs().subscribe({
-      next: rows => this.pairs = rows,
+    this.watch(this.facade.pairs()).subscribe({
+      next: rows => (this.pairs = rows),
       error: () => {}
     });
   }
 
   run(): void {
     const pair = this.selectedPair;
-    if (!pair || this.busy) return;
-    this.busy = true;
-    this.api.runMetricComparison({
-      manualDatasetId: pair.manualDatasetId,
-      predefinedDatasetId: pair.predefinedDatasetId
-    }).subscribe({
-      next: () => {
-        this.busy = false;
-        this.toast.success('Comparison completed successfully.');
-        this.router.navigate(['/metric-comparisons']);
-      },
-      error: () => {
-        this.busy = false;
-      }
+    if (!pair) {
+      return;
+    }
+    this.submitWith(this.facade.run(pair), {
+      success: 'Comparison completed successfully.',
+      redirect: this.listRoute
     });
-  }
-
-  back(): void {
-    this.router.navigate(['/metric-comparisons']);
   }
 }

@@ -1,10 +1,9 @@
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
+import { BaseDetailComponent } from '../../core/base';
 import { DatasetPreview, DatasetSummary } from '../../core/models/defectlab.model';
 import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
-import { ToastService } from '../../shared/ui-toast/toast.service';
 import { DatasetsFacade } from './datasets.facade';
 
 @Component({
@@ -12,56 +11,24 @@ import { DatasetsFacade } from './datasets.facade';
   standalone: false,
   templateUrl: './dataset-detail.component.html'
 })
-export class DatasetDetailComponent implements OnInit {
-  dataset: DatasetSummary | null = null;
+export class DatasetDetailComponent extends BaseDetailComponent<DatasetSummary> {
   preview: DatasetPreview | null = null;
-  loading = true;
   previewLoading = true;
 
-  constructor(
-    readonly facade: DatasetsFacade,
-    private readonly route: ActivatedRoute,
-    private readonly router: Router,
-    private readonly toast: ToastService
-  ) {}
+  protected readonly listRoute = ['/datasets'];
+  protected readonly missingMessage = 'The dataset was not specified.';
 
-  ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (!id) {
-      this.toast.error('The dataset was not specified.');
-      this.loading = false;
-      this.previewLoading = false;
-      return;
-    }
-    this.load(id);
+  constructor(readonly facade: DatasetsFacade) {
+    super();
   }
 
-  load(id: number): void {
-    this.loading = true;
-    this.previewLoading = true;
-    this.facade.get(id).subscribe({
-      next: dataset => {
-        this.dataset = dataset;
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.previewLoading = false;
-      }
-    });
-    this.facade.preview(id).subscribe({
-      next: preview => {
-        this.preview = preview;
-        this.previewLoading = false;
-      },
-      error: () => {
-        this.previewLoading = false;
-      }
-    });
+  /** Template alias for the base class's resolved record. */
+  get dataset(): DatasetSummary | null {
+    return this.item;
   }
 
   get detailFields(): DetailField[] {
-    return this.dataset ? this.facade.detailFields(this.dataset) : [];
+    return this.item ? this.facade.detailFields(this.item) : [];
   }
 
   get previewColumns(): TableColumn[] {
@@ -72,17 +39,22 @@ export class DatasetDetailComponent implements OnInit {
     return this.facade.previewRows(this.preview);
   }
 
-  deleteDataset = (): Observable<unknown> => this.facade.delete(this.dataset!.id);
-
-  onDeleted(): void {
-    this.router.navigate(['/datasets']);
+  /** The stored rows load alongside the record, on their own indicator. */
+  override load(id: number): void {
+    super.load(id);
+    this.previewLoading = true;
+    this.watch(this.facade.preview(id)).subscribe({
+      next: preview => {
+        this.preview = preview;
+        this.previewLoading = false;
+      },
+      error: () => (this.previewLoading = false)
+    });
   }
 
-  downloadStarted(format: 'CSV' | 'ARFF'): void {
-    this.toast.info(`${format} download started.`);
-  }
+  deleteDataset = (): Observable<unknown> => this.facade.delete(this.item!.id);
 
-  back(): void {
-    this.router.navigate(['/datasets']);
+  protected fetch(id: number): Observable<DatasetSummary> {
+    return this.facade.get(id);
   }
 }

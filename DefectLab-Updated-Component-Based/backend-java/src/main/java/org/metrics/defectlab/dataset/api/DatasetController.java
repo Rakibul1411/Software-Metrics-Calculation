@@ -18,6 +18,7 @@ import org.metrics.defectlab.dataset.domain.DatasetTable;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 import org.metrics.defectlab.dataset.usecase.DeleteDatasetUseCase;
 import org.metrics.defectlab.dataset.usecase.GetDatasetUseCase;
+import org.metrics.defectlab.dataset.usecase.DatasetSummaryMapper;
 import org.metrics.defectlab.dataset.usecase.ListDatasetsUseCase;
 import org.metrics.defectlab.dataset.usecase.LoadDatasetTableUseCase;
 import org.metrics.defectlab.dataset.usecase.UploadDatasetUseCase;

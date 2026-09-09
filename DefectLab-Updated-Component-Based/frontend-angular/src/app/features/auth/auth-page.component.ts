@@ -1,51 +1,49 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { Observable } from 'rxjs';
 import { finalize } from 'rxjs/operators';
-import { DefectLabApiService } from '../../core/services/defectlab-api.service';
-import { SessionService } from '../../core/services/session.service';
+import { BaseComponent } from '../../core/base';
 import { ThemeService } from '../../core/services/theme.service';
+import { AuthCredentials, AuthFacade, AuthMode, ForgotStep } from './auth.facade';
 
 @Component({
   selector: 'app-auth-page',
   standalone: false,
   templateUrl: './auth-page.component.html'
 })
-export class AuthPageComponent {
-  mode: 'login' | 'register' | 'forgot' = 'login';
+export class AuthPageComponent extends BaseComponent {
+  mode: AuthMode = 'login';
   name = '';
   email = '';
   password = '';
   loading = false;
-  error: string | null = null;
 
-  /** 'email' asks who they are, 'password' takes the replacement. */
-  forgotStep: 'email' | 'password' = 'email';
+  /**
+   * Auth failures render inline rather than as a toast: these endpoints are
+   * on the interceptor's silent list so the message appears exactly once,
+   * next to the field that caused it.
+   */
+  error: string | null = null;
   notice: string | null = null;
+
+  forgotStep: ForgotStep = 'email';
   showPassword = false;
 
-  constructor(
-    private readonly api: DefectLabApiService,
-    private readonly session: SessionService,
-    readonly theme: ThemeService,
-    private readonly router: Router
-  ) {}
+  readonly theme = inject(ThemeService);
+
+  constructor(private readonly facade: AuthFacade) {
+    super();
+  }
 
   toggleTheme(): void {
     this.theme.toggle();
   }
 
   get canSubmit(): boolean {
-    if (this.mode === 'forgot') {
-      return this.forgotStep === 'email'
-        ? this.email.trim().length > 0
-        : this.password.length >= 8 && this.password.length <= 12;
-    }
-    const base = this.email.trim().length > 0 && this.password.length > 0;
-    return this.mode === 'login' ? base : base && this.name.trim().length > 0;
+    return this.facade.canSubmit(this.mode, this.forgotStep, this.credentials);
   }
 
-  setMode(mode: 'login' | 'register' | 'forgot'): void {
+  setMode(mode: AuthMode): void {
     this.mode = mode;
     this.error = null;
     this.notice = null;
@@ -61,56 +59,40 @@ export class AuthPageComponent {
       this.submitForgot();
       return;
     }
-    this.loading = true;
-    this.error = null;
-
-    const request = this.mode === 'login'
-      ? this.api.login(this.email.trim(), this.password)
-      : this.api.register(this.name.trim(), this.email.trim(), this.password);
-
-    request.pipe(finalize(() => (this.loading = false))).subscribe({
-      next: user => {
-        this.session.setUser(user);
-        this.router.navigate(['/overview']);
-      },
-      error: (failure: HttpErrorResponse) => {
-        this.error = this.messageOf(failure);
-      }
-    });
+    this.send(
+      this.mode === 'login'
+        ? this.facade.login(this.credentials)
+        : this.facade.register(this.credentials),
+      () => this.navigateTo(['/overview']));
   }
 
   private submitForgot(): void {
-    this.loading = true;
-    this.error = null;
-
     if (this.forgotStep === 'email') {
-      this.api.forgotPassword(this.email.trim())
-        .pipe(finalize(() => (this.loading = false)))
-        .subscribe({
-          next: () => {
-            this.forgotStep = 'password';
-            this.notice = 'Account found. Enter a new password.';
-          },
-          error: (failure: HttpErrorResponse) => (this.error = this.messageOf(failure))
-        });
+      this.send(this.facade.forgotPassword(this.email), () => {
+        this.forgotStep = 'password';
+        this.notice = 'Account found. Enter a new password.';
+      });
       return;
     }
-
-    this.api.resetPassword(this.email.trim(), this.password)
-      .pipe(finalize(() => (this.loading = false)))
-      .subscribe({
-        next: () => {
-          this.mode = 'login';
-          this.forgotStep = 'email';
-          this.password = '';
-          this.notice = 'Password updated. Sign in with your new password.';
-        },
-        error: (failure: HttpErrorResponse) => (this.error = this.messageOf(failure))
-      });
+    this.send(this.facade.resetPassword(this.email, this.password), () => {
+      this.mode = 'login';
+      this.forgotStep = 'email';
+      this.password = '';
+      this.notice = 'Password updated. Sign in with your new password.';
+    });
   }
 
-  private messageOf(failure: HttpErrorResponse): string {
-    const payload = failure.error as { error?: string } | null;
-    return payload?.error ?? 'The request could not be completed.';
+  /** One busy/inline-error shape for all four auth requests. */
+  private send<T>(request$: Observable<T>, onSuccess: () => void): void {
+    this.loading = true;
+    this.error = null;
+    this.watch(request$.pipe(finalize(() => (this.loading = false)))).subscribe({
+      next: () => onSuccess(),
+      error: (failure: HttpErrorResponse) => (this.error = this.facade.messageOf(failure))
+    });
+  }
+
+  private get credentials(): AuthCredentials {
+    return { name: this.name, email: this.email, password: this.password };
   }
 }

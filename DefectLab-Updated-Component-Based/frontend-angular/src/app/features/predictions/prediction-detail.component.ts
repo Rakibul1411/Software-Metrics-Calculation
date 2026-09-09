@@ -1,101 +1,44 @@
-import { Component, OnInit } from '@angular/core';
-import { DatePipe } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
+import { BaseDetailComponent } from '../../core/base';
 import { PredictionRunDetail } from '../../core/models/defectlab.model';
-import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
-import { ToastService } from '../../shared/ui-toast/toast.service';
+import { PredictionsFacade } from './predictions.facade';
 
 @Component({
   selector: 'app-prediction-detail',
   standalone: false,
-  templateUrl: './prediction-detail.component.html',
-  providers: [DatePipe]
+  templateUrl: './prediction-detail.component.html'
 })
-export class PredictionDetailComponent implements OnInit {
-  run: PredictionRunDetail | null = null;
-  loading = true;
+export class PredictionDetailComponent extends BaseDetailComponent<PredictionRunDetail> {
+  protected readonly listRoute = ['/predictions'];
+  protected readonly missingMessage = 'The prediction run was not specified.';
 
-  constructor(
-    readonly api: DefectLabApiService,
-    private readonly route: ActivatedRoute,
-    private readonly router: Router,
-    private readonly datePipe: DatePipe,
-    private readonly toast: ToastService
-  ) {}
-
-  ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (!id) {
-      this.toast.error('The prediction run was not specified.');
-      this.loading = false;
-      return;
-    }
-    this.load(id);
+  constructor(readonly facade: PredictionsFacade) {
+    super();
   }
 
-  load(id: number): void {
-    this.loading = true;
-    this.api.predictionRun(id).subscribe({
-      next: run => {
-        this.run = run;
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-      }
-    });
+  /** Template alias for the base class's resolved record. */
+  get run(): PredictionRunDetail | null {
+    return this.item;
   }
 
   get runFields(): DetailField[] {
-    const run = this.run;
-    if (!run) return [];
-    return [
-      { label: 'Source dataset', value: run.sourceDataset.displayName },
-      { label: 'Target dataset', value: run.targetDataset.displayName },
-      { label: 'Target type', value: run.targetDataset.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' },
-      { label: 'Metric family', value: run.modelConfig.datasetFamily },
-      { label: 'Model', value: run.modelConfig.modelName },
-      { label: 'Neighbors (K)', value: run.modelConfig.k },
-      { label: 'Decision threshold', value: run.modelConfig.threshold },
-      { label: 'Dataset alignment', value: run.modelConfig.coral ? 'Enabled' : 'Disabled' },
-      { label: 'Created', value: this.datePipe.transform(run.createdAt, 'medium') }
-    ];
-  }
-
-  metric(value: { value: number | null }): string {
-    return value?.value === null || value?.value === undefined
-      ? 'N/A' : value.value.toFixed(3);
+    return this.item ? this.facade.detailFields(this.item) : [];
   }
 
   get predictionDetailColumns(): TableColumn[] {
-    const hasActual = this.run?.targetDataset.datasetType === 'PREDEFINED';
-    const columns: TableColumn[] = [
-      { key: 'riskRank', label: 'Rank', align: 'right', className: 'dl-col-rank', sticky: 'start', width: '8%' },
-      { key: 'classIdentifier', label: 'File / identifier', className: 'dl-col-identifier', width: hasActual ? '46%' : '58%' },
-      { key: 'defectProbability', label: 'Probability', align: 'right', className: 'dl-col-probability', width: '14%' },
-      { key: 'predictedLabel', label: 'Predicted', width: hasActual ? '16%' : '20%' }
-    ];
-    if (hasActual) {
-      columns.push({ key: 'actualLabel', label: 'Actual', width: '16%' });
-    }
-    columns[columns.length - 1].sticky = 'end';
-    return columns;
+    return this.facade.detailColumns(this.item);
   }
 
-  back(): void {
-    this.router.navigate(['/predictions']);
+  metric(value: { value: number | null }): string {
+    return this.facade.metric(value);
   }
 
-  deletePredictionRun = (): Observable<unknown> => this.api.deletePredictionRun(this.run!.id);
+  deletePredictionRun = (): Observable<unknown> => this.facade.delete(this.item!.id);
 
-  onDeleted(): void {
-    this.router.navigate(['/predictions']);
-  }
-
-  downloadStarted(label: string): void {
-    this.toast.info(`${label} download started.`);
+  protected fetch(id: number): Observable<PredictionRunDetail> {
+    return this.facade.get(id);
   }
 }

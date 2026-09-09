@@ -10,6 +10,8 @@
   <ui-state *ngIf="loading" kind="loading"
             message="Loading complete prediction details…"></ui-state>
 
+  <ui-state *ngIf="failed" kind="empty" [message]="notFoundMessage"></ui-state>
+
   <ui-detail-fields *ngIf="group && !loading" [fields]="settingsFields"></ui-detail-fields>
 
   <div class="dl-detail-section" *ngIf="group && !loading">
@@ -22,9 +24,9 @@
             <div class="dl-report-panel-sub" *ngIf="manualRun as run">Prediction run #{{ run.id }}</div>
           </div>
           <div class="dl-actions" *ngIf="manualRun as run">
-            <ui-button variant="ghost" icon="download" [href]="api.predictionDownloadUrl(run.id)"
+            <ui-button variant="ghost" icon="download" [href]="facade.predictionDownloadUrl(run.id)"
                        (click)="downloadStarted('Labeled CSV')">Download labeled CSV</ui-button>
-            <ui-button icon="download" [href]="api.reportDownloadUrl(run.id)"
+            <ui-button icon="download" [href]="facade.reportDownloadUrl(run.id)"
                        (click)="downloadStarted('PDF report')">Download report</ui-button>
           </div>
         </div>
@@ -48,35 +50,47 @@
             <div class="dl-report-panel-sub" *ngIf="predefinedRun as run">Prediction run #{{ run.id }}</div>
           </div>
           <div class="dl-actions" *ngIf="predefinedRun as run">
-            <ui-button icon="download" [href]="api.reportDownloadUrl(run.id)"
+            <ui-button icon="download" [href]="facade.reportDownloadUrl(run.id)"
                        (click)="downloadStarted('PDF report')">Download report</ui-button>
           </div>
         </div>
 
         <ng-container *ngIf="predefinedRun as run; else noPredefined">
-          <div class="dl-grid dl-grid-4" *ngIf="run.evaluation as evaluation">
-            <ui-metric-card label="True positive (TP)"
-                            [value]="evaluation.confusionMatrix.truePositive"></ui-metric-card>
-            <ui-metric-card label="True negative (TN)"
-                            [value]="evaluation.confusionMatrix.trueNegative"></ui-metric-card>
-            <ui-metric-card label="False positive (FP)"
-                            [value]="evaluation.confusionMatrix.falsePositive"></ui-metric-card>
-            <ui-metric-card label="False negative (FN)"
-                            [value]="evaluation.confusionMatrix.falseNegative"></ui-metric-card>
-          </div>
-          <div class="dl-grid dl-grid-4"
-               *ngIf="run.evaluation as evaluation">
-            <ui-metric-card label="Accuracy" [value]="metric(evaluation.accuracy)"></ui-metric-card>
-            <ui-metric-card label="Precision" [value]="metric(evaluation.precision)"></ui-metric-card>
-            <ui-metric-card label="Recall" [value]="metric(evaluation.recall)"></ui-metric-card>
-            <ui-metric-card label="F1-score" [value]="metric(evaluation.f1)"></ui-metric-card>
-            <ui-metric-card label="ROC-AUC" [value]="metric(evaluation.rocAuc)"></ui-metric-card>
+          <div class="dl-grid dl-grid-3">
+            <ui-metric-card label="Total files" [value]="run.summary.totalRecords"></ui-metric-card>
+            <ui-metric-card label="Predicted buggy files" [value]="run.summary.predictedBuggy"></ui-metric-card>
+            <ui-metric-card label="Predicted clean files" [value]="run.summary.predictedClean"></ui-metric-card>
           </div>
         </ng-container>
         <ng-template #noPredefined>
           <ui-state kind="empty" message="This report group has no PREDEFINED target."></ui-state>
         </ng-template>
       </div>
+    </div>
+  </div>
+
+  <!-- Only the PREDEFINED target carries actual labels, so its scores belong to
+       the whole page rather than to one half of a two-panel row: side by side
+       they left the MANUAL column empty for nine tiles' worth of height. -->
+  <div class="dl-detail-section" *ngIf="evaluation as scores">
+    <h3>Evaluation · {{ predefinedRun?.targetDataset?.displayName }} (PREDEFINED)</h3>
+    <p class="dl-report-panel-sub">Scored against the target's own actual Buggy/Clean labels.</p>
+    <div class="dl-grid dl-grid-metrics">
+      <ui-metric-card label="True positive (TP)"
+                      [value]="scores.confusionMatrix.truePositive"></ui-metric-card>
+      <ui-metric-card label="True negative (TN)"
+                      [value]="scores.confusionMatrix.trueNegative"></ui-metric-card>
+      <ui-metric-card label="False positive (FP)"
+                      [value]="scores.confusionMatrix.falsePositive"></ui-metric-card>
+      <ui-metric-card label="False negative (FN)"
+                      [value]="scores.confusionMatrix.falseNegative"></ui-metric-card>
+    </div>
+    <div class="dl-grid dl-grid-metrics">
+      <ui-metric-card label="Accuracy" [value]="metric(scores.accuracy)"></ui-metric-card>
+      <ui-metric-card label="Precision" [value]="metric(scores.precision)"></ui-metric-card>
+      <ui-metric-card label="Recall" [value]="metric(scores.recall)"></ui-metric-card>
+      <ui-metric-card label="F1-score" [value]="metric(scores.f1)"></ui-metric-card>
+      <ui-metric-card label="ROC-AUC" [value]="metric(scores.rocAuc)"></ui-metric-card>
     </div>
   </div>
 
@@ -110,7 +124,7 @@
     </div>
   </div>
 
-  <div class="dl-detail-section" *ngIf="manualRun && predefinedRun && !loading">
+  <div class="dl-detail-section" *ngIf="showMatchedComparison && !loading">
     <h3>MANUAL prediction compared with PREDEFINED actual label</h3>
     <p class="dl-report-panel-sub">Files are joined by normalized identifier. Correct/Wrong is determined against the PREDEFINED dataset's actual Buggy/Clean label.</p>
 

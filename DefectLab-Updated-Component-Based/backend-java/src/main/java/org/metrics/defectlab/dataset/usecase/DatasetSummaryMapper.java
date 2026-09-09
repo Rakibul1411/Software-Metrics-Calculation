@@ -1,4 +1,4 @@
-package org.metrics.defectlab.dataset.api;
+package org.metrics.defectlab.dataset.usecase;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -6,7 +6,10 @@ import java.util.Map;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 
 /**
- * Presenter: maps dataset entities to the path-free summary returned by public APIs.
+ * Maps dataset entities to the path-free summary shared by every component
+ * that needs to embed a dataset reference in its own use-case output. Lives
+ * in the use-case ring (not {@code dataset.api}) so other components' use
+ * cases can depend on it without reaching into dataset's interface adapters.
  */
 public final class DatasetSummaryMapper {
 

@@ -15,7 +15,7 @@
   --dl-accent-soft: #e7f3ee;
   --dl-accent-rgb: 8, 122, 91;
   --dl-sidebar-bg: #ffffff;
-  --dl-sidebar-ink: #69757f;
+  --dl-sidebar-ink: #556270;
   --dl-sidebar-strong: #101a22;
   --dl-sidebar-hover: #f1f4f6;
   --dl-sidebar-border: #e1e7eb;
@@ -24,6 +24,32 @@
   --dl-h-control: 36px;
   --dl-h-control-sm: 30px;
   --dl-sidebar-w: 220px;
+
+  /* Chart series — an indigo ramp, its own identity separate from the app's
+     green/orange accent (buttons, nav) so a data value never reads as a
+     control. Categories that are simply different — manual vs predefined,
+     one family vs another — are two steps of ONE hue rather than a second
+     colour: they belong to the same thing, so the eye reads "two parts of
+     one whole" instead of hunting for what an unrelated hue is supposed to
+     mean. A single hue only fits two clearly-separated steps before CVD
+     separation collapses, so a chart alternates slot 1 / slot 3 rather than
+     fanning out to a third; a third-plus series repeats the cycle, with the
+     legend and direct labels still telling them apart.
+
+     --viz-alert is the one colour that carries meaning: predicted-buggy. It
+     is the only pink/red in a chart, so a reader never has to be told what
+     it is. Clears the categorical gate against both steps in both modes
+     (CVD ΔE 21.1 / 24.4 light, 18.9 / 14.8 dark — all ≥8; normal-vision
+     24.8 / 28.1 light, 23.1 / 28.4 dark — all ≥15).
+
+     Each fill carries the ink that clears contrast ON it, so an inline value
+     is never light-on-light or dark-on-dark. */
+  --viz-1: #6c5dd3;
+  --viz-3: #b4a8f0;
+  --viz-alert: #c43e50;
+  --viz-ink-1: #ffffff;
+  --viz-ink-3: #0f2744;
+  --viz-ink-alert: #ffffff;
 }
 
 :root[data-theme='dark'] {
@@ -38,20 +64,38 @@
   --dl-sidebar-border: rgba(255, 255, 255, .07);
   --dl-sidebar-active: #ffffff;
   --dl-row-hover: rgba(255, 255, 255, .03);
+
+  /* Same indigo identity, re-stepped for the dark surface rather than
+     swapped: the light step keeps the hue readable (4.99:1) and the deep
+     step separates from it clearly (CVD ΔE 18.0) without the two visually
+     merging into the near-black canvas. */
+  --viz-1: #8c7ae6;
+  --viz-3: #4c3fb0;
+  --viz-alert: #d6336c;
+  --viz-ink-1: #1f2937;
+  --viz-ink-3: #ffffff;
+  --viz-ink-alert: #ffffff;
 }
 
 /* ── Shell ─────────────────────────────────────────────────────────────── */
 
+/* The shell owns the viewport and never scrolls itself: the topbar and the
+   sidebar stay put while .dl-content is the one scrolling region. That also
+   gives a page card a definite height to divide up, which is what lets a
+   list's table fill the space left over instead of guessing at a fixed one. */
 .dl-shell {
   display: grid;
   grid-template-columns: var(--dl-sidebar-w) minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--canvas);
 }
 
 .dl-main {
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
 }
 
@@ -61,6 +105,8 @@
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
   /* Flush against the topbar's own border-bottom — that line already reads
      as the divider, so no extra top padding is layered on top of it. */
   padding: 0 var(--space-4) var(--space-4);
@@ -73,6 +119,7 @@
   flex: 1;
   width: 100%;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
   gap: var(--space-4);
 }
@@ -353,20 +400,27 @@ button.dl-footer-link:hover {
    below it. Applied per-page via cardClass — not the base rule, so pages
    that intentionally stack several independent cards (report details,
    compare metrics) keep their natural, content-sized heights. */
-.dl-page-card { flex: 1; }
+.dl-page-card { flex: 1; min-height: 0; }
 
 .dl-grid > .dl-card,
 .dl-grid > .dl-data-card { height: 100%; }
 
+/* A page built from a row of cards rather than one page card (Account) still
+   fills its page, instead of leaving the canvas bare below them. */
+.dl-grid-fill { flex: 1; }
+
 /* Card titles are the same size whether or not they sit in a .dl-card-head —
    an <h2> outside that wrapper was falling back to the browser default. */
+/* Page titles. Every screen's card heading is this size — the dashboard used
+   to set its own larger one, which made the landing page look like it came
+   from a different app than the rest. */
 .dl-card > h2,
 .dl-card > h3,
 .dl-action-card > h2,
 .dl-card-head h2,
 .dl-detail-toolbar h2,
 .dl-section-toolbar h2,
-.dl-dash-section-head h3 {
+.dl-dash-heading h2 {
   margin: 0;
   color: var(--ink-heading);
   font-family: var(--font-heading);
@@ -431,6 +485,12 @@ button.dl-footer-link:hover {
 .dl-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .dl-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .dl-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* Evaluation tiles wrap into rows that always fill the width. A fixed track
+   count stranded the fifth metric on a row of its own beside three empty
+   cells; flex lets whatever lands on the last row stretch across it. */
+.dl-grid-metrics { display: flex; flex-wrap: wrap; }
+.dl-grid-metrics > ui-metric-card > article { flex: 1 1 120px; }
 
 /* ── Stats ─────────────────────────────────────────────────────────────── */
 
@@ -511,7 +571,7 @@ button.dl-footer-link:hover {
 
 .dl-detail-title-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
 }
@@ -537,13 +597,17 @@ button.dl-footer-link:hover {
    as the divider — an extra border-top here would double the line. */
 .dl-detail-header + .dl-detail-section { padding-top: 0; border-top: none; }
 
-.dl-detail-section h3 {
-  margin: 0 0 var(--space-3);
+/* Section titles, one step below a page title, wherever they appear. */
+.dl-detail-section h3,
+.dl-dash-section-head h3 {
+  margin: 0;
   color: var(--ink-heading);
   font-family: var(--font-heading);
   font-size: 14px;
   font-weight: 700;
 }
+
+.dl-detail-section h3 { margin-bottom: var(--space-3); }
 
 /* ── Forms ─────────────────────────────────────────────────────────────── */
 
@@ -885,16 +949,140 @@ button.dl-footer-link:hover {
 
 .dl-col-identifier { font-family: var(--font-mono); font-size: 12px; word-break: break-all; }
 
+/* A result table takes the height the viewport actually offers. The former
+   flat 460px cut a row in half and then left the rest of the card empty on
+   every screen taller than a laptop's. */
 .dl-scroll-y,
-.dl-dataset-storage-scroll,
-.dl-prediction-runs-scroll,
 .dl-prediction-detail-scroll,
 .dl-report-predictions-scroll,
-.dl-comparison-result-scroll { max-height: 460px; }
+.dl-comparison-result-scroll { max-height: max(360px, calc(100vh - 330px)); }
+
+/* A list page's table section absorbs whatever height its card has left, so
+   a two-row list no longer leaves a band of blank card underneath and a long
+   one scrolls inside that space rather than stopping at a fixed height. */
+.dl-fill {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* <ui-table>/<ui-state> are display:contents, so their first real element is
+   the flex item .dl-fill lays out. */
+.dl-fill > ui-table > .dl-table-wrap { flex: 1; min-height: 0; }
+.dl-fill > ui-state > * {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Charts ────────────────────────────────────────────────────────────── */
+
+.dl-chart { display: flex; flex-direction: column; gap: var(--space-2); }
+.dl-chart-plot { position: relative; }
+.dl-chart-plot svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+/* Gridlines are hairline and solid: recessive, never dashed. */
+.dl-chart-grid { stroke: var(--line); stroke-width: 1; }
+
+/* Axis and value text wears text tokens — never the series colour, which is
+   too light to read as type on either surface. */
+.dl-chart-axis { fill: var(--muted); font-size: 11px; }
+.dl-chart-value { fill: var(--ink); font-size: 11px; font-weight: 600; }
+.dl-chart-value-on-1 { fill: var(--viz-ink-1); }
+.dl-chart-value-on-3 { fill: var(--viz-ink-3); }
+.dl-chart-value-on-alert { fill: var(--viz-ink-alert); }
+
+.dl-chart-mark { transition: opacity .15s ease; cursor: default; }
+.dl-chart-mark:focus { outline: none; }
+.dl-chart-mark-active { opacity: .78; }
+
+.dl-viz-fill-1 { fill: var(--viz-1); background: var(--viz-1); }
+.dl-viz-fill-3 { fill: var(--viz-3); background: var(--viz-3); }
+.dl-viz-fill-alert { fill: var(--viz-alert); background: var(--viz-alert); }
+
+/* The legend is the dependable identity channel, so it ships with every
+   multi-series chart; direct labels on the marks only supplement it. */
+.dl-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.dl-chart-legend span { display: inline-flex; align-items: center; gap: var(--space-1); }
+
+.dl-chart-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.dl-chart-tooltip {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, .18);
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 8px));
+  white-space: nowrap;
+}
+
+/* Values lead, labels follow: the reader already knows the series. */
+.dl-chart-tooltip strong { color: var(--ink-heading); font-size: 14px; font-weight: 600; }
+.dl-chart-tooltip span { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--ink); font-size: 11px; }
+.dl-chart-tooltip small { color: var(--muted); font-size: 11px; }
+
+.dl-chart-tooltip i {
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.dl-chart-empty {
+  padding: var(--space-6) 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ── Pagination ────────────────────────────────────────────────────────── */
+
+/* Sits under a list's table as the card's last row: the table above it takes
+   the leftover height, this bar keeps its own. */
+.dl-pagination {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-top: var(--space-3);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dl-pagination-size,
+.dl-pagination-nav { display: flex; align-items: center; gap: var(--space-2); }
+
+/* The size dropdown is a footer control, not a form field: its label sits
+   beside it and the control is only as wide as a two-digit number needs. */
+.dl-pagination-size .dl-field { flex-direction: row; align-items: center; gap: var(--space-2); }
+.dl-pagination-size .dl-select { width: 76px; }
+
+.dl-pagination-range { font-variant-numeric: tabular-nums; }
+.dl-pagination-nav span { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .dl-empty,
-.dl-dash-list-empty,
-.dl-dash-chart-empty {
+.dl-dash-list-empty {
   padding: var(--space-8) var(--space-4);
   color: var(--muted);
   font-size: 13px;
@@ -962,7 +1150,7 @@ button.dl-footer-link:hover {
 }
 
 .dl-badge-blue  { background: var(--dl-accent-soft); color: var(--dl-accent); }
-.dl-badge-green { background: rgba(62, 201, 138, .14); color: #2e9c6b; }
+.dl-badge-green { background: rgba(62, 201, 138, .14); color: #1a6b47; }
 .dl-badge-amber { background: var(--warning-bg); color: var(--warning-text); }
 .dl-badge-red   { background: var(--danger-bg); color: var(--danger-text); }
 
@@ -1078,7 +1266,7 @@ button.dl-footer-link:hover {
 
 /* ── Dashboard ─────────────────────────────────────────────────────────── */
 
-.dl-dashboard { display: flex; flex-direction: column; gap: var(--space-4); }
+.dl-dashboard { display: flex; flex-direction: column; gap: var(--space-3); }
 
 /* A <header> holding the page title and its actions — a row, not a heading. */
 .dl-dash-heading {
@@ -1089,15 +1277,6 @@ button.dl-footer-link:hover {
   flex-wrap: wrap;
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--line);
-}
-
-.dl-dash-heading h2 {
-  margin: 0;
-  color: var(--ink-heading);
-  font-family: var(--font-heading);
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -.01em;
 }
 
 .dl-dash-heading > div:first-child > span,
@@ -1187,13 +1366,13 @@ button.dl-footer-link:hover {
   background: var(--surface-muted);
 }
 
-.dl-dash-mix .manual { background: var(--dl-accent); }
-.dl-dash-mix .predefined { background: var(--accent-soft-strong); }
+.dl-dash-mix .manual { background: var(--viz-1); }
+.dl-dash-mix .predefined { background: var(--viz-3); }
 
 .dl-dash-legend { display: flex; flex-wrap: wrap; gap: var(--space-4); color: var(--muted); font-size: 11px; }
 .dl-dash-legend i { width: 8px; height: 8px; border-radius: 2px; }
-.dl-dash-legend .manual { background: var(--dl-accent); }
-.dl-dash-legend .predefined { background: var(--accent-soft-strong); }
+.dl-dash-legend .manual { background: var(--viz-1); }
+.dl-dash-legend .predefined { background: var(--viz-3); }
 
 .dl-dash-panel footer {
   display: flex;
@@ -1256,53 +1435,16 @@ button.dl-footer-link:hover {
 .dl-dash-asset-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 .dl-dash-asset-copy strong { font-size: 13px; font-weight: 600; }
 .dl-dash-asset-copy small { color: var(--muted); font-size: 11px; }
-.dl-dash-asset-value { font-size: 15px; }
-
-/* Every SVG child needs an explicit fill/stroke: the default is fill:black,
-   stroke:none, which turns the <polyline> into a solid black area and makes
-   the gridlines invisible. */
-.dl-dash-chart-stage { display: flex; flex-direction: column; gap: var(--space-2); }
-.dl-dash-chart-stage svg { width: 100%; height: 150px; overflow: visible; }
-
-.dl-dash-chart-stage line {
-  stroke: var(--line);
-  stroke-width: 1;
-  stroke-dasharray: 3 4;
-}
-
-.dl-dash-chart-area { fill: rgba(var(--dl-accent-rgb), .16); stroke: none; }
-
-.dl-dash-chart-stage polyline {
-  fill: none;
-  stroke: var(--dl-accent);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.dl-dash-chart-stage circle {
-  fill: var(--surface);
-  stroke: var(--dl-accent);
-  stroke-width: 2;
-}
-
-.dl-dash-chart-labels {
+/* The count and its caption are separate lines: as an inline <strong> and
+   <small> in a block they rendered as "1,181Unlabeled". */
+.dl-dash-asset-value {
   display: flex;
-  gap: var(--space-2);
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 10px;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 15px;
 }
 
-/* Equal shares so long project names cannot crush their neighbours. */
-.dl-dash-chart-labels span {
-  flex: 1 1 0;
-  min-width: 0;
-  overflow: hidden;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.dl-dash-asset-value small { color: var(--muted); font-family: var(--font-sans); font-size: 11px; }
 
 /* Horizontal pipeline rail: numbered steps joined by <i> connectors. */
 .dl-dash-workflow {
@@ -1328,6 +1470,12 @@ button.dl-footer-link:hover {
 .dl-dash-section-head a:hover { text-decoration: underline; }
 
 .dl-dash-assets > a { color: inherit; text-decoration: none; }
+
+/* Two panels sharing one grid column, so a short chart beside a tall one
+   leaves usable content rather than an empty half-card. */
+.dl-dash-stack { display: flex; flex-direction: column; gap: var(--space-4); }
+.dl-dash-stack > * { flex: 0 0 auto; }
+.dl-dash-stack > *:last-child { flex: 1 1 auto; }
 
 .dl-dash-actions,
 .dl-dash-prediction-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
@@ -1513,6 +1661,13 @@ button.dl-footer-link:hover {
   box-shadow: 0 12px 24px rgba(0, 0, 0, .28);
 }
 
+/* Opened upward when the trigger sits too low for the panel to fit below. */
+.dl-select-menu-up {
+  top: auto;
+  bottom: calc(100% + 4px);
+  box-shadow: 0 -12px 24px rgba(0, 0, 0, .28);
+}
+
 .dl-select-option {
   display: block;
   width: 100%;
@@ -1654,6 +1809,12 @@ button.dl-footer-link:hover {
   .dl-topbar { gap: var(--space-2); }
   .dl-page-context p { display: none; }
   .dl-file-panel { width: 100%; }
+
+  /* On a phone the page itself is the scroll surface: pinning the filters and
+     leaving the table a few rows of window inside them reads as a stuck page.
+     The table returns to its natural height and .dl-content scrolls. */
+  .dl-fill { flex: none; }
+  .dl-fill > ui-table > .dl-table-wrap { flex: none; max-height: none; }
 }
 
 /* ── Shared UI components ──────────────────────────────────────────────── */
@@ -1666,6 +1827,7 @@ ui-badge,
 ui-card,
 ui-file-picker,
 ui-metric-card,
+ui-pagination,
 ui-state,
 ui-confirm-dialog,
 ui-delete-action,

@@ -6,8 +6,8 @@
     </nav>
     <h2>{{ comparison ? (comparison.manualDataset.displayName + ' ↔ ' + comparison.predefinedDataset.displayName) : 'Metric comparison' }}</h2>
     <div class="dl-actions" *ngIf="comparison as item">
-      <ui-button icon="download" [href]="api.metricComparisonReportUrl(item.id)"
-                 (click)="downloadStarted()">Download PDF Report</ui-button>
+      <ui-button icon="download" [href]="facade.reportUrl(item.id)"
+                 (click)="downloadStarted()">Download report</ui-button>
       <ui-delete-action label="Delete" dialogTitle="Delete comparison"
           [confirmMessage]="'Delete the comparison between ' + item.manualDataset.displayName + ' and ' + item.predefinedDataset.displayName + '? This cannot be undone.'"
           successMessage="Comparison deleted successfully."
@@ -18,6 +18,8 @@
 
   <ui-state *ngIf="loading" kind="loading" message="Loading comparison…"></ui-state>
 
+  <ui-state *ngIf="failed" kind="empty" [message]="notFoundMessage"></ui-state>
+
   <ng-container *ngIf="comparison as comparison">
     <ng-container *ngIf="comparison.result.comparisonMode === 'AGGREGATE'; else instanceResult">
       <div class="dl-detail-section">
@@ -25,8 +27,10 @@
         <div class="dl-grid dl-grid-3">
           <ui-metric-card label="Common numeric metrics"
                           [value]="comparison.result.commonNumericMetricCount"></ui-metric-card>
-          <ui-metric-card label="Dataset A" value="MANUAL"></ui-metric-card>
-          <ui-metric-card label="Dataset B" value="PREDEFINED"></ui-metric-card>
+          <ui-metric-card label="Manual dataset"
+                          [value]="comparison.manualDataset.displayName"></ui-metric-card>
+          <ui-metric-card label="Predefined dataset"
+                          [value]="comparison.predefinedDataset.displayName"></ui-metric-card>
         </div>
       </div>
 

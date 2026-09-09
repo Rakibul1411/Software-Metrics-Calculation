@@ -2,19 +2,20 @@ package org.metrics.defectlab.dataset.usecase;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.metrics.defectlab.comparison.usecase.port.MetricComparisonRepository;
 import org.metrics.defectlab.dataset.domain.DatasetTable;
+import org.metrics.defectlab.dataset.usecase.port.ArtifactStorage;
 import org.metrics.defectlab.dataset.usecase.port.DatasetFileReader;
+import org.metrics.defectlab.dataset.usecase.port.DatasetUsageGuard;
 import org.metrics.defectlab.dataset.usecase.port.MetricDatasetRepository;
-import org.metrics.defectlab.prediction.usecase.port.PredictionRunRepository;
-import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class DatasetInteractorLabelTest {
@@ -23,12 +24,13 @@ class DatasetInteractorLabelTest {
 
     @BeforeEach
     void setUp() throws IOException {
+        ArtifactStorage artifactStorage = mock(ArtifactStorage.class);
+        when(artifactStorage.rootFor(anyString())).thenReturn(java.nio.file.Path.of("storage", "metrics"));
         interactor = new DatasetInteractor(
                 mock(MetricDatasetRepository.class),
-                mock(PredictionRunRepository.class),
-                mock(MetricComparisonRepository.class),
+                mock(DatasetUsageGuard.class),
                 mock(DatasetFileReader.class),
-                new StorageRoot("storage"));
+                artifactStorage);
     }
 
     @Test

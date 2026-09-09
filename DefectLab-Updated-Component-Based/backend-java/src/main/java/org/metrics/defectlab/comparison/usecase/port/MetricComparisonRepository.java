@@ -22,4 +22,11 @@ public interface MetricComparisonRepository {
             Long userId, Long manualDatasetId, Long predefinedDatasetId);
 
     boolean existsByDatasetId(Long datasetId);
+
+    /** Raised when a concurrent save conflicts with an existing row, free of any persistence-framework type. */
+    class SaveConflictException extends RuntimeException {
+        public SaveConflictException(Throwable cause) {
+            super(cause);
+        }
+    }
 }
