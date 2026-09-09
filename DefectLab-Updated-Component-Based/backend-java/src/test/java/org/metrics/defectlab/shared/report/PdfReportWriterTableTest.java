@@ -67,10 +67,10 @@ class PdfReportWriterTableTest {
         assertTrue(text.contains("-25.89%"));
         assertTrue(text.contains("File-wise comparison"));
         assertTrue(text.contains("EXACT_MATCH"));
-        // The long identifier wrapped across two lines within its column
-        // rather than overflowing; text extraction keeps the line break, so
-        // check both halves rather than the joined word.
-        assertTrue(text.contains("ExtremelyLongClassNameThatMustWrapAcrossMultipleLine"));
+        // The long identifier wrapped across multiple lines within its column
+        // rather than overflowing; text extraction keeps the line breaks.
+        assertTrue(text.contains("ExtremelyLong"));
+        assertTrue(text.contains("MultipleLines"));
         assertTrue(text.contains("MISMATCH"));
     }
 
@@ -85,6 +85,58 @@ class PdfReportWriterTableTest {
             String text = new PDFTextStripper().getText(document);
             assertTrue(text.contains("DefectLab Prediction Report"));
             assertTrue(text.contains("Accuracy: 0.87"));
+        }
+    }
+
+    @Test
+    void rendersPredictionTableReportWithColumnWeightsAndFooterPagination() throws IOException {
+        Path target = workspace.resolve("prediction_report.pdf");
+
+        List<List<String>> rows = new ArrayList<>();
+        for (int i = 1; i <= 60; i++) {
+            rows.add(List.of(
+                    "row_" + i,
+                    String.valueOf(i),
+                    "0.6667",
+                    "Buggy",
+                    "Clean"
+            ));
+        }
+
+        PdfReportWriter.Table table = new PdfReportWriter.Table(
+                "Predictions & Risk Ranking",
+                List.of("File / Identifier", "Risk Rank", "Probability", "Predicted", "Actual"),
+                rows,
+                new float[]{ 3.2f, 0.9f, 1.1f, 1.0f, 1.0f }
+        );
+
+        PdfReportWriter.writeTables(
+                target,
+                "DefectLab Prediction Report",
+                List.of(
+                        "Source Dataset: pde 3.4.1 (AEEEM)",
+                        "Target Dataset: ml 3.1 (MANUAL)",
+                        "Model Configuration: Model: KNN | Threshold: 0.50 | CORAL: Enabled | k: 3",
+                        "Summary: 56 predicted buggy, 958 predicted clean (1014 total files)"
+                ),
+                List.of(table)
+        );
+
+        assertTrue(Files.isRegularFile(target));
+        assertTrue(Files.size(target) > 0);
+
+        try (PDDocument document = PDDocument.load(target.toFile())) {
+            assertTrue(document.getNumberOfPages() > 1);
+            String text = new PDFTextStripper().getText(document);
+            assertTrue(text.contains("DefectLab Prediction Report"));
+            assertTrue(text.contains("Source Dataset: pde 3.4.1"));
+            assertTrue(text.contains("Model Configuration: Model: KNN"));
+            assertTrue(text.contains("File / Identifier"));
+            assertTrue(text.contains("Probability"));
+            assertTrue(text.contains("0.6667"));
+            assertTrue(text.contains("Page 1 of"));
+            assertTrue(text.contains("Page 2 of"));
+            assertTrue(text.contains("DefectLab Analytics Platform"));
         }
     }
 }

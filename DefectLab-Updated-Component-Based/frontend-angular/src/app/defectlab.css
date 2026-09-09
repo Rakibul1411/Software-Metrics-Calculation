@@ -532,7 +532,6 @@ button.dl-footer-link:hover {
   align-items: baseline;
   gap: var(--space-2);
   padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--line);
   break-inside: avoid;
   font-size: 14px;
 }

@@ -10,7 +10,10 @@ public interface ComparisonReportRenderer {
     void writeTables(Path target, String title, List<String> introLines, List<Table> tables)
             throws IOException;
 
-    /** One table section: an optional heading, column headers, and rows. */
-    record Table(String heading, List<String> headers, List<List<String>> rows) {
+    /** One table section: an optional heading, column headers, rows, and optional custom weights. */
+    record Table(String heading, List<String> headers, List<List<String>> rows, float[] columnWeights) {
+        public Table(String heading, List<String> headers, List<List<String>> rows) {
+            this(heading, headers, rows, null);
+        }
     }
 }

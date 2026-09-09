@@ -293,17 +293,19 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
             Path pdf, MetricDataset manual, MetricDataset predefined,
             Map<String, Object> config, Map<String, Object> result) throws IOException {
         List<String> intro = new ArrayList<>();
-        intro.add("Manual dataset: " + manual.getDisplayName());
-        intro.add("Predefined dataset: " + predefined.getDisplayName());
-        intro.add("Family: " + manual.getDatasetFamily());
-        intro.add("Comparison mode: " + result.get("comparisonMode"));
-        intro.add("Absolute tolerance: " + config.get("absoluteTolerance")
-                + "   Relative tolerance: " + config.get("relativeTolerance"));
+        intro.add("Manual Dataset: " + manual.getDisplayName() + " (" + manual.getDatasetFamily() + ")");
+        intro.add("Predefined Dataset: " + predefined.getDisplayName());
+        intro.add("Comparison Mode: " + result.get("comparisonMode"));
+        Object absTol = config.get("absoluteTolerance");
+        Object relTol = config.get("relativeTolerance");
+        if (absTol != null && relTol != null) {
+            intro.add("Tolerance: Absolute = " + absTol + ", Relative = " + relTol);
+        }
 
         List<ComparisonReportRenderer.Table> tables = new ArrayList<>();
         if (!"AGGREGATE".equals(result.get("comparisonMode"))) {
-            intro.add("Matched identifiers: " + result.get("matchedIdentifiers"));
-            intro.add("Status counts: " + result.get("statusCounts"));
+            intro.add("Matched Identifiers: " + result.get("matchedIdentifiers"));
+            intro.add("Status Counts: " + result.get("statusCounts"));
             intro.add(identifierSummaryLine("Manual-only files", result.get("manualOnly")));
             intro.add(identifierSummaryLine("Predefined-only files", result.get("predefinedOnly")));
         }
@@ -312,14 +314,16 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
                 "Metric-wise mean & std (manual vs predefined)",
                 List.of("Metric", "Mean Manual", "Mean Predefined",
                         "Std Manual", "Std Predefined", "% Diff"),
-                metricStatsTableRows(result.get("metrics"))));
+                metricStatsTableRows(result.get("metrics")),
+                new float[]{ 2.6f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f }));
 
         if (!"AGGREGATE".equals(result.get("comparisonMode"))) {
             tables.add(new ComparisonReportRenderer.Table(
                     "File-wise comparison",
                     List.of("File / Identifier", "Metric", "Manual Value",
                             "Predefined Value", "Status"),
-                    instanceComparisonTableRows(result.get("comparisons"))));
+                    instanceComparisonTableRows(result.get("comparisons")),
+                    new float[]{ 2.4f, 1.8f, 1.0f, 1.0f, 1.0f }));
         }
 
         reportRenderer.writeTables(pdf, "DefectLab Metric Comparison Report", intro, tables);
@@ -500,12 +504,33 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
 
     @Override
     public Path reportFile(Long userId, Long comparisonId) {
-        Path path = Paths.get(require(userId, comparisonId)
-                .getComparisonReportFilePath()).toAbsolutePath().normalize();
+        MetricComparison comparison = require(userId, comparisonId);
+        Path path = Paths.get(comparison.getComparisonReportFilePath()).toAbsolutePath().normalize();
+        regenerateReportIfMetadataPresent(userId, comparison, path);
         if (!Files.isRegularFile(path)) {
             throw new NotFoundException("The metric-comparison report is unavailable.");
         }
         return path;
+    }
+
+    private void regenerateReportIfMetadataPresent(
+            Long userId, MetricComparison comparison, Path path) {
+        Path metaPath = metadataPath(path);
+        if (!Files.isRegularFile(metaPath)) {
+            return;
+        }
+        try {
+            Map<String, Object> result = readResult(comparison);
+            if (result.isEmpty() || !result.containsKey("metrics")) {
+                return;
+            }
+            MetricDataset manual = getDatasetUseCase.require(userId, comparison.getManualDatasetId());
+            MetricDataset predefined = getDatasetUseCase.require(userId, comparison.getPredefinedDatasetId());
+            Map<String, Object> config = readJson(comparison.getComparisonConfig());
+            writePdf(path, manual, predefined, config, result);
+        } catch (Exception ignored) {
+            // Preserve existing report file if regeneration fails
+        }
     }
 
     private Map<String, Object> readResult(MetricComparison comparison) {

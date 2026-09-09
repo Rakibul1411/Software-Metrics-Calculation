@@ -52,15 +52,15 @@ export class ReportsFacade {
   ];
 
   readonly manualColumns: TableColumn[] = [
-    { key: 'riskRank', label: 'Rank', sticky: 'start', width: '10%' },
-    { key: 'classIdentifier', label: 'File / identifier', className: 'dl-mono', width: '46%' },
+    { key: 'classIdentifier', label: 'File / identifier', className: 'dl-mono', sticky: 'start', width: '46%' },
+    { key: 'riskRank', label: 'Rank', width: '10%' },
     { key: 'defectProbability', label: 'Probability', width: '22%' },
     { key: 'predictedLabel', label: 'Model prediction', sticky: 'end', width: '22%' }
   ];
 
   readonly predefinedColumns: TableColumn[] = [
-    { key: 'riskRank', label: 'Rank', sticky: 'start', width: '8%' },
-    { key: 'classIdentifier', label: 'File / identifier', className: 'dl-mono', width: '38%' },
+    { key: 'classIdentifier', label: 'File / identifier', className: 'dl-mono', sticky: 'start', width: '38%' },
+    { key: 'riskRank', label: 'Rank', width: '8%' },
     { key: 'defectProbability', label: 'Probability', width: '18%' },
     { key: 'predictedLabel', label: 'Model prediction', width: '18%' },
     { key: 'actualLabel', label: 'Actual', sticky: 'end', width: '18%' }

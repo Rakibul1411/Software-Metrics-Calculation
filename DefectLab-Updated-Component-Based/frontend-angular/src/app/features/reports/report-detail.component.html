@@ -27,9 +27,9 @@
             </div>
           </div>
           <div class="dl-actions" *ngIf="manualRun as run">
-            <ui-button variant="ghost" size="sm" icon="download" [href]="facade.predictionDownloadUrl(run.id)"
+            <ui-button variant="ghost" icon="download" [href]="facade.predictionDownloadUrl(run.id)"
                        (click)="downloadStarted('Labeled CSV')">Labeled CSV</ui-button>
-            <ui-button icon="download" size="sm" [href]="facade.reportDownloadUrl(run.id)"
+            <ui-button icon="download" [href]="facade.reportDownloadUrl(run.id)"
                        (click)="downloadStarted('PDF report')">Download report</ui-button>
           </div>
         </div>
@@ -56,7 +56,7 @@
             </div>
           </div>
           <div class="dl-actions" *ngIf="predefinedRun as run">
-            <ui-button icon="download" size="sm" [href]="facade.reportDownloadUrl(run.id)"
+            <ui-button icon="download" [href]="facade.reportDownloadUrl(run.id)"
                        (click)="downloadStarted('PDF report')">Download report</ui-button>
           </div>
         </div>

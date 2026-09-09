@@ -145,6 +145,27 @@ class PredictionInteractorConfigurationTest {
                 interactor, "classLabel", 0));
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void sortsPredictionsRowWiseNumerically() {
+        java.util.List<Map<String, Object>> unsorted = java.util.List.of(
+                Map.of("classIdentifier", "row_29", "riskRank", 1),
+                Map.of("classIdentifier", "row_82", "riskRank", 2),
+                Map.of("classIdentifier", "row_5", "riskRank", 15),
+                Map.of("classIdentifier", "row_108", "riskRank", 3),
+                Map.of("classIdentifier", "row_53", "riskRank", 16)
+        );
+
+        java.util.List<Map<String, Object>> sorted = (java.util.List<Map<String, Object>>)
+                ReflectionTestUtils.invokeMethod(interactor, "sortPredictionsRowWise", unsorted, null);
+
+        assertEquals("row_5", sorted.get(0).get("classIdentifier"));
+        assertEquals("row_29", sorted.get(1).get("classIdentifier"));
+        assertEquals("row_53", sorted.get(2).get("classIdentifier"));
+        assertEquals("row_82", sorted.get(3).get("classIdentifier"));
+        assertEquals("row_108", sorted.get(4).get("classIdentifier"));
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> modelConfig(Map<String, Object> body) {
         return (Map<String, Object>) ReflectionTestUtils.invokeMethod(
