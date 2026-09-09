@@ -103,23 +103,24 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  /* Flush against the topbar's own border-bottom — that line already reads
-     as the divider, so no extra top padding is layered on top of it. */
-  padding: 0 var(--space-4) var(--space-4);
+  padding: var(--space-5);
 }
+
+/* Angular's router-outlet must not generate a box or it creates an unintended flex gap above routed components */
+router-outlet { display: none; }
 
 /* Routed feature hosts are the page stack. Without this, sibling cards inside
    a routed component do not inherit .dl-content's gap and collapse together. */
 .dl-content > *:not(router-outlet) {
   display: flex;
-  flex: 1;
+  flex: 1 0 auto;
   width: 100%;
   min-width: 0;
-  min-height: 0;
+  min-height: 100%;
   flex-direction: column;
   gap: var(--space-4);
 }
@@ -172,14 +173,14 @@
 }
 
 .dl-brand > span:last-child { display: flex; flex-direction: column; }
-.dl-brand strong { color: var(--dl-sidebar-strong); font-family: var(--font-heading); font-size: 14px; font-weight: 700; }
+.dl-brand strong { color: var(--dl-sidebar-strong); font-family: var(--font-heading); font-size: 15px; font-weight: 700; }
 
 .dl-brand small,
 .dl-nav-label {
   color: var(--dl-sidebar-ink);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: .07em;
+  letter-spacing: .06em;
   text-transform: uppercase;
 }
 
@@ -194,7 +195,7 @@
   height: var(--dl-h-control);
   border-radius: var(--radius-sm);
   color: var(--dl-sidebar-ink);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   text-decoration: none;
   transition: background .15s ease, color .15s ease;
@@ -300,8 +301,8 @@ button.dl-footer-link:hover {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: 0 var(--space-6);
-  min-height: 64px;
+  padding: 0 var(--space-5);
+  min-height: 60px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
@@ -311,16 +312,17 @@ button.dl-footer-link:hover {
   min-width: 0;
   flex-direction: column;
   justify-content: center;
-  gap: 1px;
+  gap: 2px;
 }
 
 .dl-page-context h1 {
   margin: 0;
   color: var(--ink-heading);
   font-family: var(--font-heading);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: -.01em;
+  letter-spacing: -.015em;
+  line-height: 1.25;
   white-space: nowrap;
 }
 
@@ -328,7 +330,8 @@ button.dl-footer-link:hover {
   overflow: hidden;
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -387,8 +390,8 @@ button.dl-footer-link:hover {
 .dl-action-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: 12px var(--space-5) var(--space-5);
+  gap: var(--space-4);
+  padding: var(--space-5);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface);
@@ -400,7 +403,7 @@ button.dl-footer-link:hover {
    below it. Applied per-page via cardClass — not the base rule, so pages
    that intentionally stack several independent cards (report details,
    compare metrics) keep their natural, content-sized heights. */
-.dl-page-card { flex: 1; min-height: 0; }
+.dl-page-card { flex: 1 0 auto; min-height: 100%; }
 
 .dl-grid > .dl-card,
 .dl-grid > .dl-data-card { height: 100%; }
@@ -409,13 +412,8 @@ button.dl-footer-link:hover {
    fills its page, instead of leaving the canvas bare below them. */
 .dl-grid-fill { flex: 1; }
 
-/* Card titles are the same size whether or not they sit in a .dl-card-head —
-   an <h2> outside that wrapper was falling back to the browser default. */
-/* Page titles. Every screen's card heading is this size — the dashboard used
-   to set its own larger one, which made the landing page look like it came
-   from a different app than the rest. */
+/* Page titles. Every screen's card heading is this consistent size */
 .dl-card > h2,
-.dl-card > h3,
 .dl-action-card > h2,
 .dl-card-head h2,
 .dl-detail-toolbar h2,
@@ -424,8 +422,10 @@ button.dl-footer-link:hover {
   margin: 0;
   color: var(--ink-heading);
   font-family: var(--font-heading);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
+  letter-spacing: -.015em;
+  line-height: 1.25;
 }
 
 /* Selected mode: an accent frame, not a different box. Toggling .dl-data-card
@@ -446,12 +446,15 @@ button.dl-footer-link:hover {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
 }
 
 .dl-card-head p {
   margin: var(--space-1) 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 /* Small tile: a label above a mono value. Used for score/summary readouts. */
@@ -498,7 +501,7 @@ button.dl-footer-link:hover {
 
 .dl-stat-label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: .05em;
   text-transform: uppercase;
@@ -517,7 +520,7 @@ button.dl-footer-link:hover {
    Analyze page's mode cards — reads better at heading size than at the
    26px numeric-readout size. Doubled class beats `.dl-data-card > strong`
    (0,1,1) so a selected card's accent styling can't reintroduce 17px. */
-.dl-stat-value.dl-stat-value-sm { font-size: 13px; font-variant-numeric: normal; }
+.dl-stat-value.dl-stat-value-sm { font-size: 14px; font-variant-numeric: normal; }
 
 /* A record's attributes as label : value rows — flows down the first
    column, then the second, rather than interleaving row by row. */
@@ -530,7 +533,7 @@ button.dl-footer-link:hover {
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--line);
   break-inside: avoid;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .dl-detail-field-label { flex: 0 0 160px; color: var(--text-secondary); }
@@ -582,11 +585,13 @@ button.dl-footer-link:hover {
   margin: 0;
   color: var(--ink-heading);
   font-family: var(--font-heading);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
+  letter-spacing: -.015em;
+  line-height: 1.25;
 }
 
-.dl-detail-header p { margin: 0; color: var(--muted); font-size: 12px; }
+.dl-detail-header p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
 
 /* A second block (e.g. a data table) inside the same card as the fields
    above, separated by a rule instead of a card boundary. */
@@ -599,12 +604,15 @@ button.dl-footer-link:hover {
 
 /* Section titles, one step below a page title, wherever they appear. */
 .dl-detail-section h3,
-.dl-dash-section-head h3 {
+.dl-dash-section-head h3,
+.dl-card > h3,
+.dl-card-head h3 {
   margin: 0;
   color: var(--ink-heading);
   font-family: var(--font-heading);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .dl-detail-section h3 { margin-bottom: var(--space-3); }
@@ -636,7 +644,7 @@ button.dl-footer-link:hover {
 
 .dl-field > span {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -652,7 +660,7 @@ button.dl-footer-link:hover {
   border-radius: var(--radius-sm);
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 
@@ -674,7 +682,7 @@ button.dl-footer-link:hover {
   gap: var(--space-2);
   height: var(--dl-h-control);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -689,7 +697,7 @@ button.dl-footer-link:hover {
 
 .dl-field small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .dl-file-panel {
@@ -755,8 +763,8 @@ button.dl-footer-link:hover {
   border-radius: var(--radius-sm);
   background: var(--dl-accent);
   color: #fff;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
@@ -796,7 +804,7 @@ button.dl-footer-link:hover {
   color: var(--danger-strong);
 }
 
-.dl-btn-sm { height: var(--dl-h-control-sm); padding: 0 var(--space-3); font-size: 12px; }
+.dl-btn-sm { height: var(--dl-h-control-sm); padding: 0 var(--space-3); font-size: 13px; }
 
 .dl-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .dl-actions-spaced { margin-top: var(--space-4); }
@@ -809,8 +817,8 @@ button.dl-footer-link:hover {
   border-bottom: 2px solid transparent;
   background: none;
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -827,7 +835,7 @@ button.dl-footer-link:hover {
 /* Full width, but table-layout:auto still sizes each column from its content
    and any TableColumn.width hint — explicit widths beat guessing which
    column should absorb the leftover space. */
-.dl-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.dl-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 
 .dl-table th {
   position: sticky;
@@ -837,9 +845,9 @@ button.dl-footer-link:hover {
   border-bottom: 1px solid var(--line);
   background: var(--surface-alt);
   color: var(--muted);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .06em;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
@@ -854,7 +862,7 @@ button.dl-footer-link:hover {
 .dl-table tbody tr:last-child td { border-bottom: none; }
 .dl-table tbody tr:hover { background: var(--dl-row-hover); }
 .dl-table td strong { font-weight: 600; }
-.dl-table td small { color: var(--muted); font-size: 11px; }
+.dl-table td small { color: var(--muted); font-size: 12px; }
 
 /* Frozen edge columns (ui-table's first/last column) stay put while the rest
    of a wide table scrolls horizontally underneath them. */
@@ -988,8 +996,8 @@ button.dl-footer-link:hover {
 
 /* Axis and value text wears text tokens — never the series colour, which is
    too light to read as type on either surface. */
-.dl-chart-axis { fill: var(--muted); font-size: 11px; }
-.dl-chart-value { fill: var(--ink); font-size: 11px; font-weight: 600; }
+.dl-chart-axis { fill: var(--muted); font-size: 12px; }
+.dl-chart-value { fill: var(--ink); font-size: 12px; font-weight: 600; }
 .dl-chart-value-on-1 { fill: var(--viz-ink-1); }
 .dl-chart-value-on-3 { fill: var(--viz-ink-3); }
 .dl-chart-value-on-alert { fill: var(--viz-ink-alert); }
@@ -1009,7 +1017,7 @@ button.dl-footer-link:hover {
   flex-wrap: wrap;
   gap: var(--space-3);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .dl-chart-legend span { display: inline-flex; align-items: center; gap: var(--space-1); }
@@ -1085,7 +1093,7 @@ button.dl-footer-link:hover {
 .dl-dash-list-empty {
   padding: var(--space-8) var(--space-4);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -1095,7 +1103,7 @@ button.dl-footer-link:hover {
   gap: var(--space-2);
   padding: var(--space-4);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .dl-spinner {
@@ -1283,7 +1291,7 @@ button.dl-footer-link:hover {
 .dl-dash-eyebrow {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -1433,18 +1441,18 @@ button.dl-footer-link:hover {
 
 .dl-dash-asset:last-child { border-bottom: none; }
 .dl-dash-asset-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-.dl-dash-asset-copy strong { font-size: 13px; font-weight: 600; }
-.dl-dash-asset-copy small { color: var(--muted); font-size: 11px; }
+.dl-dash-asset-copy strong { font-size: 14px; font-weight: 600; }
+.dl-dash-asset-copy small { color: var(--muted); font-size: 12px; }
 /* The count and its caption are separate lines: as an inline <strong> and
    <small> in a block they rendered as "1,181Unlabeled". */
 .dl-dash-asset-value {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  font-size: 15px;
+  font-size: 14px;
 }
 
-.dl-dash-asset-value small { color: var(--muted); font-family: var(--font-sans); font-size: 11px; }
+.dl-dash-asset-value small { color: var(--muted); font-family: var(--font-sans); font-size: 12px; }
 
 
 .dl-dash-section-head a { color: var(--dl-accent); font-size: 12px; font-weight: 600; text-decoration: none; }
