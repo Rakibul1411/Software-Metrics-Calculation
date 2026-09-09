@@ -17,6 +17,7 @@ export class ComparisonDetailComponent extends BaseDetailComponent<MetricCompari
   protected readonly listRoute = ['/metric-comparisons'];
   protected readonly missingMessage = 'The comparison was not specified.';
 
+  activeTab: 'metrics' | 'files' = 'metrics';
   metricPage = 1;
   metricPageSize = 10;
   filePage = 1;

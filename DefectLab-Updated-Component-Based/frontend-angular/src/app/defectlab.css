@@ -812,6 +812,8 @@ button.dl-footer-link:hover {
 .dl-tabs { display: flex; gap: var(--space-1); border-bottom: 1px solid var(--line); }
 
 .dl-tabs button {
+  display: inline-flex;
+  align-items: center;
   padding: var(--space-2) var(--space-3);
   border: none;
   border-bottom: 2px solid transparent;
@@ -820,9 +822,33 @@ button.dl-footer-link:hover {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  transition: color .15s ease, border-color .15s ease;
 }
 
-.dl-tabs button.active { border-bottom-color: var(--dl-accent); color: var(--dl-accent); }
+.dl-tabs button:hover:not(.active) { color: var(--ink-heading); }
+.dl-tabs button.active { border-bottom-color: var(--dl-accent); color: var(--dl-accent); font-weight: 600; }
+
+.dl-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: var(--space-2);
+  padding: 1px 7px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--surface-alt);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.dl-tabs button.active .dl-tab-badge {
+  background: var(--dl-accent-soft);
+  color: var(--dl-accent);
+}
+
+.dl-tab-content {
+  margin-top: var(--space-4);
+}
 
 /* ── Tables ────────────────────────────────────────────────────────────── */
 
