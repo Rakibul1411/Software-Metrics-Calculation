@@ -52,18 +52,18 @@ export class ReportsFacade {
   ];
 
   readonly manualColumns: TableColumn[] = [
-    { key: 'classIdentifier', label: 'File / identifier', className: 'dl-mono', sticky: 'start', width: '46%' },
-    { key: 'riskRank', label: 'Rank', width: '10%' },
-    { key: 'defectProbability', label: 'Probability', width: '22%' },
-    { key: 'predictedLabel', label: 'Model prediction', sticky: 'end', width: '22%' }
+    { key: 'classIdentifier', label: 'File / identifier', className: 'dl-mono', sticky: 'start', width: '50%' },
+    { key: 'riskRank', label: 'Risk rank', width: '12%' },
+    { key: 'defectProbability', label: 'Defect probability', width: '18%' },
+    { key: 'predictedLabel', label: 'Model prediction', sticky: 'end', width: '20%' }
   ];
 
   readonly predefinedColumns: TableColumn[] = [
-    { key: 'classIdentifier', label: 'File / identifier', className: 'dl-mono', sticky: 'start', width: '38%' },
-    { key: 'riskRank', label: 'Rank', width: '8%' },
-    { key: 'defectProbability', label: 'Probability', width: '18%' },
-    { key: 'predictedLabel', label: 'Model prediction', width: '18%' },
-    { key: 'actualLabel', label: 'Actual', sticky: 'end', width: '18%' }
+    { key: 'classIdentifier', label: 'File / identifier', className: 'dl-mono', sticky: 'start', width: '40%' },
+    { key: 'riskRank', label: 'Risk rank', width: '12%' },
+    { key: 'defectProbability', label: 'Defect probability', width: '16%' },
+    { key: 'predictedLabel', label: 'Model prediction', width: '16%' },
+    { key: 'actualLabel', label: 'Actual label', sticky: 'end', width: '16%' }
   ];
 
   readonly matchedColumns: TableColumn[] = [
@@ -145,11 +145,11 @@ export class ReportsFacade {
     }
     return [
       { label: 'Source dataset', value: run.sourceDataset.displayName },
+      { label: 'Target dataset', value: this.title(view) },
       { label: 'Dataset family', value: run.modelConfig.datasetFamily },
       { label: 'Model', value: `KNN · K=${run.modelConfig.k}` },
       { label: 'Threshold', value: run.modelConfig.threshold },
-      { label: 'CORAL alignment', value: run.modelConfig.coral ? 'Enabled' : 'Disabled' },
-      { label: 'Random seed', value: run.modelConfig.seed }
+      { label: 'CORAL alignment', value: run.modelConfig.coral ? 'Enabled' : 'Disabled' }
     ];
   }
 

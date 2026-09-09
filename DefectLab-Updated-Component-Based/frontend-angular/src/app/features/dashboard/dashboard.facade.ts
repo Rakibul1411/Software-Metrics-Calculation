@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable, forkJoin } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, forkJoin, of } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import {
   DashboardData,
   DatasetSummary,
@@ -14,6 +14,14 @@ const VOLUME_LIMIT = 8;
 /** Scored runs compared side by side; past three, colour stops being readable. */
 const QUALITY_LIMIT = 3;
 
+export interface TopHotspot {
+  classIdentifier: string;
+  defectProbability: number;
+  riskRank: number;
+  runId: number;
+  targetDatasetName: string;
+}
+
 export interface DefectStats {
   totalRuns: number;
   totalPredictedBuggy: number;
@@ -23,6 +31,8 @@ export interface DefectStats {
   avgF1: number | null;
   avgRocAuc: number | null;
   avgAccuracy: number | null;
+  avgPrecision: number | null;
+  avgRecall: number | null;
   scoredRunsCount: number;
   highestRiskDataset: string | null;
   highestRiskCount: number;
@@ -39,6 +49,7 @@ export interface DashboardView {
   quality: ChartData;
   balance: ChartData;
   defectStats: DefectStats;
+  topHotspots: TopHotspot[];
 }
 
 /**
@@ -56,7 +67,27 @@ export class DashboardFacade {
       data: this.api.dashboard(),
       datasets: this.api.listDatasets(),
       runs: this.api.listPredictionRuns()
-    }).pipe(map(result => this.assemble(result.data, result.datasets, result.runs)));
+    }).pipe(
+      switchMap(result => {
+        const latestRun = result.runs[0];
+        if (latestRun) {
+          return this.api.predictions(latestRun.id, true, 6).pipe(
+            map(predictions => {
+              const hotspots: TopHotspot[] = predictions.map(p => ({
+                classIdentifier: p.classIdentifier,
+                defectProbability: p.defectProbability,
+                riskRank: p.riskRank,
+                runId: latestRun.id,
+                targetDatasetName: latestRun.targetDataset.displayName
+              }));
+              return this.assemble(result.data, result.datasets, result.runs, hotspots);
+            }),
+            catchError(() => of(this.assemble(result.data, result.datasets, result.runs, [])))
+          );
+        }
+        return of(this.assemble(result.data, result.datasets, result.runs, []));
+      })
+    );
   }
 
   originLabel(value: string): string {
@@ -74,7 +105,8 @@ export class DashboardFacade {
   private assemble(
     data: DashboardData,
     datasets: DatasetSummary[],
-    runs: PredictionRunSummary[]
+    runs: PredictionRunSummary[],
+    topHotspots: TopHotspot[] = []
   ): DashboardView {
     return {
       data,
@@ -85,7 +117,8 @@ export class DashboardFacade {
       composition: this.compositionChart(datasets),
       quality: this.qualityChart(runs),
       balance: this.balanceChart(runs),
-      defectStats: this.calculateDefectStats(runs)
+      defectStats: this.calculateDefectStats(runs),
+      topHotspots
     };
   }
 
@@ -137,6 +170,28 @@ export class DashboardFacade {
           ) / accRuns.length
         : null;
 
+    const precRuns = runs.filter(
+      r => r.evaluation && typeof r.evaluation.precision?.value === 'number'
+    );
+    const avgPrecision =
+      precRuns.length > 0
+        ? precRuns.reduce(
+            (sum, r) => sum + (r.evaluation!.precision.value ?? 0),
+            0
+          ) / precRuns.length
+        : null;
+
+    const recRuns = runs.filter(
+      r => r.evaluation && typeof r.evaluation.recall?.value === 'number'
+    );
+    const avgRecall =
+      recRuns.length > 0
+        ? recRuns.reduce(
+            (sum, r) => sum + (r.evaluation!.recall.value ?? 0),
+            0
+          ) / recRuns.length
+        : null;
+
     let highestRiskDataset: string | null = null;
     let highestRiskCount = 0;
     for (const run of runs) {
@@ -156,6 +211,8 @@ export class DashboardFacade {
       avgF1,
       avgRocAuc,
       avgAccuracy,
+      avgPrecision,
+      avgRecall,
       scoredRunsCount,
       highestRiskDataset,
       highestRiskCount

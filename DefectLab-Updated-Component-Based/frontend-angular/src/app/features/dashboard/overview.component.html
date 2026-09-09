@@ -54,6 +54,9 @@
         <span>Model reliability</span>
         <strong>{{ view.defectStats.avgF1 !== null ? (view.defectStats.avgF1 | number:'1.2-2') : '—' }}</strong>
         <small>Avg F1 · ROC-AUC {{ view.defectStats.avgRocAuc !== null ? (view.defectStats.avgRocAuc | number:'1.2-2') : '—' }}</small>
+        <span class="dl-dash-submetric" *ngIf="view.defectStats.avgPrecision !== null">
+          Prec {{ view.defectStats.avgPrecision | number:'1.2-2' }} · Rec {{ view.defectStats.avgRecall | number:'1.2-2' }}
+        </span>
         <a routerLink="/predictions">Model workspace <b>→</b></a>
       </article>
 
@@ -63,6 +66,45 @@
         <strong [title]="view.defectStats.highestRiskDataset || 'No hotspots'">{{ view.defectStats.highestRiskDataset || 'None' }}</strong>
         <small>{{ view.defectStats.highestRiskCount > 0 ? (view.defectStats.highestRiskCount + ' buggy classes') : 'No defect alerts' }}</small>
         <a routerLink="/reports">Inspect target <b>→</b></a>
+      </article>
+    </section>
+
+    <!-- Critical Defect Hotspots Section -->
+    <section class="dl-dash-hotspots-section" *ngIf="view.topHotspots && view.topHotspots.length">
+      <article class="dl-dash-panel">
+        <div class="dl-dash-section-head">
+          <div>
+            <span class="dl-dash-eyebrow">Defect triage</span>
+            <h3>Critical defect hotspots · Top flagged classes</h3>
+          </div>
+          <span class="dl-dash-period">Highest defect probability</span>
+        </div>
+        <span class="dl-dash-run-label">
+          Classes predicted with the highest defect risk in latest evaluation ({{ view.topHotspots[0].targetDatasetName }}).
+          Prioritize these components for unit testing, refactoring, and code review.
+        </span>
+
+        <div class="dl-hotspots-list">
+          <div class="dl-hotspot-item" *ngFor="let item of view.topHotspots">
+            <div class="dl-hotspot-rank">#{{ item.riskRank }}</div>
+            <div class="dl-hotspot-main">
+              <strong class="dl-hotspot-name" [title]="item.classIdentifier">{{ item.classIdentifier }}</strong>
+              <small class="dl-hotspot-target">{{ item.targetDatasetName }} · Prediction run #{{ item.runId }}</small>
+            </div>
+            <div class="dl-hotspot-prob-box">
+              <span class="dl-hotspot-prob-number">{{ (item.defectProbability * 100) | number:'1.1-1' }}% prob</span>
+              <div class="dl-prob-track">
+                <span class="dl-prob-fill buggy" [style.width.%]="item.defectProbability * 100"></span>
+              </div>
+            </div>
+            <div class="dl-hotspot-action">
+              <ui-badge tone="amber">Buggy (1)</ui-badge>
+              <a routerLink="/reports" class="dl-hotspot-link" title="Inspect in Reports">
+                <ui-icon name="chevron-right" [size]="14"></ui-icon>
+              </a>
+            </div>
+          </div>
+        </div>
       </article>
     </section>
 
