@@ -42,13 +42,16 @@
      (CVD ΔE 21.1 / 24.4 light, 18.9 / 14.8 dark — all ≥8; normal-vision
      24.8 / 28.1 light, 23.1 / 28.4 dark — all ≥15).
 
-     Each fill carries the ink that clears contrast ON it, so an inline value
-     is never light-on-light or dark-on-dark. */
-  --viz-1: #6c5dd3;
-  --viz-3: #b4a8f0;
-  --viz-alert: #c43e50;
+  /* Chart series — standard professional blue visualization palette.
+     Categorical values (manual vs predefined) use two distinct steps of
+     standard chart blue that maintain optimal contrast against both light
+     and dark backgrounds.
+     --viz-alert indicates defect / predicted-buggy metrics. */
+  --viz-1: #2563eb;
+  --viz-3: #93c5fd;
+  --viz-alert: #dc2626;
   --viz-ink-1: #ffffff;
-  --viz-ink-3: #0f2744;
+  --viz-ink-3: #1e3a8a;
   --viz-ink-alert: #ffffff;
 }
 
@@ -65,14 +68,11 @@
   --dl-sidebar-active: #ffffff;
   --dl-row-hover: rgba(255, 255, 255, .03);
 
-  /* Same indigo identity, re-stepped for the dark surface rather than
-     swapped: the light step keeps the hue readable (4.99:1) and the deep
-     step separates from it clearly (CVD ΔE 18.0) without the two visually
-     merging into the near-black canvas. */
-  --viz-1: #8c7ae6;
-  --viz-3: #4c3fb0;
-  --viz-alert: #d6336c;
-  --viz-ink-1: #1f2937;
+  /* Standard vibrant chart blue calibrated for dark theme backgrounds */
+  --viz-1: #3b82f6;
+  --viz-3: #1d4ed8;
+  --viz-alert: #ef4444;
+  --viz-ink-1: #ffffff;
   --viz-ink-3: #ffffff;
   --viz-ink-alert: #ffffff;
 }
@@ -1306,13 +1306,13 @@ button.dl-footer-link:hover {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-alt);
+  min-width: 0;
 }
 
 /* A rule above each subsequent widget row, instead of the gap between
    separate cards doing that job. */
 .dl-dash-analytics-grid,
-.dl-dash-lists,
-.dl-dash-workflow {
+.dl-dash-lists {
   padding-top: var(--space-4);
   border-top: 1px solid var(--line);
 }
@@ -1446,25 +1446,6 @@ button.dl-footer-link:hover {
 
 .dl-dash-asset-value small { color: var(--muted); font-family: var(--font-sans); font-size: 11px; }
 
-/* Horizontal pipeline rail: numbered steps joined by <i> connectors. */
-.dl-dash-workflow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.dl-dash-workflow > div { display: flex; min-width: 0; flex-direction: column; }
-.dl-dash-workflow > div > span { color: var(--dl-accent); font-family: var(--font-mono); font-size: 10px; font-weight: 700; }
-.dl-dash-workflow > div > strong { font-size: 13px; font-weight: 600; }
-.dl-dash-workflow > div > small { color: var(--muted); font-size: 11px; }
-
-.dl-dash-workflow > i {
-  flex: 1;
-  min-width: 20px;
-  height: 1px;
-  background: var(--line-strong);
-}
 
 .dl-dash-section-head a { color: var(--dl-accent); font-size: 12px; font-weight: 600; text-decoration: none; }
 .dl-dash-section-head a:hover { text-decoration: underline; }
@@ -1473,7 +1454,7 @@ button.dl-footer-link:hover {
 
 /* Two panels sharing one grid column, so a short chart beside a tall one
    leaves usable content rather than an empty half-card. */
-.dl-dash-stack { display: flex; flex-direction: column; gap: var(--space-4); }
+.dl-dash-stack { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .dl-dash-stack > * { flex: 0 0 auto; }
 .dl-dash-stack > *:last-child { flex: 1 1 auto; }
 
@@ -1482,6 +1463,9 @@ button.dl-footer-link:hover {
 .dl-dash-prediction-actions { margin-top: auto; }
 
 .dl-dash-period {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   align-self: flex-start;
   height: var(--dl-h-control-sm);
   padding: 0 var(--space-3);
