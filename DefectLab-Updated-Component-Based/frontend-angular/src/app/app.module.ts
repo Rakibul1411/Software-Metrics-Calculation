@@ -1,10 +1,12 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { HttpClientModule } from '@angular/common/http';
+import { DatePipe } from '@angular/common';
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
+import { ErrorToastInterceptor } from './core/interceptors/error-toast.interceptor';
 import { AuthPageComponent } from './features/auth/auth-page.component';
 import { AnalyzeComponent } from './features/analysis/analyze.component';
 import { AccountComponent } from './features/account/account.component';
@@ -22,6 +24,7 @@ import { ReportDetailComponent } from './features/reports/report-detail.componen
 import { ReportsComponent } from './features/reports/reports.component';
 import { ShellComponent } from './features/shell/shell.component';
 import { UiBadgeComponent } from './shared/ui-badge/ui-badge.component';
+import { UiBarChartComponent } from './shared/ui-bar-chart/ui-bar-chart.component';
 import { UiButtonComponent } from './shared/ui-button/ui-button.component';
 import { UiCardComponent } from './shared/ui-card/ui-card.component';
 import { UiConfirmDialogComponent } from './shared/ui-confirm-dialog/ui-confirm-dialog.component';
@@ -32,6 +35,7 @@ import { UiIconComponent } from './shared/ui-icon/ui-icon.component';
 import { UiFilePickerComponent } from './shared/ui-file-picker/ui-file-picker.component';
 import { UiInputComponent } from './shared/ui-input/ui-input.component';
 import { UiMetricCardComponent } from './shared/ui-metric-card/ui-metric-card.component';
+import { UiPaginationComponent } from './shared/ui-pagination/ui-pagination.component';
 import { UiRadioGroupComponent } from './shared/ui-radio-group/ui-radio-group.component';
 import { UiSearchToggleComponent } from './shared/ui-search-toggle/ui-search-toggle.component';
 import { UiSelectComponent } from './shared/ui-select/ui-select.component';
@@ -46,6 +50,7 @@ import { UiToastComponent } from './shared/ui-toast/ui-toast.component';
     UiButtonComponent,
     UiCardComponent,
     UiBadgeComponent,
+    UiBarChartComponent,
     UiFilePickerComponent,
     UiMetricCardComponent,
     UiStateComponent,
@@ -54,6 +59,7 @@ import { UiToastComponent } from './shared/ui-toast/ui-toast.component';
     UiDetailFieldsComponent,
     UiDownloadMenuComponent,
     UiInputComponent,
+    UiPaginationComponent,
     UiRadioGroupComponent,
     UiSearchToggleComponent,
     UiSelectComponent,
@@ -79,7 +85,10 @@ import { UiToastComponent } from './shared/ui-toast/ui-toast.component';
     AccountComponent
   ],
   imports: [BrowserModule, HttpClientModule, FormsModule, AppRoutingModule],
-  providers: [],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: ErrorToastInterceptor, multi: true },
+    DatePipe
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule {}

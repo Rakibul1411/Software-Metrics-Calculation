@@ -1,0 +1,51 @@
+<div class="dl-chart">
+  <div class="dl-chart-legend" *ngIf="showLegend">
+    <span *ngFor="let entry of data.series; let index = index">
+      <i [class]="'dl-viz-fill-' + legendSlot(index)"></i>{{ entry.label }}
+    </span>
+  </div>
+
+  <div class="dl-chart-plot" #plot>
+    <svg [attr.viewBox]="'0 0 ' + viewWidth + ' ' + viewHeight"
+         role="img" [attr.aria-label]="caption" preserveAspectRatio="xMidYMid meet">
+      <line *ngFor="let tick of ticks" class="dl-chart-grid"
+            [attr.x1]="tick.line?.x1" [attr.y1]="tick.line?.y1"
+            [attr.x2]="tick.line?.x2" [attr.y2]="tick.line?.y2"></line>
+
+      <text *ngFor="let tick of ticks" class="dl-chart-axis"
+            [attr.x]="tick.x" [attr.y]="tick.y" [attr.text-anchor]="tick.anchor">
+        {{ tick.label }}
+      </text>
+
+      <text *ngFor="let tick of categoryTicks" class="dl-chart-axis"
+            [attr.x]="tick.x" [attr.y]="tick.y" [attr.text-anchor]="tick.anchor">
+        {{ tick.label }}
+      </text>
+
+      <g *ngFor="let mark of marks; trackBy: trackMark">
+        <path [class]="'dl-chart-mark dl-viz-fill-' + mark.slot"
+              [attr.d]="mark.path" tabindex="0"
+              [class.dl-chart-mark-active]="hovered?.key === mark.key"
+              (mouseenter)="show(mark)" (mouseleave)="hide()"
+              (focus)="show(mark)" (blur)="hide()">
+          <title>{{ mark.category }} · {{ mark.series }}: {{ mark.text }}</title>
+        </path>
+
+        <text *ngIf="mark.label"
+              [class]="mark.labelInside ? 'dl-chart-value dl-chart-value-on-' + mark.slot : 'dl-chart-value'"
+              [attr.x]="mark.labelX" [attr.y]="mark.labelY"
+              [attr.text-anchor]="mark.labelAnchor"
+              [attr.dominant-baseline]="orientation === 'horizontal' ? 'middle' : 'auto'">
+          {{ mark.label }}
+        </text>
+      </g>
+    </svg>
+
+    <div class="dl-chart-tooltip" *ngIf="hovered as mark"
+         [style.left.%]="tooltipLeft" [style.top.%]="tooltipTop">
+      <strong>{{ mark.text }}</strong>
+      <span><i [class]="'dl-viz-fill-' + mark.slot"></i>{{ mark.series }}</span>
+      <small>{{ mark.category }}</small>
+    </div>
+  </div>
+</div>

@@ -3,54 +3,26 @@ package org.metrics.defectlab.prediction.domain;
 import java.time.Instant;
 import java.util.UUID;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-import org.hibernate.annotations.ColumnTransformer;
-
-@Entity
-@Table(name = "prediction_runs")
+/**
+ * Enterprise Business Rule: a completed prediction run, free of any
+ * persistence or framework annotations.
+ */
 public class PredictionRun {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private final Long id;
+    private final Long userId;
+    private final UUID comparisonGroupId;
+    private final Long sourceDatasetId;
+    private final Long targetDatasetId;
+    private final String modelConfig;
+    private final String predictionFilePath;
+    private final String reportFilePath;
+    private final Instant createdAt;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
-
-    @Column(name = "comparison_group_id")
-    private UUID comparisonGroupId;
-
-    @Column(name = "source_dataset_id", nullable = false)
-    private Long sourceDatasetId;
-
-    @Column(name = "target_dataset_id", nullable = false)
-    private Long targetDatasetId;
-
-    @Column(name = "model_config", nullable = false, columnDefinition = "jsonb")
-    @ColumnTransformer(read = "model_config::text", write = "?::jsonb")
-    private String modelConfig;
-
-    @Column(name = "prediction_file_path", columnDefinition = "text")
-    private String predictionFilePath;
-
-    @Column(name = "report_file_path", nullable = false, columnDefinition = "text")
-    private String reportFilePath;
-
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
-
-    protected PredictionRun() {
-    }
-
-    public PredictionRun(Long userId, UUID comparisonGroupId, Long sourceDatasetId,
+    public PredictionRun(Long id, Long userId, UUID comparisonGroupId, Long sourceDatasetId,
                          Long targetDatasetId, String modelConfig,
-                         String predictionFilePath, String reportFilePath) {
+                         String predictionFilePath, String reportFilePath, Instant createdAt) {
+        this.id = id;
         this.userId = userId;
         this.comparisonGroupId = comparisonGroupId;
         this.sourceDatasetId = sourceDatasetId;
@@ -58,7 +30,15 @@ public class PredictionRun {
         this.modelConfig = modelConfig;
         this.predictionFilePath = predictionFilePath;
         this.reportFilePath = reportFilePath;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
+    }
+
+    /** A brand-new run; the id is assigned once the repository persists it. */
+    public static PredictionRun newRun(Long userId, UUID comparisonGroupId, Long sourceDatasetId,
+                         Long targetDatasetId, String modelConfig,
+                         String predictionFilePath, String reportFilePath) {
+        return new PredictionRun(null, userId, comparisonGroupId, sourceDatasetId, targetDatasetId,
+                modelConfig, predictionFilePath, reportFilePath, Instant.now());
     }
 
     public Long getId() { return id; }

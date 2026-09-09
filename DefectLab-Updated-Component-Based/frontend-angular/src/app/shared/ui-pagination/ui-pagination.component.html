@@ -1,0 +1,22 @@
+<div class="dl-pagination">
+  <div class="dl-pagination-size">
+    <span>Rows per page</span>
+    <ui-select [options]="sizeOptions" [value]="pageSize"
+               (valueChange)="onSizeChange($event)">
+    </ui-select>
+  </div>
+
+  <span class="dl-pagination-range">
+    {{ firstRow }}–{{ lastRow }} of {{ total }} {{ noun }}
+  </span>
+
+  <div class="dl-pagination-nav">
+    <ui-button variant="ghost" size="sm" icon="arrow-left"
+               title="Previous page" ariaLabel="Previous page"
+               [disabled]="!hasPrevious" (pressed)="previous()"></ui-button>
+    <span>Page {{ page }} of {{ totalPages }}</span>
+    <ui-button variant="ghost" size="sm" icon="arrow-right"
+               title="Next page" ariaLabel="Next page"
+               [disabled]="!hasNext" (pressed)="next()"></ui-button>
+  </div>
+</div>

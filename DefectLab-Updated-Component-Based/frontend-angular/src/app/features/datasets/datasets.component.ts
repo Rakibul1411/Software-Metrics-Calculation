@@ -1,81 +1,56 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
+import { Observable } from 'rxjs';
+import { BaseListComponent } from '../../core/base';
+import {
+  FAMILY_FILTER_OPTIONS,
+  ORIGIN_FILTER_OPTIONS
+} from '../../core/constants/dataset-filter.options';
 import { DatasetFamily, DatasetSummary } from '../../core/models/defectlab.model';
-import { DefectLabApiService } from '../../core/services/defectlab-api.service';
-import { SelectOption } from '../../shared/ui-select/ui-select.model';
-import { TableColumn } from '../../shared/ui-table/ui-table.model';
+import { DatasetsFacade } from './datasets.facade';
 
 @Component({
   selector: 'app-datasets',
   standalone: false,
   templateUrl: './datasets.component.html'
 })
-export class DatasetsComponent implements OnInit {
-  datasets: DatasetSummary[] = [];
-  loading = true;
-  loadError = '';
-  search = '';
+export class DatasetsComponent extends BaseListComponent<DatasetSummary> {
   familyFilter = '';
   originFilter = '';
 
-  readonly familyFilterOptions: SelectOption[] = [
-    { value: '', label: 'All families' },
-    { value: 'PROMISE', label: 'PROMISE' },
-    { value: 'AEEEM', label: 'AEEEM' }
-  ];
+  readonly familyFilterOptions = FAMILY_FILTER_OPTIONS;
+  readonly originFilterOptions = ORIGIN_FILTER_OPTIONS;
 
-  readonly originFilterOptions: SelectOption[] = [
-    { value: '', label: 'All origins' },
-    { value: 'PREDEFINED', label: 'Predefined dataset' },
-    { value: 'MANUAL', label: 'Manually extracted' }
-  ];
-
-  readonly columns: TableColumn[] = [
-    { key: 'projectName', label: 'Project Name', sticky: 'start', width: '28%' },
-    { key: 'datasetFamily', label: 'Metrics Family', width: '10%' },
-    { key: 'datasetType', label: 'Data Source', width: '14%' },
-    { key: 'hasActualLabel', label: 'Labeled', width: '10%' },
-    { key: 'totalFiles', label: 'Instances', align: 'right', width: '8%' },
-    { key: 'totalMetrics', label: 'Features', align: 'right', width: '9%' },
-    { key: 'createdAt', label: 'Created At', width: '13%' },
-    { key: 'actions', label: 'Actions', sticky: 'end', className: 'dl-col-actions', width: '8%' }
-  ];
-
-  constructor(private readonly api: DefectLabApiService) {}
-
-  ngOnInit(): void { this.load(); }
-
-  get filtered(): DatasetSummary[] {
-    const query = this.search.trim().toLowerCase();
-    return this.datasets.filter(item =>
-      (!query || `${item.projectName} ${item.projectVersion || ''}`.toLowerCase().includes(query)) &&
-      (!this.familyFilter || item.datasetFamily === this.familyFilter) &&
-      (!this.originFilter || item.datasetType === this.originFilter));
+  constructor(readonly facade: DatasetsFacade) {
+    super();
   }
 
-  load(): void {
-    this.loading = true;
-    this.loadError = '';
-    this.api.listDatasets().subscribe({
-      next: rows => {
-        this.datasets = rows;
-        this.loading = false;
-      },
-      error: error => {
-        this.loadError = error?.error?.error ?? 'Could not load metric storage.';
-        this.loading = false;
-      }
-    });
+  get columns() {
+    return this.facade.columns;
   }
 
   countFamily(family: DatasetFamily): number {
-    return this.datasets.filter(item => item.datasetFamily === family).length;
+    return this.facade.countByFamily(this.rows, family);
   }
 
   onFamilyFilterChange(value: string | number | null): void {
     this.familyFilter = (value as string) ?? '';
+    this.resetPage();
   }
 
   onOriginFilterChange(value: string | number | null): void {
     this.originFilter = (value as string) ?? '';
+    this.resetPage();
+  }
+
+  protected fetch(): Observable<DatasetSummary[]> {
+    return this.facade.list();
+  }
+
+  protected override matches(row: DatasetSummary, query: string): boolean {
+    return this.facade.matches(row, {
+      search: query,
+      family: this.familyFilter,
+      origin: this.originFilter
+    });
   }
 }

@@ -14,13 +14,15 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import org.metrics.defectlab.auth.security.CurrentUser;
-import org.metrics.defectlab.dataset.application.DatasetService;
-import org.metrics.defectlab.dataset.application.DatasetSummaryMapper;
-import org.metrics.defectlab.dataset.domain.DatasetQuality;
 import org.metrics.defectlab.dataset.domain.DatasetTable;
-import org.metrics.defectlab.dataset.domain.FeatureProfile;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
-import org.metrics.defectlab.dataset.infrastructure.DatasetFileWriter;
+import org.metrics.defectlab.dataset.usecase.DeleteDatasetUseCase;
+import org.metrics.defectlab.dataset.usecase.GetDatasetUseCase;
+import org.metrics.defectlab.dataset.usecase.DatasetSummaryMapper;
+import org.metrics.defectlab.dataset.usecase.ListDatasetsUseCase;
+import org.metrics.defectlab.dataset.usecase.LoadDatasetTableUseCase;
+import org.metrics.defectlab.dataset.usecase.UploadDatasetUseCase;
+import org.metrics.defectlab.dataset.usecase.UploadedFile;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -36,17 +38,29 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+/** Interface Adapter: translates HTTP requests into use-case calls and back. */
 @RestController
 @RequestMapping("/api/datasets")
 public class DatasetController {
 
     private static final int PREVIEW_ROWS = 25;
 
-    private final DatasetService datasetService;
+    private final UploadDatasetUseCase uploadDatasetUseCase;
+    private final ListDatasetsUseCase listDatasetsUseCase;
+    private final GetDatasetUseCase getDatasetUseCase;
+    private final LoadDatasetTableUseCase loadDatasetTableUseCase;
+    private final DeleteDatasetUseCase deleteDatasetUseCase;
     private final CurrentUser currentUser;
 
-    public DatasetController(DatasetService datasetService, CurrentUser currentUser) {
-        this.datasetService = datasetService;
+    public DatasetController(UploadDatasetUseCase uploadDatasetUseCase,
+            ListDatasetsUseCase listDatasetsUseCase, GetDatasetUseCase getDatasetUseCase,
+            LoadDatasetTableUseCase loadDatasetTableUseCase, DeleteDatasetUseCase deleteDatasetUseCase,
+            CurrentUser currentUser) {
+        this.uploadDatasetUseCase = uploadDatasetUseCase;
+        this.listDatasetsUseCase = listDatasetsUseCase;
+        this.getDatasetUseCase = getDatasetUseCase;
+        this.loadDatasetTableUseCase = loadDatasetTableUseCase;
+        this.deleteDatasetUseCase = deleteDatasetUseCase;
         this.currentUser = currentUser;
     }
 
@@ -64,10 +78,12 @@ public class DatasetController {
             HttpServletRequest request) throws IOException {
         Long userId = currentUser.requireUserId(request);
         MetricDataset.Family family = parseFamily(familyValue);
-        MetricDataset dataset = datasetService.createFromUpload(
-                userId, projectName, projectVersion, parseType(typeValue), datasetFile);
+        MetricDataset dataset = uploadDatasetUseCase.upload(
+                userId, projectName, projectVersion, parseType(typeValue),
+                new UploadedFile(datasetFile.getInputStream(),
+                        datasetFile.getOriginalFilename(), datasetFile.getSize()));
         if (dataset.getDatasetFamily() != family) {
-            datasetService.delete(userId, dataset.getId());
+            deleteDatasetUseCase.delete(userId, dataset.getId());
             throw new IllegalArgumentException(
                     "The file contains " + dataset.getDatasetFamily()
                     + " metrics but " + family + " was selected.");
@@ -79,7 +95,7 @@ public class DatasetController {
     public ResponseEntity<List<Map<String, Object>>> list(HttpServletRequest request) {
         Long userId = currentUser.requireUserId(request);
         List<Map<String, Object>> result = new ArrayList<>();
-        for (MetricDataset dataset : datasetService.list(userId)) {
+        for (MetricDataset dataset : listDatasetsUseCase.list(userId)) {
             result.add(DatasetSummaryMapper.toSummary(dataset));
         }
         return ResponseEntity.ok(result);
@@ -88,40 +104,23 @@ public class DatasetController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> detail(
             @PathVariable("id") Long id, HttpServletRequest request) {
-        MetricDataset dataset = datasetService.require(
+        MetricDataset dataset = getDatasetUseCase.require(
                 currentUser.requireUserId(request), id);
         Map<String, Object> body = DatasetSummaryMapper.toSummary(dataset);
-        body.put("features", datasetService.profileFor(dataset).getFeatures());
+        body.put("features", loadDatasetTableUseCase.profileFor(dataset).getFeatures());
         return ResponseEntity.ok(body);
     }
 
     @GetMapping("/{id}/preview")
     public ResponseEntity<Map<String, Object>> preview(
             @PathVariable("id") Long id, HttpServletRequest request) throws IOException {
-        MetricDataset dataset = datasetService.require(
+        MetricDataset dataset = getDatasetUseCase.require(
                 currentUser.requireUserId(request), id);
-        DatasetTable table = datasetService.load(dataset);
+        DatasetTable table = loadDatasetTableUseCase.load(dataset);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("headers", table.getHeaders());
         body.put("rows", table.getRows().subList(0, Math.min(PREVIEW_ROWS, table.getRowCount())));
         body.put("totalRows", table.getRowCount());
-        return ResponseEntity.ok(body);
-    }
-
-    @GetMapping("/{id}/quality")
-    public ResponseEntity<Map<String, Object>> quality(
-            @PathVariable("id") Long id, HttpServletRequest request) throws IOException {
-        MetricDataset dataset = datasetService.require(
-                currentUser.requireUserId(request), id);
-        DatasetTable table = datasetService.load(dataset);
-        FeatureProfile profile = datasetService.profileFor(dataset);
-        DatasetQuality quality = DatasetQuality.inspect(table, profile);
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("usable", quality.isUsable());
-        body.put("blockingIssues", quality.getBlockingIssues());
-        body.put("warnings", quality.getWarnings());
-        body.put("columns", quality.getColumns());
-        body.put("hasActualLabel", dataset.hasActualLabel());
         return ResponseEntity.ok(body);
     }
 
@@ -130,7 +129,7 @@ public class DatasetController {
             @PathVariable("id") Long id,
             @RequestParam(value = "format", required = false) String format,
             HttpServletRequest request) throws IOException {
-        MetricDataset dataset = datasetService.require(
+        MetricDataset dataset = getDatasetUseCase.require(
                 currentUser.requireUserId(request), id);
         Path file = Paths.get(dataset.getMetricsFilePath());
         if (!Files.exists(file)) {
@@ -148,7 +147,7 @@ public class DatasetController {
                     .body(new FileSystemResource(file.toFile()));
         }
 
-        DatasetTable table = datasetService.load(dataset);
+        DatasetTable table = loadDatasetTableUseCase.load(dataset);
         String converted = "arff".equals(requestedFormat)
                 ? DatasetFileWriter.toArff(table, DatasetFileWriter.sanitizedRelationName(
                         dataset.getProjectName(), dataset.getProjectVersion()))
@@ -163,7 +162,7 @@ public class DatasetController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> delete(
             @PathVariable("id") Long id, HttpServletRequest request) throws IOException {
-        datasetService.delete(currentUser.requireUserId(request), id);
+        deleteDatasetUseCase.delete(currentUser.requireUserId(request), id);
         return ResponseEntity.ok(Map.of("deleted", true));
     }
 

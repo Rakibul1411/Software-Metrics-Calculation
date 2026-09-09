@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,7 +28,7 @@ class FileStorageServiceFolderTest {
                 "apache-ant-1.7.0/src/main/demo/Core.java",
                 "apache-ant-1.7.0/src/main/demo/util/Helper.java");
 
-        Path root = new FileStorageService().storeProjectFolder(files, paths);
+        Path root = new FileStorageService(new StorageRoot("storage")).storeProjectFolder(files, paths);
         try {
             assertTrue(Files.isRegularFile(
                     root.resolve("apache-ant-1.7.0/src/main/demo/Core.java")));
@@ -47,7 +48,7 @@ class FileStorageServiceFolderTest {
         };
         List<String> paths = List.of("release/demo/Core.java", "release/build.xml");
 
-        Path root = new FileStorageService().storeProjectFolder(files, paths);
+        Path root = new FileStorageService(new StorageRoot("storage")).storeProjectFolder(files, paths);
         try {
             assertTrue(Files.isRegularFile(root.resolve("release/demo/Core.java")));
             assertFalse(Files.exists(root.resolve("release/build.xml")));
@@ -60,7 +61,7 @@ class FileStorageServiceFolderTest {
     void containsPathsThatTryToEscapeTheUploadRoot() {
         MultipartFile[] files = {javaFile("Evil.java", "package x; public class Evil { }")};
 
-        assertThrows(IOException.class, () -> new FileStorageService().storeProjectFolder(
+        assertThrows(IOException.class, () -> new FileStorageService(new StorageRoot("storage")).storeProjectFolder(
                 files, List.of("../../../../escaped/Evil.java")));
     }
 
@@ -82,15 +83,15 @@ class FileStorageServiceFolderTest {
                 javaFile("Helper.java", "package demo; public class Helper { }")
         };
 
-        assertThrows(IllegalArgumentException.class, () -> new FileStorageService()
+        assertThrows(IllegalArgumentException.class, () -> new FileStorageService(new StorageRoot("storage"))
                 .storeProjectFolder(files, List.of("release/demo/Core.java")));
-        assertThrows(IllegalArgumentException.class, () -> new FileStorageService()
+        assertThrows(IllegalArgumentException.class, () -> new FileStorageService(new StorageRoot("storage"))
                 .storeProjectFolder(files, null));
     }
 
     private static FileStorageService newService() {
         try {
-            return new FileStorageService();
+            return new FileStorageService(new StorageRoot("storage"));
         } catch (IOException exception) {
             throw new IllegalStateException(exception);
         }

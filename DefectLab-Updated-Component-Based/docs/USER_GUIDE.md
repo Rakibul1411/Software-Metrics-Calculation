@@ -42,8 +42,8 @@ Select three compatible datasets:
 The predefined dropdown narrows automatically after choosing a manual target.
 
 Choose K from 1 to 5 and whether to apply dataset alignment, then adjust the
-decision threshold if needed. Log1p runs automatically; shallow CORAL runs only
-when the alignment checkbox is checked.
+decision threshold if needed. Standardization always runs automatically;
+shallow CORAL runs only when the alignment checkbox is checked.
 
 Running again with another alignment or threshold setting is safe: the old
 result and original target stay unchanged.

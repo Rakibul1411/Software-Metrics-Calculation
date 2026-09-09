@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.UNAUTHORIZED, exception.getMessage());
     }
 
-    @ExceptionHandler(org.metrics.defectlab.auth.application.AuthService.InvalidCredentialsException.class)
+    @ExceptionHandler(org.metrics.defectlab.auth.usecase.exception.InvalidCredentialsException.class)
     public ResponseEntity<Map<String, String>> handleInvalidCredentials(RuntimeException exception) {
         return error(HttpStatus.UNAUTHORIZED, exception.getMessage());
     }
@@ -47,7 +47,7 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, exception.getMessage());
     }
 
-    @ExceptionHandler(org.metrics.defectlab.prediction.infrastructure.MlServiceClient.MlServiceException.class)
+    @ExceptionHandler(org.metrics.defectlab.prediction.usecase.port.MlServiceClient.MlServiceException.class)
     public ResponseEntity<Map<String, String>> handleMlValidation(RuntimeException exception) {
         return error(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
     }

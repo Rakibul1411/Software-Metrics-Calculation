@@ -1,23 +1,20 @@
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { BaseFormComponent } from '../../core/base';
 import { DatasetFamily, DatasetType } from '../../core/models/defectlab.model';
-import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { RadioOption } from '../../shared/ui-radio-group/ui-radio-group.model';
-import { ToastService } from '../../shared/ui-toast/toast.service';
+import { DatasetsFacade } from './datasets.facade';
 
 @Component({
   selector: 'app-dataset-create',
   standalone: false,
   templateUrl: './dataset-create.component.html'
 })
-export class DatasetCreateComponent {
+export class DatasetCreateComponent extends BaseFormComponent {
   projectName = '';
   projectVersion = '';
   family: DatasetFamily = 'PROMISE';
   origin: DatasetType = 'PREDEFINED';
   file: File | null = null;
-  uploading = false;
-  uploadError = '';
 
   readonly familyOptions: RadioOption[] = [
     { value: 'PROMISE', label: 'PROMISE' },
@@ -29,14 +26,15 @@ export class DatasetCreateComponent {
     { value: 'MANUAL', label: 'Manually extracted' }
   ];
 
-  constructor(
-    private readonly api: DefectLabApiService,
-    private readonly router: Router,
-    private readonly toast: ToastService
-  ) {}
+  protected override readonly listRoute = ['/datasets'];
+
+  constructor(private readonly facade: DatasetsFacade) {
+    super();
+  }
 
   get canSubmit(): boolean {
-    return !!this.file && this.projectName.trim().length > 0
+    return !!this.file
+      && this.projectName.trim().length > 0
       && this.projectVersion.trim().length > 0;
   }
 
@@ -53,31 +51,17 @@ export class DatasetCreateComponent {
   }
 
   upload(): void {
-    if (!this.canSubmit || this.uploading) return;
-    this.uploading = true;
-    this.uploadError = '';
-    this.api.uploadDataset({
-      file: this.file!,
-      projectName: this.projectName,
-      projectVersion: this.projectVersion,
-      family: this.family,
-      type: this.origin
-    }).subscribe({
-      next: () => {
-        this.uploading = false;
-        this.toast.success('Dataset added successfully.');
-        this.router.navigate(['/datasets']);
-      },
-      error: error => {
-        const message = error?.error?.error ?? 'Dataset upload failed.';
-        this.uploadError = message;
-        this.uploading = false;
-        this.toast.error(message);
-      }
-    });
-  }
-
-  back(): void {
-    this.router.navigate(['/datasets']);
+    if (!this.canSubmit) {
+      return;
+    }
+    this.submitWith(
+      this.facade.upload({
+        file: this.file!,
+        projectName: this.projectName,
+        projectVersion: this.projectVersion,
+        family: this.family,
+        type: this.origin
+      }),
+      { success: 'Dataset added successfully.', redirect: this.listRoute });
   }
 }

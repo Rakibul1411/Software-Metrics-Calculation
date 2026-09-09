@@ -8,8 +8,14 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import org.metrics.defectlab.auth.security.CurrentUser;
-import org.metrics.defectlab.comparison.application.MetricComparisonService;
 import org.metrics.defectlab.comparison.domain.MetricComparison;
+import org.metrics.defectlab.comparison.usecase.DeleteComparisonUseCase;
+import org.metrics.defectlab.comparison.usecase.ExecuteComparisonUseCase;
+import org.metrics.defectlab.comparison.usecase.GetComparisonReportFileUseCase;
+import org.metrics.defectlab.comparison.usecase.GetComparisonSummaryUseCase;
+import org.metrics.defectlab.comparison.usecase.GetComparisonUseCase;
+import org.metrics.defectlab.comparison.usecase.GetEligiblePairsUseCase;
+import org.metrics.defectlab.comparison.usecase.ListComparisonsUseCase;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -23,16 +29,36 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/** Interface Adapter: translates HTTP requests into use-case calls and back. */
 @RestController
 @RequestMapping("/api/metric-comparisons")
 public class MetricComparisonController {
 
-    private final MetricComparisonService comparisonService;
+    private final ExecuteComparisonUseCase executeComparisonUseCase;
+    private final ListComparisonsUseCase listComparisonsUseCase;
+    private final GetEligiblePairsUseCase getEligiblePairsUseCase;
+    private final GetComparisonUseCase getComparisonUseCase;
+    private final GetComparisonSummaryUseCase getComparisonSummaryUseCase;
+    private final DeleteComparisonUseCase deleteComparisonUseCase;
+    private final GetComparisonReportFileUseCase getComparisonReportFileUseCase;
     private final CurrentUser currentUser;
 
     public MetricComparisonController(
-            MetricComparisonService comparisonService, CurrentUser currentUser) {
-        this.comparisonService = comparisonService;
+            ExecuteComparisonUseCase executeComparisonUseCase,
+            ListComparisonsUseCase listComparisonsUseCase,
+            GetEligiblePairsUseCase getEligiblePairsUseCase,
+            GetComparisonUseCase getComparisonUseCase,
+            GetComparisonSummaryUseCase getComparisonSummaryUseCase,
+            DeleteComparisonUseCase deleteComparisonUseCase,
+            GetComparisonReportFileUseCase getComparisonReportFileUseCase,
+            CurrentUser currentUser) {
+        this.executeComparisonUseCase = executeComparisonUseCase;
+        this.listComparisonsUseCase = listComparisonsUseCase;
+        this.getEligiblePairsUseCase = getEligiblePairsUseCase;
+        this.getComparisonUseCase = getComparisonUseCase;
+        this.getComparisonSummaryUseCase = getComparisonSummaryUseCase;
+        this.deleteComparisonUseCase = deleteComparisonUseCase;
+        this.getComparisonReportFileUseCase = getComparisonReportFileUseCase;
         this.currentUser = currentUser;
     }
 
@@ -40,21 +66,21 @@ public class MetricComparisonController {
     public ResponseEntity<Map<String, Object>> create(
             @RequestBody Map<String, Object> body, HttpServletRequest request)
             throws IOException {
-        return ResponseEntity.ok(comparisonService.execute(
+        return ResponseEntity.ok(executeComparisonUseCase.execute(
                 currentUser.requireUserId(request), body));
     }
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> list(HttpServletRequest request) {
         Long userId = currentUser.requireUserId(request);
-        return ResponseEntity.ok(comparisonService.list(userId).stream()
-                .map(row -> comparisonService.summary(userId, row)).toList());
+        return ResponseEntity.ok(listComparisonsUseCase.list(userId).stream()
+                .map(row -> getComparisonSummaryUseCase.summary(userId, row)).toList());
     }
 
     @GetMapping("/eligible-pairs")
     public ResponseEntity<List<Map<String, Object>>> eligiblePairs(
             HttpServletRequest request) {
-        return ResponseEntity.ok(comparisonService.eligiblePairs(
+        return ResponseEntity.ok(getEligiblePairsUseCase.eligiblePairs(
                 currentUser.requireUserId(request)));
     }
 
@@ -62,21 +88,21 @@ public class MetricComparisonController {
     public ResponseEntity<Map<String, Object>> detail(
             @PathVariable("id") Long id, HttpServletRequest request) {
         Long userId = currentUser.requireUserId(request);
-        MetricComparison comparison = comparisonService.require(userId, id);
-        return ResponseEntity.ok(comparisonService.detail(userId, comparison));
+        MetricComparison comparison = getComparisonUseCase.require(userId, id);
+        return ResponseEntity.ok(getComparisonSummaryUseCase.detail(userId, comparison));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> delete(
             @PathVariable("id") Long id, HttpServletRequest request) throws IOException {
-        comparisonService.delete(currentUser.requireUserId(request), id);
+        deleteComparisonUseCase.delete(currentUser.requireUserId(request), id);
         return ResponseEntity.ok(Map.of("deleted", true));
     }
 
     @GetMapping("/{id}/report.pdf")
     public ResponseEntity<Resource> report(
             @PathVariable("id") Long id, HttpServletRequest request) {
-        Path file = comparisonService.reportFile(
+        Path file = getComparisonReportFileUseCase.reportFile(
                 currentUser.requireUserId(request), id);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)

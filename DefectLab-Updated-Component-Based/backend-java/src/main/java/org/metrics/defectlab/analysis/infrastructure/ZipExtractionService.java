@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Locale;
 import java.util.UUID;
@@ -14,21 +13,25 @@ import java.util.zip.ZipInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.metrics.defectlab.analysis.usecase.port.SourceArchiveExtractor;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ZipExtractionService {
+public class ZipExtractionService implements SourceArchiveExtractor {
 
     private static final int MAX_ENTRIES = 20_000;
     private static final long MAX_UNCOMPRESSED_BYTES = 250L * 1024L * 1024L;
     private static final int BUFFER_SIZE = 8192;
 
-    private final Path extractLocation = Paths.get("storage/extracted-projects");
+    private final Path extractLocation;
 
-    public ZipExtractionService() throws IOException {
+    public ZipExtractionService(StorageRoot storageRoot) throws IOException {
+        this.extractLocation = storageRoot.resolve("extracted-projects");
         Files.createDirectories(extractLocation);
     }
 
+    @Override
     public Path extractArchiveFile(Path archivePath) throws IOException {
         String filename = archivePath.getFileName().toString().toLowerCase(Locale.ROOT);
         if (filename.endsWith(".zip")) {

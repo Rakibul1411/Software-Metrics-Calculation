@@ -8,8 +8,14 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import org.metrics.defectlab.auth.security.CurrentUser;
-import org.metrics.defectlab.prediction.application.PredictionService;
 import org.metrics.defectlab.prediction.domain.PredictionRun;
+import org.metrics.defectlab.prediction.usecase.DeletePredictionRunUseCase;
+import org.metrics.defectlab.prediction.usecase.ExecutePredictionUseCase;
+import org.metrics.defectlab.prediction.usecase.GetPredictionArtifactUseCase;
+import org.metrics.defectlab.prediction.usecase.GetPredictionRowsUseCase;
+import org.metrics.defectlab.prediction.usecase.GetPredictionRunUseCase;
+import org.metrics.defectlab.prediction.usecase.GetPredictionSummaryUseCase;
+import org.metrics.defectlab.prediction.usecase.ListPredictionRunsUseCase;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -24,15 +30,35 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/** Interface Adapter: translates HTTP requests into use-case calls and back. */
 @RestController
 @RequestMapping("/api/predictions")
 public class PredictionController {
 
-    private final PredictionService predictionService;
+    private final ExecutePredictionUseCase executePredictionUseCase;
+    private final ListPredictionRunsUseCase listPredictionRunsUseCase;
+    private final GetPredictionRunUseCase getPredictionRunUseCase;
+    private final DeletePredictionRunUseCase deletePredictionRunUseCase;
+    private final GetPredictionSummaryUseCase getPredictionSummaryUseCase;
+    private final GetPredictionRowsUseCase getPredictionRowsUseCase;
+    private final GetPredictionArtifactUseCase getPredictionArtifactUseCase;
     private final CurrentUser currentUser;
 
-    public PredictionController(PredictionService predictionService, CurrentUser currentUser) {
-        this.predictionService = predictionService;
+    public PredictionController(ExecutePredictionUseCase executePredictionUseCase,
+            ListPredictionRunsUseCase listPredictionRunsUseCase,
+            GetPredictionRunUseCase getPredictionRunUseCase,
+            DeletePredictionRunUseCase deletePredictionRunUseCase,
+            GetPredictionSummaryUseCase getPredictionSummaryUseCase,
+            GetPredictionRowsUseCase getPredictionRowsUseCase,
+            GetPredictionArtifactUseCase getPredictionArtifactUseCase,
+            CurrentUser currentUser) {
+        this.executePredictionUseCase = executePredictionUseCase;
+        this.listPredictionRunsUseCase = listPredictionRunsUseCase;
+        this.getPredictionRunUseCase = getPredictionRunUseCase;
+        this.deletePredictionRunUseCase = deletePredictionRunUseCase;
+        this.getPredictionSummaryUseCase = getPredictionSummaryUseCase;
+        this.getPredictionRowsUseCase = getPredictionRowsUseCase;
+        this.getPredictionArtifactUseCase = getPredictionArtifactUseCase;
         this.currentUser = currentUser;
     }
 
@@ -40,35 +66,35 @@ public class PredictionController {
     public ResponseEntity<Map<String, Object>> create(
             @RequestBody Map<String, Object> body, HttpServletRequest request)
             throws IOException {
-        return ResponseEntity.ok(predictionService.execute(
+        return ResponseEntity.ok(executePredictionUseCase.execute(
                 currentUser.requireUserId(request), body));
     }
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> list(HttpServletRequest request) {
         Long userId = currentUser.requireUserId(request);
-        return ResponseEntity.ok(predictionService.list(userId).stream()
-                .map(run -> predictionService.summary(userId, run)).toList());
+        return ResponseEntity.ok(listPredictionRunsUseCase.list(userId).stream()
+                .map(run -> getPredictionSummaryUseCase.summary(userId, run)).toList());
     }
 
     @GetMapping("/groups")
     public ResponseEntity<List<Map<String, Object>>> groups(HttpServletRequest request) {
         return ResponseEntity.ok(
-                predictionService.grouped(currentUser.requireUserId(request)));
+                getPredictionSummaryUseCase.grouped(currentUser.requireUserId(request)));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> detail(
             @PathVariable("id") Long id, HttpServletRequest request) {
         Long userId = currentUser.requireUserId(request);
-        PredictionRun run = predictionService.require(userId, id);
-        return ResponseEntity.ok(predictionService.detail(userId, run));
+        PredictionRun run = getPredictionRunUseCase.require(userId, id);
+        return ResponseEntity.ok(getPredictionSummaryUseCase.detail(userId, run));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> delete(
             @PathVariable("id") Long id, HttpServletRequest request) throws IOException {
-        predictionService.delete(currentUser.requireUserId(request), id);
+        deletePredictionRunUseCase.delete(currentUser.requireUserId(request), id);
         return ResponseEntity.ok(Map.of("deleted", true));
     }
 
@@ -79,14 +105,14 @@ public class PredictionController {
             @RequestParam(value = "buggyOnly", defaultValue = "false")
             boolean buggyOnly,
             HttpServletRequest request) {
-        return ResponseEntity.ok(predictionService.predictions(
+        return ResponseEntity.ok(getPredictionRowsUseCase.predictions(
                 currentUser.requireUserId(request), id, limit, buggyOnly));
     }
 
     @GetMapping("/{id}/prediction.csv")
     public ResponseEntity<Resource> downloadPrediction(
             @PathVariable("id") Long id, HttpServletRequest request) {
-        Path file = predictionService.predictionFile(
+        Path file = getPredictionArtifactUseCase.predictionFile(
                 currentUser.requireUserId(request), id);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/csv"))
@@ -98,7 +124,7 @@ public class PredictionController {
     @GetMapping("/{id}/report.pdf")
     public ResponseEntity<Resource> downloadReport(
             @PathVariable("id") Long id, HttpServletRequest request) {
-        Path file = predictionService.reportFile(currentUser.requireUserId(request), id);
+        Path file = getPredictionArtifactUseCase.reportFile(currentUser.requireUserId(request), id);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION,

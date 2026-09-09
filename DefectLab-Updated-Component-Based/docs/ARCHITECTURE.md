@@ -82,12 +82,14 @@ gets UUID artifact names and one new `prediction_runs` row per target.
 
 - canonical header normalization;
 - missing-value imputation;
-- log1p transforms for registered features;
-- standard scaling;
+- independent per-domain standard scaling (no log transform);
 - optional shallow CORAL alignment;
 - KNN fitting with user-selected K=1–5;
 - ranked probabilities and deterministic tie-breaking;
-- evaluation and metric-distribution comparison.
+- evaluation against actual labels.
+
+Metric-distribution comparison (`/api/metric-comparisons`) is computed
+entirely in Spring Boot; FastAPI is never called for it.
 
 ## Storage decisions
 
@@ -114,9 +116,12 @@ reproducibility.
 
 ## Current prediction contract
 
-The current implementation always applies registered log1p transformations and
-source-fitted standardization. The user chooses whether shallow CORAL dataset
-alignment runs; the user selects K from 1 to 5. Threshold and seed are stored per run.
+The current implementation always standardizes source and target
+independently to zero mean/unit variance (the normalization CORAL's
+derivation assumes) — there is no log1p transform, and neither domain's
+scaler is fit on the other's statistics. The user chooses whether shallow
+CORAL dataset alignment runs; the user selects K from 1 to 5. Threshold and
+seed are stored per run.
 
 A manual target produces a new labeled CSV plus PDF/JSON report artifacts. A
 predefined target produces PDF/JSON report artifacts and post-prediction

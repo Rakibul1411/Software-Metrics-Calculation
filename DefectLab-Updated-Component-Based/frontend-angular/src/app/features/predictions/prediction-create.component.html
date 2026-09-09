@@ -20,6 +20,7 @@
       </ui-select>
 
       <ui-select label="Manual target" [options]="manualSelectOptions"
+                 helper="Pick a manual target, a predefined target, or both."
                  [value]="manualId" (valueChange)="onManualChange($event)">
       </ui-select>
 
@@ -35,8 +36,6 @@
                  [value]="k" (valueChange)="onKChange($event)">
       </ui-select>
 
-      <ui-input label="Model" [value]="'K-Nearest Neighbors (KNN)'" [disabled]="true"></ui-input>
-
       <div class="dl-field">
         <span>Dataset alignment</span>
         <label class="dl-checkbox-control">
@@ -47,7 +46,6 @@
       </div>
     </div>
 
-    <ui-state *ngIf="error" kind="error" [message]="error"></ui-state>
     <div class="dl-form-actions">
       <ui-button type="button" variant="ghost" icon="undo" (pressed)="back()">Cancel</ui-button>
       <ui-button type="submit" [disabled]="busy || !canRun()" [loading]="busy">

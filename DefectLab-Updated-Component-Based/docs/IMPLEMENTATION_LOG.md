@@ -99,3 +99,26 @@ This is the step-by-step record of the corrected component-based rebuild.
   structural checks.
 - Prepared a clean source archive excluding dependencies, build outputs,
   temporary data, and runtime databases.
+
+## Step 11 — Enforce the Clean Architecture dependency rule
+
+- Replaced every component's `application/<Name>Service` with `usecase/`: a
+  named use-case interface per operation, and one `<Name>Interactor`
+  implementing all of them (`DatasetInteractor`, `PredictionInteractor`,
+  `ComparisonInteractor`, `SourceAnalysisInteractor`).
+- Replaced every `persistence/` repository interface with a `usecase/port/`
+  interface plus an `infrastructure/…RepositoryAdapter` (or, for auth's
+  password hashing, `BCryptPasswordHasher`).
+- Moved `dashboard/api` and `report/api` into `shared/api`: each was a single
+  controller with no domain or use case of its own, the same situation
+  already documented for `DashboardController`.
+- Closed the remaining direct `usecase → infrastructure` imports: added
+  `usecase/port` interfaces for the ML client (`MlServiceClient`), the
+  dataset file reader (`DatasetFileReader`), and the five services the
+  analysis interactor calls (source storage, archive extraction, GitHub
+  client, metrics extractor, extraction-slot coordinator). Reclassified
+  `DatasetFileWriter` — pure in-memory formatting with no I/O — as a
+  presenter under `dataset/api` instead of wrapping it in a port.
+- Verified afterward, not just asserted: `domain/` has zero JPA/Spring
+  imports across all five components; no `usecase/` or `api/` file imports
+  its own `infrastructure/` package; all 135 backend tests pass.

@@ -11,28 +11,34 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.metrics.defectlab.analysis.usecase.UploadedArchive;
+import org.metrics.defectlab.analysis.usecase.port.SourceArchiveStorage;
+import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
-public class FileStorageService {
+public class FileStorageService implements SourceArchiveStorage {
 
     private static final int MAX_FOLDER_FILES = 20_000;
     private static final long MAX_FOLDER_BYTES = 250L * 1024L * 1024L;
 
-    private final Path uploadLocation = Paths.get("storage/uploads");
-    private final Path folderLocation = Paths.get("storage/uploaded-folders");
+    private final Path uploadLocation;
+    private final Path folderLocation;
 
-    public FileStorageService() throws IOException {
+    public FileStorageService(StorageRoot storageRoot) throws IOException {
+        this.uploadLocation = storageRoot.resolve("source-archives");
+        this.folderLocation = storageRoot.resolve("source-projects");
         Files.createDirectories(uploadLocation);
         Files.createDirectories(folderLocation);
     }
 
-    public Path storeUploadedFile(MultipartFile file) throws IOException {
-        if (file == null || file.isEmpty()) {
+    @Override
+    public Path storeUploadedFile(UploadedArchive file) throws IOException {
+        if (file == null || !file.hasContent()) {
             throw new IllegalArgumentException("Choose a non-empty project archive file.");
         }
-        String originalName = file.getOriginalFilename() == null ? "project-archive.zip" : file.getOriginalFilename();
+        String originalName = file.originalFilename() == null ? "project-archive.zip" : file.originalFilename();
         String safeName = Paths.get(originalName).getFileName().toString();
         if (!isSupportedArchive(safeName)) {
             throw new IllegalArgumentException(
@@ -40,7 +46,7 @@ public class FileStorageService {
         }
         String filename = UUID.randomUUID().toString() + "_" + safeName;
         Path targetPath = uploadLocation.resolve(filename);
-        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(file.content(), targetPath, StandardCopyOption.REPLACE_EXISTING);
         return targetPath;
     }
 
@@ -143,6 +149,11 @@ public class FileStorageService {
         return lower.endsWith(".zip") || lower.endsWith(".tar")
                 || lower.endsWith(".tar.gz") || lower.endsWith(".tgz")
                 || lower.endsWith(".gz");
+    }
+
+    @Override
+    public void delete(Path path) {
+        deleteRecursively(path);
     }
 
     public static void deleteRecursively(Path path) {
