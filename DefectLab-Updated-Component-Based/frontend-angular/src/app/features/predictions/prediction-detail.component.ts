@@ -15,6 +15,9 @@ export class PredictionDetailComponent extends BaseDetailComponent<PredictionRun
   protected readonly listRoute = ['/predictions'];
   protected readonly missingMessage = 'The prediction run was not specified.';
 
+  page = 1;
+  pageSize = 10;
+
   constructor(readonly facade: PredictionsFacade) {
     super();
   }
@@ -32,6 +35,21 @@ export class PredictionDetailComponent extends BaseDetailComponent<PredictionRun
     return this.facade.detailColumns(this.item);
   }
 
+  get pagedPredictions() {
+    const list = this.run?.predictions || [];
+    const start = (this.page - 1) * this.pageSize;
+    return list.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(page: number): void {
+    this.page = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
+  }
+
   metric(value: { value: number | null }): string {
     return this.facade.metric(value);
   }
@@ -39,6 +57,7 @@ export class PredictionDetailComponent extends BaseDetailComponent<PredictionRun
   deletePredictionRun = (): Observable<unknown> => this.facade.delete(this.item!.id);
 
   protected fetch(id: number): Observable<PredictionRunDetail> {
+    this.page = 1;
     return this.facade.get(id);
   }
 }

@@ -94,7 +94,7 @@ export class DatasetsFacade {
       { label: 'Project version', value: item.projectVersion || '—' },
       { label: 'Rows', value: item.totalFiles },
       { label: 'Features', value: item.totalMetrics },
-      { label: 'Created', value: this.datePipe.transform(item.createdAt, 'medium') },
+      { label: 'Created', value: this.datePipe.transform(item.createdAt, 'mediumDate') },
       { label: 'System dataset', value: item.systemDataset ? 'Yes' : 'No' }
     ];
   }

@@ -19,7 +19,7 @@
           <div>
             <span class="dl-dash-eyebrow">Dataset portfolio</span>
             <strong>{{ view.data.totalDatasets | number }}</strong>
-            <small>Total metric assets</small>
+            <small>{{ view.volumeTotal | number }} classes across assets</small>
           </div>
           <span class="dl-dash-live"><i></i> Live</span>
         </div>
@@ -42,19 +42,27 @@
       </article>
 
       <article class="dl-dash-metric">
-        <div class="dl-dash-metric-icon">M</div>
-        <span>Manual extractions</span>
-        <strong>{{ view.data.manualDatasets | number }}</strong>
-        <small>Source archives and GitHub</small>
-        <a routerLink="/analyze">Add source <b>→</b></a>
+        <div class="dl-dash-metric-icon danger">!</div>
+        <span>Defects detected</span>
+        <strong>{{ view.defectStats.totalPredictedBuggy | number }}</strong>
+        <small>{{ view.defectStats.defectRate | number:'1.1-1' }}% defect rate ({{ view.defectStats.totalRuns }} runs)</small>
+        <a routerLink="/reports">Review reports <b>→</b></a>
       </article>
 
       <article class="dl-dash-metric">
-        <div class="dl-dash-metric-icon alt">P</div>
-        <span>Predefined datasets</span>
-        <strong>{{ view.data.predefinedDatasets | number }}</strong>
-        <small>Labeled training sources</small>
-        <a routerLink="/datasets">Open storage <b>→</b></a>
+        <div class="dl-dash-metric-icon success">Q</div>
+        <span>Model reliability</span>
+        <strong>{{ view.defectStats.avgF1 !== null ? (view.defectStats.avgF1 | number:'1.2-2') : '—' }}</strong>
+        <small>Avg F1 · ROC-AUC {{ view.defectStats.avgRocAuc !== null ? (view.defectStats.avgRocAuc | number:'1.2-2') : '—' }}</small>
+        <a routerLink="/predictions">Model workspace <b>→</b></a>
+      </article>
+
+      <article class="dl-dash-metric">
+        <div class="dl-dash-metric-icon warn">H</div>
+        <span>Top defect hotspot</span>
+        <strong [title]="view.defectStats.highestRiskDataset || 'No hotspots'">{{ view.defectStats.highestRiskDataset || 'None' }}</strong>
+        <small>{{ view.defectStats.highestRiskCount > 0 ? (view.defectStats.highestRiskCount + ' buggy classes') : 'No defect alerts' }}</small>
+        <a routerLink="/reports">Inspect target <b>→</b></a>
       </article>
     </section>
 

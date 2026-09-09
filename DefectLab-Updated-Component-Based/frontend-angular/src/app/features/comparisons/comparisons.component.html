@@ -21,27 +21,28 @@
 
   <div class="dl-detail-section dl-fill">
     <ui-state *ngIf="loading" kind="loading" message="Loading comparisons…"></ui-state>
-    <ui-table *ngIf="!loading && filtered.length; else empty" [columns]="columns" [rows]="pageRows" trackByKey="key">
-      <ng-template uiTableCell="pair" let-row>
-        <strong>{{ row.displayName }}</strong>
-      </ng-template>
-      <ng-template uiTableCell="family" let-row>
-        <ui-badge tone="blue">{{ row.datasetFamily }}</ui-badge>
-      </ng-template>
-      <ng-template uiTableCell="actions" let-row>
-        <ui-button variant="ghost" size="sm" icon="view"
-                   title="View comparison" ariaLabel="View comparison"
-                   (pressed)="view(row)"></ui-button>
-      </ng-template>
-    </ui-table>
+    <div class="dl-table-box" *ngIf="!loading && filtered.length; else empty">
+      <ui-table [columns]="columns" [rows]="pageRows" trackByKey="key">
+        <ng-template uiTableCell="pair" let-row>
+          <strong>{{ row.displayName }}</strong>
+        </ng-template>
+        <ng-template uiTableCell="family" let-row>
+          <ui-badge [tone]="row.datasetFamily">{{ row.datasetFamily }}</ui-badge>
+        </ng-template>
+        <ng-template uiTableCell="actions" let-row>
+          <ui-button variant="ghost" size="sm" icon="view"
+                     title="View comparison" ariaLabel="View comparison"
+                     (pressed)="view(row)"></ui-button>
+        </ng-template>
+      </ui-table>
+      <ui-pagination [total]="filtered.length" [page]="page" [pageSize]="pageSize" noun="comparisons"
+                     (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+      </ui-pagination>
+    </div>
     <ng-template #empty>
       <ui-state *ngIf="!loading" kind="empty"
                 [message]="pairs.length ? 'No matching comparisons.' : 'No comparisons yet. Start one from New Comparison.'">
       </ui-state>
     </ng-template>
-    <ui-pagination *ngIf="!loading && filtered.length"
-                   [total]="filtered.length" [page]="page" [pageSize]="pageSize" noun="comparisons"
-                   (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
-    </ui-pagination>
   </div>
 </ui-card>

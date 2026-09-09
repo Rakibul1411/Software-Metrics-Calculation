@@ -36,14 +36,19 @@
 
       <div class="dl-detail-section">
         <h3>Metric-wise mean &amp; std (manual vs predefined)</h3>
-        <ui-table [columns]="metricStatsColumns" [rows]="aggregateRows"
-                  trackByKey="metric" scrollClass="dl-comparison-result-scroll">
-          <ng-template uiTableCell="meanManual" let-row>{{ number(row.manual.mean) }}</ng-template>
-          <ng-template uiTableCell="meanPredefined" let-row>{{ number(row.predefined.mean) }}</ng-template>
-          <ng-template uiTableCell="stdManual" let-row>{{ number(row.manual.standardDeviation) }}</ng-template>
-          <ng-template uiTableCell="stdPredefined" let-row>{{ number(row.predefined.standardDeviation) }}</ng-template>
-          <ng-template uiTableCell="percentageDifference" let-row>{{ percentage(row.percentageDifference) }}</ng-template>
-        </ui-table>
+        <div class="dl-table-box">
+          <ui-table [columns]="metricStatsColumns" [rows]="pagedAggregateRows"
+                    trackByKey="metric">
+            <ng-template uiTableCell="meanManual" let-row>{{ number(row.manual.mean) }}</ng-template>
+            <ng-template uiTableCell="meanPredefined" let-row>{{ number(row.predefined.mean) }}</ng-template>
+            <ng-template uiTableCell="stdManual" let-row>{{ number(row.manual.standardDeviation) }}</ng-template>
+            <ng-template uiTableCell="stdPredefined" let-row>{{ number(row.predefined.standardDeviation) }}</ng-template>
+            <ng-template uiTableCell="percentageDifference" let-row>{{ percentage(row.percentageDifference) }}</ng-template>
+          </ui-table>
+          <ui-pagination [total]="aggregateRows.length" [page]="metricPage" [pageSize]="metricPageSize" noun="metrics"
+                         (pageChange)="onMetricPageChange($event)" (pageSizeChange)="onMetricPageSizeChange($event)">
+          </ui-pagination>
+        </div>
       </div>
     </ng-container>
 
@@ -60,23 +65,32 @@
 
       <div class="dl-detail-section">
         <h3>Metric-wise mean &amp; std (manual vs predefined)</h3>
-        <ui-table [columns]="metricStatsColumns" [rows]="instanceMetricStats"
-                  trackByKey="metric" scrollClass="dl-comparison-result-scroll">
-          <ng-template uiTableCell="meanManual" let-row>{{ number(row.manual.mean) }}</ng-template>
-          <ng-template uiTableCell="meanPredefined" let-row>{{ number(row.predefined.mean) }}</ng-template>
-          <ng-template uiTableCell="stdManual" let-row>{{ number(row.manual.standardDeviation) }}</ng-template>
-          <ng-template uiTableCell="stdPredefined" let-row>{{ number(row.predefined.standardDeviation) }}</ng-template>
-          <ng-template uiTableCell="percentageDifference" let-row>{{ percentage(row.percentageDifference) }}</ng-template>
-        </ui-table>
+        <div class="dl-table-box">
+          <ui-table [columns]="metricStatsColumns" [rows]="pagedInstanceMetricStats"
+                    trackByKey="metric">
+            <ng-template uiTableCell="meanManual" let-row>{{ number(row.manual.mean) }}</ng-template>
+            <ng-template uiTableCell="meanPredefined" let-row>{{ number(row.predefined.mean) }}</ng-template>
+            <ng-template uiTableCell="stdManual" let-row>{{ number(row.manual.standardDeviation) }}</ng-template>
+            <ng-template uiTableCell="stdPredefined" let-row>{{ number(row.predefined.standardDeviation) }}</ng-template>
+            <ng-template uiTableCell="percentageDifference" let-row>{{ percentage(row.percentageDifference) }}</ng-template>
+          </ui-table>
+          <ui-pagination [total]="instanceMetricStats.length" [page]="metricPage" [pageSize]="metricPageSize" noun="metrics"
+                         (pageChange)="onMetricPageChange($event)" (pageSizeChange)="onMetricPageSizeChange($event)">
+          </ui-pagination>
+        </div>
       </div>
 
       <div class="dl-detail-section">
         <h3>File-wise comparison</h3>
-        <ui-table [columns]="instanceRowColumns" [rows]="instanceRows"
-                  scrollClass="dl-comparison-result-scroll">
-          <ng-template uiTableCell="manualValue" let-row>{{ number(row.manualValue) }}</ng-template>
-          <ng-template uiTableCell="predefinedValue" let-row>{{ number(row.predefinedValue) }}</ng-template>
-        </ui-table>
+        <div class="dl-table-box">
+          <ui-table [columns]="instanceRowColumns" [rows]="pagedInstanceRows">
+            <ng-template uiTableCell="manualValue" let-row>{{ number(row.manualValue) }}</ng-template>
+            <ng-template uiTableCell="predefinedValue" let-row>{{ number(row.predefinedValue) }}</ng-template>
+          </ui-table>
+          <ui-pagination [total]="instanceRows.length" [page]="filePage" [pageSize]="filePageSize" noun="files"
+                         (pageChange)="onFilePageChange($event)" (pageSizeChange)="onFilePageSizeChange($event)">
+          </ui-pagination>
+        </div>
       </div>
     </ng-template>
   </ng-container>

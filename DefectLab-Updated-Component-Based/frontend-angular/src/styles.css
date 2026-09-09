@@ -148,11 +148,37 @@
   box-sizing: border-box;
 }
 
+/* ── View Transitions (Hardware-accelerated atomic theme shift) ──────────
+   Cross-fades the full interface simultaneously in a single action,
+   eliminating the lag where background shifts before text repaints. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.22s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: dl-theme-fade-out;
+}
+
+::view-transition-new(root) {
+  animation-name: dl-theme-fade-in;
+}
+
+@keyframes dl-theme-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes dl-theme-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 html {
   min-width: 320px;
   scroll-behavior: smooth;
   background: var(--canvas);
-  transition: background-color .32s ease, color .32s ease;
 }
 
 body {
@@ -164,7 +190,6 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color .32s ease, color .32s ease;
 }
 
 button,

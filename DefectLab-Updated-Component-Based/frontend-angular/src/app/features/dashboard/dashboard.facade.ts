@@ -14,6 +14,20 @@ const VOLUME_LIMIT = 8;
 /** Scored runs compared side by side; past three, colour stops being readable. */
 const QUALITY_LIMIT = 3;
 
+export interface DefectStats {
+  totalRuns: number;
+  totalPredictedBuggy: number;
+  totalPredictedClean: number;
+  totalPredictedClasses: number;
+  defectRate: number;
+  avgF1: number | null;
+  avgRocAuc: number | null;
+  avgAccuracy: number | null;
+  scoredRunsCount: number;
+  highestRiskDataset: string | null;
+  highestRiskCount: number;
+}
+
 /** Everything the overview screen renders, assembled once. */
 export interface DashboardView {
   data: DashboardData;
@@ -24,6 +38,7 @@ export interface DashboardView {
   composition: ChartData;
   quality: ChartData;
   balance: ChartData;
+  defectStats: DefectStats;
 }
 
 /**
@@ -69,7 +84,81 @@ export class DashboardFacade {
       volumeTotal: datasets.reduce((sum, item) => sum + item.totalFiles, 0),
       composition: this.compositionChart(datasets),
       quality: this.qualityChart(runs),
-      balance: this.balanceChart(runs)
+      balance: this.balanceChart(runs),
+      defectStats: this.calculateDefectStats(runs)
+    };
+  }
+
+  private calculateDefectStats(runs: PredictionRunSummary[]): DefectStats {
+    const totalRuns = runs.length;
+    const totalPredictedBuggy = runs.reduce(
+      (sum, r) => sum + (r.summary?.predictedBuggy ?? 0),
+      0
+    );
+    const totalPredictedClean = runs.reduce(
+      (sum, r) => sum + (r.summary?.predictedClean ?? 0),
+      0
+    );
+    const totalPredictedClasses = totalPredictedBuggy + totalPredictedClean;
+    const defectRate =
+      totalPredictedClasses > 0
+        ? (totalPredictedBuggy / totalPredictedClasses) * 100
+        : 0;
+
+    const scoredRuns = runs.filter(
+      r => r.evaluation && typeof r.evaluation.f1?.value === 'number'
+    );
+    const scoredRunsCount = scoredRuns.length;
+    const avgF1 =
+      scoredRunsCount > 0
+        ? scoredRuns.reduce((sum, r) => sum + (r.evaluation!.f1.value ?? 0), 0) /
+          scoredRunsCount
+        : null;
+
+    const rocAucRuns = runs.filter(
+      r => r.evaluation && typeof r.evaluation.rocAuc?.value === 'number'
+    );
+    const avgRocAuc =
+      rocAucRuns.length > 0
+        ? rocAucRuns.reduce(
+            (sum, r) => sum + (r.evaluation!.rocAuc.value ?? 0),
+            0
+          ) / rocAucRuns.length
+        : null;
+
+    const accRuns = runs.filter(
+      r => r.evaluation && typeof r.evaluation.accuracy?.value === 'number'
+    );
+    const avgAccuracy =
+      accRuns.length > 0
+        ? accRuns.reduce(
+            (sum, r) => sum + (r.evaluation!.accuracy.value ?? 0),
+            0
+          ) / accRuns.length
+        : null;
+
+    let highestRiskDataset: string | null = null;
+    let highestRiskCount = 0;
+    for (const run of runs) {
+      const buggy = run.summary?.predictedBuggy ?? 0;
+      if (buggy > highestRiskCount) {
+        highestRiskCount = buggy;
+        highestRiskDataset = run.targetDataset?.displayName ?? `Run #${run.id}`;
+      }
+    }
+
+    return {
+      totalRuns,
+      totalPredictedBuggy,
+      totalPredictedClean,
+      totalPredictedClasses,
+      defectRate,
+      avgF1,
+      avgRocAuc,
+      avgAccuracy,
+      scoredRunsCount,
+      highestRiskDataset,
+      highestRiskCount
     };
   }
 

@@ -28,6 +28,9 @@ export type UiIconName =
   | 'view-off'
   | 'undo'
   | 'chevron-right'
+  | 'chevron-left'
+  | 'chevrons-left'
+  | 'chevrons-right'
   | 'info';
 
 const PATHS: Record<UiIconName, string> = {
@@ -51,6 +54,9 @@ const PATHS: Record<UiIconName, string> = {
   'view-off': 'M3 3l18 18M10.6 10.6a3 3 0 0 0 4.2 4.2M9.9 5.2A9.5 9.5 0 0 1 12 5c6 0 9.5 6 9.5 6a15 15 0 0 1-3 3.6M6.5 6.6A15 15 0 0 0 2.5 11S6 17 12 17a9 9 0 0 0 3.2-.6',
   'undo': 'M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12',
   'chevron-right': 'M9 5l7 7-7 7',
+  'chevron-left': 'M15 19l-7-7 7-7',
+  'chevrons-left': 'M11 19l-7-7 7-7m8 14l-7-7 7-7',
+  'chevrons-right': 'M13 5l7 7-7 7M5 5l7 7-7 7',
   'info': 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-8v5m0-9v.01'
 };
 

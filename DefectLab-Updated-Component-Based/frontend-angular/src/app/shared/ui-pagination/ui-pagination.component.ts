@@ -41,12 +41,75 @@ export class UiPaginationComponent {
     return Math.min(this.page * this.pageSize, this.total);
   }
 
+  get singularNoun(): string {
+    if (this.noun.endsWith('ies')) {
+      return this.noun.slice(0, -3) + 'y';
+    }
+    if (this.noun.endsWith('es')) {
+      return this.noun.slice(0, -2);
+    }
+    if (this.noun.endsWith('s')) {
+      return this.noun.slice(0, -1);
+    }
+    return this.noun;
+  }
+
+  get rangeText(): string {
+    if (this.total === 0) {
+      return `No ${this.noun}`;
+    }
+    if (this.total === 1) {
+      return `Showing 1 ${this.singularNoun}`;
+    }
+    if (this.total <= this.pageSize) {
+      return `Showing all ${this.total} ${this.noun}`;
+    }
+    return `Showing ${this.firstRow}–${this.lastRow} of ${this.total} ${this.noun}`;
+  }
+
   get hasPrevious(): boolean {
     return this.page > 1;
   }
 
   get hasNext(): boolean {
     return this.page < this.totalPages;
+  }
+
+  get pages(): (number | string)[] {
+    const total = this.totalPages;
+    const current = this.page;
+    if (total <= 5) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 3) {
+      return [1, 2, 3, '…', total];
+    }
+    if (current >= total - 2) {
+      return [1, '…', total - 2, total - 1, total];
+    }
+    return [1, '…', current, '…', total];
+  }
+
+  isNumber(val: number | string): boolean {
+    return typeof val === 'number';
+  }
+
+  goToPage(p: number | string): void {
+    if (typeof p === 'number' && p >= 1 && p <= this.totalPages && p !== this.page) {
+      this.pageChange.emit(p);
+    }
+  }
+
+  first(): void {
+    if (this.hasPrevious) {
+      this.pageChange.emit(1);
+    }
+  }
+
+  last(): void {
+    if (this.hasNext) {
+      this.pageChange.emit(this.totalPages);
+    }
   }
 
   previous(): void {

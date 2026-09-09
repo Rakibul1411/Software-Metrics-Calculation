@@ -49,16 +49,67 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     return this.item?.predefinedRun ?? null;
   }
 
+  manualPage = 1;
+  manualPageSize = 10;
+
+  predefinedPage = 1;
+  predefinedPageSize = 10;
+
+  matchedPage = 1;
+  matchedPageSize = 10;
+
   get manualRows(): PredictionRow[] {
     return this.item?.manualRows ?? [];
+  }
+
+  get pagedManualRows(): PredictionRow[] {
+    const start = (this.manualPage - 1) * this.manualPageSize;
+    return this.manualRows.slice(start, start + this.manualPageSize);
   }
 
   get predefinedRows(): PredictionRow[] {
     return this.item?.predefinedRows ?? [];
   }
 
+  get pagedPredefinedRows(): PredictionRow[] {
+    const start = (this.predefinedPage - 1) * this.predefinedPageSize;
+    return this.predefinedRows.slice(start, start + this.predefinedPageSize);
+  }
+
   get matchedRows(): MatchedPredictionRow[] {
     return this.item?.matchedRows ?? [];
+  }
+
+  get pagedMatchedRows(): MatchedPredictionRow[] {
+    const start = (this.matchedPage - 1) * this.matchedPageSize;
+    return this.matchedRows.slice(start, start + this.matchedPageSize);
+  }
+
+  onManualPageChange(p: number): void {
+    this.manualPage = p;
+  }
+
+  onManualPageSizeChange(s: number): void {
+    this.manualPageSize = s;
+    this.manualPage = 1;
+  }
+
+  onPredefinedPageChange(p: number): void {
+    this.predefinedPage = p;
+  }
+
+  onPredefinedPageSizeChange(s: number): void {
+    this.predefinedPageSize = s;
+    this.predefinedPage = 1;
+  }
+
+  onMatchedPageChange(p: number): void {
+    this.matchedPage = p;
+  }
+
+  onMatchedPageSizeChange(s: number): void {
+    this.matchedPageSize = s;
+    this.matchedPage = 1;
   }
 
   get groupTitle(): string {
@@ -113,6 +164,9 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
   }
 
   protected fetch(key: string): Observable<ReportDetailView> {
+    this.manualPage = 1;
+    this.predefinedPage = 1;
+    this.matchedPage = 1;
     return this.facade.detail(key);
   }
 

@@ -105,7 +105,7 @@ export class PredictionsFacade {
         label: 'Dataset alignment',
         value: run.modelConfig.coral ? 'Enabled' : 'Disabled'
       },
-      { label: 'Created', value: this.datePipe.transform(run.createdAt, 'medium') }
+      { label: 'Created', value: this.datePipe.transform(run.createdAt, 'mediumDate') }
     ];
   }
 

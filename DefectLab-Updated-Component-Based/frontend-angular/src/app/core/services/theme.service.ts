@@ -20,7 +20,14 @@ export class ThemeService {
   toggle(): void {
     this.isDark = !this.isDark;
     localStorage.setItem(STORAGE_KEY, this.isDark ? 'dark' : 'light');
-    this.apply();
+
+    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+      (document as any).startViewTransition(() => {
+        this.apply();
+      });
+    } else {
+      this.apply();
+    }
   }
 
   private apply(): void {
