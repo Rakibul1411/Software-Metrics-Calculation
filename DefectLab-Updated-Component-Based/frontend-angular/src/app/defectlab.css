@@ -884,7 +884,6 @@ button.dl-footer-link:hover {
   vertical-align: middle;
 }
 
-.dl-table tbody tr:last-child td { border-bottom: none; }
 .dl-table tbody tr:hover { background: var(--dl-row-hover); }
 .dl-table td strong { font-weight: 600; }
 .dl-table td small { color: var(--muted); font-size: 12px; }
