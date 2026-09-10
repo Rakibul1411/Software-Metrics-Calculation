@@ -326,36 +326,68 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
             Map<String, Object> evaluation) throws IOException {
         long buggy = predictions.stream()
                 .filter(row -> integerValue(row.get("predictedLabel"), 0) == 1).count();
-        List<String> lines = new ArrayList<>();
-        lines.add("Source: " + source.getDisplayName() + " (" + source.getDatasetFamily() + ")");
-        lines.add("Target: " + target.getDisplayName() + " (" + target.getDatasetType() + ")");
-        lines.add("Model configuration: " + config);
-        lines.add("Total predicted buggy files: " + buggy);
-        lines.add("Total predicted clean files: " + (predictions.size() - buggy));
-        if (!evaluation.isEmpty()) {
-            lines.add("");
-            lines.add("EVALUATION METRICS");
-            lines.add("Accuracy: " + metricValue(evaluation.get("accuracy")));
-            lines.add("Precision: " + metricValue(evaluation.get("precision")));
-            lines.add("Recall: " + metricValue(evaluation.get("recall")));
-            lines.add("F1-score: " + metricValue(evaluation.get("f1")));
-            lines.add("ROC-AUC: " + metricValue(evaluation.get("rocAuc")));
-            lines.add("Confusion matrix: " + evaluation.get("confusionMatrix"));
-        }
-        lines.add("");
-        lines.add(target.hasActualLabel()
-                ? "RANK | FILE/IDENTIFIER | PROBABILITY | PREDICTED | ACTUAL"
-                : "RANK | FILE/IDENTIFIER | PROBABILITY | PREDICTED");
-        for (Map<String, Object> row : predictions) {
-            String line = row.get("riskRank") + " | " + row.get("classIdentifier")
-                    + " | " + probability(row) + " | "
-                    + classLabel(row.get("predictedLabel"));
-            if (target.hasActualLabel()) {
-                line += " | " + classLabel(row.get("actualLabel"));
+        long clean = predictions.size() - buggy;
+
+        List<String> introLines = new ArrayList<>();
+        introLines.add("Source Dataset: " + source.getDisplayName() + " (" + source.getDatasetFamily() + ")");
+        introLines.add("Target Dataset: " + target.getDisplayName() + " (" + target.getDatasetType() + ")");
+        introLines.add("Model Configuration: " + formatModelConfig(config));
+        introLines.add(String.format(Locale.US, "Summary: %d predicted buggy, %d predicted clean (%d total files)",
+                buggy, clean, predictions.size()));
+
+        List<PredictionReportRenderer.Table> tables = new ArrayList<>();
+
+        if (evaluation != null && !evaluation.isEmpty()) {
+            List<String> evalHeaders = List.of("Evaluation Metric", "Result");
+            List<List<String>> evalRows = new ArrayList<>();
+            evalRows.add(List.of("Accuracy", formatMetric(evaluation.get("accuracy"))));
+            evalRows.add(List.of("Precision", formatMetric(evaluation.get("precision"))));
+            evalRows.add(List.of("Recall", formatMetric(evaluation.get("recall"))));
+            evalRows.add(List.of("F1-score", formatMetric(evaluation.get("f1"))));
+            evalRows.add(List.of("ROC-AUC", formatMetric(evaluation.get("rocAuc"))));
+            if (evaluation.containsKey("confusionMatrix")) {
+                evalRows.add(List.of("Confusion Matrix", formatConfusionMatrix(evaluation.get("confusionMatrix"))));
             }
-            lines.add(line);
+            tables.add(new PredictionReportRenderer.Table(
+                    "Model Evaluation",
+                    evalHeaders,
+                    evalRows,
+                    new float[]{ 1.8f, 3.2f }
+            ));
         }
-        reportRenderer.write(report, "DefectLab Prediction Report", lines);
+
+        boolean hasActual = target.hasActualLabel();
+        List<String> headers = hasActual
+                ? List.of("File / Identifier", "Risk Rank", "Probability", "Predicted", "Actual")
+                : List.of("File / Identifier", "Risk Rank", "Probability", "Predicted");
+
+        float[] weights = hasActual
+                ? new float[]{ 3.2f, 0.9f, 1.1f, 1.0f, 1.0f }
+                : new float[]{ 3.6f, 1.1f, 1.3f, 1.2f };
+
+        List<Map<String, Object>> sortedPredictions = sortPredictionsRowWise(predictions, target);
+
+        List<List<String>> rows = new ArrayList<>();
+        for (Map<String, Object> row : sortedPredictions) {
+            List<String> cells = new ArrayList<>();
+            cells.add(String.valueOf(row.get("classIdentifier")));
+            cells.add(String.valueOf(row.get("riskRank")));
+            cells.add(probability(row));
+            cells.add(classLabel(row.get("predictedLabel")));
+            if (hasActual) {
+                cells.add(classLabel(row.get("actualLabel")));
+            }
+            rows.add(cells);
+        }
+
+        tables.add(new PredictionReportRenderer.Table(
+                "Predictions & Risk Ranking",
+                headers,
+                rows,
+                weights
+        ));
+
+        reportRenderer.writeTables(report, "DefectLab Prediction Report", introLines, tables);
     }
 
     @Override
@@ -410,7 +442,9 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
         Map<String, Object> body = summary(userId, run);
         Map<String, Object> metadata = readMetadata(run);
         body.put("warnings", metadata.getOrDefault("warnings", List.of()));
-        body.put("predictions", limitPredictions(metadata, 100));
+        MetricDataset target = getDatasetUseCase.require(userId, run.getTargetDatasetId());
+        List<Map<String, Object>> sorted = sortPredictionsRowWise(predictionRows(metadata), target);
+        body.put("predictions", sorted.stream().limit(100).toList());
         return body;
     }
 
@@ -437,7 +471,8 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
     public List<Map<String, Object>> predictions(
             Long userId, Long runId, int limit, boolean buggyOnly) {
         PredictionRun run = require(userId, runId);
-        List<Map<String, Object>> rows = predictionRows(readMetadata(run));
+        MetricDataset target = getDatasetUseCase.require(userId, run.getTargetDatasetId());
+        List<Map<String, Object>> rows = sortPredictionsRowWise(predictionRows(readMetadata(run)), target);
         return rows.stream()
                 .filter(row -> !buggyOnly
                         || integerValue(row.get("predictedLabel"), 0) == 1)
@@ -457,7 +492,34 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
 
     @Override
     public Path reportFile(Long userId, Long runId) {
-        return requireFile(require(userId, runId).getReportFilePath());
+        PredictionRun run = require(userId, runId);
+        Path report = requireFile(run.getReportFilePath());
+        regenerateReportIfMetadataPresent(userId, run, report);
+        return report;
+    }
+
+    private void regenerateReportIfMetadataPresent(Long userId, PredictionRun run, Path report) {
+        Path metaPath = metadataPath(report);
+        if (!Files.isRegularFile(metaPath)) {
+            return;
+        }
+        try {
+            Map<String, Object> metadata = readMetadata(run);
+            if (metadata.isEmpty() || !metadata.containsKey("predictions")) {
+                return;
+            }
+            MetricDataset source = getDatasetUseCase.require(userId, run.getSourceDatasetId());
+            MetricDataset target = getDatasetUseCase.require(userId, run.getTargetDatasetId());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> config = (Map<String, Object>) metadata.getOrDefault("modelConfig", Map.of());
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> predictions = (List<Map<String, Object>>) metadata.getOrDefault("predictions", List.of());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> evaluation = (Map<String, Object>) metadata.getOrDefault("evaluation", Map.of());
+            writePredictionPdf(report, source, target, config, predictions, evaluation == null ? Map.of() : evaluation);
+        } catch (Exception ignored) {
+            // Preserve existing report file if regeneration fails
+        }
     }
 
     private Map<String, Object> readMetadata(PredictionRun run) {
@@ -492,6 +554,92 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
     private List<Map<String, Object>> predictionRows(Map<String, Object> metadata) {
         Object raw = metadata.get("predictions");
         return raw instanceof List ? (List<Map<String, Object>>) raw : List.of();
+    }
+
+    private List<Map<String, Object>> sortPredictionsRowWise(
+            List<Map<String, Object>> predictions, MetricDataset target) {
+        if (predictions == null || predictions.isEmpty()) {
+            return List.of();
+        }
+        Map<String, Integer> rowOrder = null;
+        if (target != null) {
+            try {
+                DatasetTable targetTable = loadDatasetTableUseCase.load(target);
+                if (targetTable != null && targetTable.getRows() != null) {
+                    int identifierIndex = targetTable.indexOf("name");
+                    rowOrder = new LinkedHashMap<>();
+                    for (int i = 0; i < targetTable.getRows().size(); i++) {
+                        List<String> r = targetTable.getRows().get(i);
+                        String id = identifierIndex >= 0 && identifierIndex < r.size()
+                                ? r.get(identifierIndex) : "row_" + i;
+                        rowOrder.putIfAbsent(id, i);
+                    }
+                }
+            } catch (Exception ignored) {
+                // fall back to natural sorting
+            }
+        }
+        final Map<String, Integer> finalRowOrder = rowOrder;
+        List<Map<String, Object>> sorted = new ArrayList<>(predictions);
+        sorted.sort((a, b) -> {
+            String idA = String.valueOf(a.getOrDefault("classIdentifier", ""));
+            String idB = String.valueOf(b.getOrDefault("classIdentifier", ""));
+            if (finalRowOrder != null) {
+                Integer orderA = finalRowOrder.get(idA);
+                Integer orderB = finalRowOrder.get(idB);
+                if (orderA != null && orderB != null) {
+                    return Integer.compare(orderA, orderB);
+                }
+            }
+            return naturalCompare(idA, idB);
+        });
+        return sorted;
+    }
+
+    private static int naturalCompare(String s1, String s2) {
+        if (s1 == null && s2 == null) return 0;
+        if (s1 == null) return -1;
+        if (s2 == null) return 1;
+
+        if (s1.startsWith("row_") && s2.startsWith("row_")) {
+            try {
+                long n1 = Long.parseLong(s1.substring(4));
+                long n2 = Long.parseLong(s2.substring(4));
+                return Long.compare(n1, n2);
+            } catch (NumberFormatException ignored) {
+                // fall through
+            }
+        }
+
+        int i = 0, j = 0;
+        int len1 = s1.length(), len2 = s2.length();
+        while (i < len1 && j < len2) {
+            char c1 = s1.charAt(i);
+            char c2 = s2.charAt(j);
+            if (Character.isDigit(c1) && Character.isDigit(c2)) {
+                int start1 = i;
+                while (i < len1 && Character.isDigit(s1.charAt(i))) i++;
+                int start2 = j;
+                while (j < len2 && Character.isDigit(s2.charAt(j))) j++;
+                String num1 = s1.substring(start1, i);
+                String num2 = s2.substring(start2, j);
+                try {
+                    long val1 = Long.parseLong(num1);
+                    long val2 = Long.parseLong(num2);
+                    int cmp = Long.compare(val1, val2);
+                    if (cmp != 0) return cmp;
+                } catch (NumberFormatException ignored) {
+                    int cmp = num1.compareTo(num2);
+                    if (cmp != 0) return cmp;
+                }
+            } else {
+                int cmp = Character.compare(Character.toLowerCase(c1), Character.toLowerCase(c2));
+                if (cmp != 0) return cmp;
+                i++;
+                j++;
+            }
+        }
+        return Integer.compare(len1, len2);
     }
 
     private List<Map<String, Object>> limitPredictions(
@@ -581,7 +729,74 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
     private static String probability(Map<String, Object> row) {
         Object value = row.containsKey("defectProbability")
                 ? row.get("defectProbability") : row.get("defectScore");
-        return String.valueOf(value);
+        if (value instanceof Number number) {
+            return String.format(Locale.US, "%.4f", number.doubleValue());
+        }
+        if (value != null) {
+            try {
+                double parsed = Double.parseDouble(String.valueOf(value));
+                return String.format(Locale.US, "%.4f", parsed);
+            } catch (NumberFormatException ignored) {
+                return String.valueOf(value);
+            }
+        }
+        return "N/A";
+    }
+
+    private static String formatModelConfig(Map<String, Object> config) {
+        if (config == null || config.isEmpty()) {
+            return "Default";
+        }
+        List<String> parts = new ArrayList<>();
+        if (config.containsKey("modelName")) {
+            parts.add("Model: " + config.get("modelName"));
+        }
+        if (config.containsKey("threshold")) {
+            parts.add(String.format(Locale.US, "Threshold: %.2f", doubleValue(config.get("threshold"), 0.5)));
+        }
+        if (config.containsKey("coral")) {
+            parts.add("CORAL: " + (booleanValue(config.get("coral")) ? "Enabled" : "Disabled"));
+        }
+        if (config.containsKey("k")) {
+            parts.add("k: " + config.get("k"));
+        }
+        if (config.containsKey("seed")) {
+            parts.add("Seed: " + config.get("seed"));
+        }
+        if (config.containsKey("datasetFamily")) {
+            parts.add("Family: " + config.get("datasetFamily"));
+        }
+        return parts.isEmpty() ? config.toString() : String.join(" · ", parts);
+    }
+
+    private static String formatMetric(Object raw) {
+        Object val = metricValue(raw);
+        if (val instanceof Number num) {
+            return String.format(Locale.US, "%.4f", num.doubleValue());
+        }
+        if (val != null) {
+            try {
+                double parsed = Double.parseDouble(String.valueOf(val));
+                return String.format(Locale.US, "%.4f", parsed);
+            } catch (NumberFormatException ignored) {
+                return String.valueOf(val);
+            }
+        }
+        return "N/A";
+    }
+
+    private static String formatConfusionMatrix(Object cm) {
+        if (cm == null) return "N/A";
+        if (cm instanceof Map<?, ?> map) {
+            Object tn = map.get("tn");
+            Object fp = map.get("fp");
+            Object fn = map.get("fn");
+            Object tp = map.get("tp");
+            if (tn != null && fp != null && fn != null && tp != null) {
+                return String.format("TP: %s, FP: %s, TN: %s, FN: %s", tp, fp, tn, fn);
+            }
+        }
+        return String.valueOf(cm);
     }
 
     private static String classLabel(Object value) {

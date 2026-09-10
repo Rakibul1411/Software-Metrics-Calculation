@@ -35,8 +35,18 @@ export class DatasetDetailComponent extends BaseDetailComponent<DatasetSummary> 
     return this.facade.previewColumns(this.preview);
   }
 
+  allRows: Array<Record<string, string>> = [];
+
+  page = 1;
+  pageSize = 10;
+
+  get totalRows(): number {
+    return this.allRows.length || (this.preview?.totalRows ?? this.dataset?.totalFiles ?? 0);
+  }
+
   get previewRows(): Array<Record<string, string>> {
-    return this.facade.previewRows(this.preview);
+    const fromIndex = (this.page - 1) * this.pageSize;
+    return this.allRows.slice(fromIndex, fromIndex + this.pageSize);
   }
 
   /** The stored rows load alongside the record, on their own indicator. */
@@ -46,10 +56,21 @@ export class DatasetDetailComponent extends BaseDetailComponent<DatasetSummary> 
     this.watch(this.facade.preview(id)).subscribe({
       next: preview => {
         this.preview = preview;
+        this.allRows = this.facade.previewRows(preview);
+        this.page = 1;
         this.previewLoading = false;
       },
       error: () => (this.previewLoading = false)
     });
+  }
+
+  onPageChange(page: number): void {
+    this.page = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
   }
 
   deleteDataset = (): Observable<unknown> => this.facade.delete(this.item!.id);

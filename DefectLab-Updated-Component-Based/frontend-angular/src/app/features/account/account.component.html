@@ -3,7 +3,7 @@
     <dl class="dl-kv" *ngIf="session.user as user">
       <dt>Name</dt><dd>{{ user.name }}</dd>
       <dt>Email</dt><dd>{{ user.email }}</dd>
-      <dt>Member since</dt><dd>{{ user.createdAt | date:'medium' }}</dd>
+      <dt>Member since</dt><dd>{{ user.createdAt | date:'mediumDate' }}</dd>
     </dl>
   </ui-card>
 

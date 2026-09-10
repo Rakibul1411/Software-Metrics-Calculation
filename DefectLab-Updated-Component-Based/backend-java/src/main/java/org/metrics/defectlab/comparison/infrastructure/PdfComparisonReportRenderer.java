@@ -16,7 +16,8 @@ public class PdfComparisonReportRenderer implements ComparisonReportRenderer {
     public void writeTables(Path target, String title, List<String> introLines, List<Table> tables)
             throws IOException {
         List<PdfReportWriter.Table> converted = tables.stream()
-                .map(table -> new PdfReportWriter.Table(table.heading(), table.headers(), table.rows()))
+                .map(table -> new PdfReportWriter.Table(
+                        table.heading(), table.headers(), table.rows(), table.columnWeights()))
                 .toList();
         PdfReportWriter.writeTables(target, title, introLines, converted);
     }

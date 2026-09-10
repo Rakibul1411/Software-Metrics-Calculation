@@ -204,12 +204,11 @@ public final class PromiseCompilationService {
             return diagnostics;
         }
         diagnostics.add(String.format(Locale.ROOT,
-                "%d of %d source files did not compile cleanly. Their classes are excluded "
-                + "from the PROMISE output because bytecode metrics cannot be measured on "
-                + "an uncompilable method body (usually a missing dependency JAR).",
+                "%d of %d source files compiled with diagnostics due to unbundled "
+                + "external dependency JARs. Their classes are preserved in the dataset.",
                 failedSources.size(), totalSources));
         failedSources.stream().limit(25).forEach(file ->
-                diagnostics.add("Excluded from PROMISE output: " + file));
+                diagnostics.add("Compiled with missing dependency diagnostics: " + file));
         if (failedSources.size() > 25) {
             diagnostics.add("... and " + (failedSources.size() - 25) + " more.");
         }

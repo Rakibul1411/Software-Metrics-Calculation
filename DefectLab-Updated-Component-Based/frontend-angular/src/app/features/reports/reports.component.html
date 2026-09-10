@@ -12,29 +12,29 @@
 
   <div class="dl-fill">
     <ui-state *ngIf="loading" kind="loading" message="Loading reports…"></ui-state>
-    <ui-table *ngIf="!loading && filtered.length; else empty"
-              [columns]="columns" [rows]="pageRows">
-      <ng-template uiTableCell="group" let-row>
-        <span [title]="row.comparisonGroupId || ''">{{ groupLabel(row) }}</span>
-      </ng-template>
-      <ng-template uiTableCell="source" let-row>{{ row.runs[0].sourceDataset.displayName }}</ng-template>
-      <ng-template uiTableCell="targets" let-row>{{ targetNames(row) }}</ng-template>
-      <ng-template uiTableCell="model" let-row>{{ row.runs[0].modelConfig.modelName }}</ng-template>
-      <ng-template uiTableCell="created" let-row>{{ row.runs[0].createdAt | date:'medium' }}</ng-template>
-      <ng-template uiTableCell="view" let-row>
-        <ui-button variant="ghost" size="sm" icon="view"
-                   title="View report details" ariaLabel="View report details"
-                   (pressed)="view(row)"></ui-button>
-      </ng-template>
-    </ui-table>
+    <div class="dl-table-box" *ngIf="!loading && filtered.length; else empty">
+      <ui-table [columns]="columns" [rows]="pageRows">
+        <ng-template uiTableCell="group" let-row>
+          <span [title]="row.comparisonGroupId || ''">{{ groupLabel(row) }}</span>
+        </ng-template>
+        <ng-template uiTableCell="source" let-row>{{ row.runs[0].sourceDataset.displayName }}</ng-template>
+        <ng-template uiTableCell="targets" let-row>{{ targetNames(row) }}</ng-template>
+        <ng-template uiTableCell="model" let-row>{{ row.runs[0].modelConfig.modelName }}</ng-template>
+        <ng-template uiTableCell="created" let-row>{{ row.runs[0].createdAt | date:'mediumDate' }}</ng-template>
+        <ng-template uiTableCell="view" let-row>
+          <ui-button variant="ghost" size="sm" icon="view"
+                     title="View report details" ariaLabel="View report details"
+                     (pressed)="view(row)"></ui-button>
+        </ng-template>
+      </ui-table>
+      <ui-pagination [total]="filtered.length" [page]="page" [pageSize]="pageSize" noun="reports"
+                     (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+      </ui-pagination>
+    </div>
     <ng-template #empty>
       <ui-state *ngIf="!loading" kind="empty"
                 [message]="groups.length ? 'No matching reports.' : 'No complete dual-target prediction reports yet.'">
       </ui-state>
     </ng-template>
-    <ui-pagination *ngIf="!loading && filtered.length"
-                   [total]="filtered.length" [page]="page" [pageSize]="pageSize" noun="reports"
-                   (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
-    </ui-pagination>
   </div>
 </ui-card>

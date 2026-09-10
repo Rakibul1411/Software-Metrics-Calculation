@@ -72,9 +72,13 @@ export class DefectLabApiService {
     return this.http.get<DatasetSummary>(`${this.api}/datasets/${id}`, this.options);
   }
 
-  previewDataset(id: number): Observable<DatasetPreview> {
+  previewDataset(id: number, page?: number, size?: number): Observable<DatasetPreview> {
+    let params = new HttpParams();
+    if (page != null && size != null && size > 0) {
+      params = params.set('page', String(page)).set('size', String(size));
+    }
     return this.http.get<DatasetPreview>(
-      `${this.api}/datasets/${id}/preview`, this.options);
+      `${this.api}/datasets/${id}/preview`, { ...this.options, params });
   }
 
   uploadDataset(input: {

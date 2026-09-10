@@ -38,13 +38,17 @@
 
   <div class="dl-detail-section" *ngIf="run">
     <h3>Predicted classes</h3>
-    <ui-table *ngIf="run.predictions.length; else emptyPredictions"
-              [columns]="predictionDetailColumns" [rows]="run.predictions"
-              trackByKey="classIdentifier" scrollClass="dl-prediction-detail-scroll">
-      <ng-template uiTableCell="defectProbability" let-row>{{ row.defectProbability | number:'1.4-4' }}</ng-template>
-      <ng-template uiTableCell="predictedLabel" let-row>{{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}</ng-template>
-      <ng-template uiTableCell="actualLabel" let-row>{{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}</ng-template>
-    </ui-table>
+    <div class="dl-table-box" *ngIf="run.predictions.length; else emptyPredictions">
+      <ui-table [columns]="predictionDetailColumns" [rows]="pagedPredictions"
+                trackByKey="classIdentifier">
+        <ng-template uiTableCell="defectProbability" let-row>{{ row.defectProbability | number:'1.4-4' }}</ng-template>
+        <ng-template uiTableCell="predictedLabel" let-row>{{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}</ng-template>
+        <ng-template uiTableCell="actualLabel" let-row>{{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}</ng-template>
+      </ui-table>
+      <ui-pagination [total]="run.predictions.length" [page]="page" [pageSize]="pageSize" noun="predictions"
+                     (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+      </ui-pagination>
+    </div>
     <ng-template #emptyPredictions><ui-state kind="empty" message="No predictions available."></ui-state></ng-template>
   </div>
 </ui-card>

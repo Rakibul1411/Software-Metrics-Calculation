@@ -26,12 +26,13 @@ export interface DatasetListFilter {
 @Injectable({ providedIn: 'root' })
 export class DatasetsFacade {
   readonly columns: TableColumn[] = [
-    { key: 'projectName', label: 'Project name', sticky: 'start', width: '28%' },
+    { key: 'projectName', label: 'Project name', sticky: 'start', width: '18%' },
+    { key: 'projectVersion', label: 'Project version', width: '13%' },
     { key: 'datasetFamily', label: 'Metric family', width: '10%' },
-    { key: 'datasetType', label: 'Data source', width: '14%' },
-    { key: 'hasActualLabel', label: 'Labeled', width: '10%' },
+    { key: 'datasetType', label: 'Data source', width: '13%' },
+    { key: 'hasActualLabel', label: 'Labeled', width: '9%' },
     { key: 'totalFiles', label: 'Instances', align: 'right', width: '8%' },
-    { key: 'totalMetrics', label: 'Features', align: 'right', width: '9%' },
+    { key: 'totalMetrics', label: 'Features', align: 'right', width: '8%' },
     { key: 'createdAt', label: 'Created at', width: '13%' },
     { key: 'actions', label: 'Actions', sticky: 'end', className: 'dl-col-actions', width: '8%' }
   ];
@@ -60,8 +61,8 @@ export class DatasetsFacade {
     return this.api.getDataset(id);
   }
 
-  preview(id: number): Observable<DatasetPreview> {
-    return this.api.previewDataset(id);
+  preview(id: number, page?: number, size?: number): Observable<DatasetPreview> {
+    return this.api.previewDataset(id, page, size);
   }
 
   upload(input: {
@@ -94,7 +95,7 @@ export class DatasetsFacade {
       { label: 'Project version', value: item.projectVersion || '—' },
       { label: 'Rows', value: item.totalFiles },
       { label: 'Features', value: item.totalMetrics },
-      { label: 'Created', value: this.datePipe.transform(item.createdAt, 'medium') },
+      { label: 'Created', value: this.datePipe.transform(item.createdAt, 'mediumDate') },
       { label: 'System dataset', value: item.systemDataset ? 'Yes' : 'No' }
     ];
   }
@@ -105,12 +106,19 @@ export class DatasetsFacade {
    * happened to be underneath — the neighbouring header read as truncated.
    */
   previewColumns(preview: DatasetPreview | null): TableColumn[] {
-    return (preview?.headers ?? []).map((header, index) => ({
-      key: header,
-      label: header,
-      className: 'dl-mono',
-      sticky: index === 0 ? 'start' : undefined
-    }));
+    const headers = preview?.headers ?? [];
+    return headers.map((header, index) => {
+      const isFirst = index === 0;
+      const isLast = index === headers.length - 1 && headers.length > 1;
+      return {
+        key: header,
+        label: header,
+        className: isFirst ? 'dl-col-identifier dl-col-name' : 'dl-num',
+        align: isFirst ? undefined : 'right',
+        sticky: isFirst ? 'start' : (isLast ? 'end' : undefined),
+        width: isFirst ? '320px' : (isLast ? '100px' : undefined)
+      };
+    });
   }
 
   previewRows(preview: DatasetPreview | null): Array<Record<string, string>> {

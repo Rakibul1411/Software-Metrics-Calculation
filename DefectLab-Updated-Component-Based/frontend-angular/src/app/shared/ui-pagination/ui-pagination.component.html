@@ -1,22 +1,41 @@
 <div class="dl-pagination">
-  <div class="dl-pagination-size">
-    <span>Rows per page</span>
-    <ui-select [options]="sizeOptions" [value]="pageSize"
-               (valueChange)="onSizeChange($event)">
-    </ui-select>
+  <div class="dl-pagination-left">
+    <div class="dl-pagination-size">
+      <span>Rows per page</span>
+      <ui-select [options]="sizeOptions" [value]="pageSize"
+                 (valueChange)="onSizeChange($event)">
+      </ui-select>
+    </div>
+
+    <span class="dl-pagination-count">
+      <strong>{{ firstRow }}-{{ lastRow }}</strong> of <strong>{{ total }}</strong>
+    </span>
   </div>
 
-  <span class="dl-pagination-range">
-    {{ firstRow }}–{{ lastRow }} of {{ total }} {{ noun }}
-  </span>
+  <div class="dl-pagination-group" *ngIf="totalPages >= 1">
+    <button type="button" class="dl-page-seg"
+            title="Previous page" aria-label="Previous page"
+            [disabled]="!hasPrevious" (click)="previous()">
+      <ui-icon name="chevron-left" [size]="14"></ui-icon>
+    </button>
 
-  <div class="dl-pagination-nav">
-    <ui-button variant="ghost" size="sm" icon="arrow-left"
-               title="Previous page" ariaLabel="Previous page"
-               [disabled]="!hasPrevious" (pressed)="previous()"></ui-button>
-    <span>Page {{ page }} of {{ totalPages }}</span>
-    <ui-button variant="ghost" size="sm" icon="arrow-right"
-               title="Next page" ariaLabel="Next page"
-               [disabled]="!hasNext" (pressed)="next()"></ui-button>
+    <ng-container *ngFor="let p of pages">
+      <button *ngIf="isNumber(p); else ellipsis"
+              type="button" class="dl-page-seg dl-page-num"
+              [class.active]="p === page"
+              [attr.aria-current]="p === page ? 'page' : null"
+              (click)="goToPage(p)">
+        {{ p }}
+      </button>
+      <ng-template #ellipsis>
+        <span class="dl-page-seg dl-page-ellipsis">…</span>
+      </ng-template>
+    </ng-container>
+
+    <button type="button" class="dl-page-seg"
+            title="Next page" aria-label="Next page"
+            [disabled]="!hasNext" (click)="next()">
+      <ui-icon name="chevron-right" [size]="14"></ui-icon>
+    </button>
   </div>
 </div>

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable, forkJoin } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, forkJoin, of } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import {
   DashboardData,
   DatasetSummary,
@@ -14,6 +14,30 @@ const VOLUME_LIMIT = 8;
 /** Scored runs compared side by side; past three, colour stops being readable. */
 const QUALITY_LIMIT = 3;
 
+export interface TopHotspot {
+  classIdentifier: string;
+  defectProbability: number;
+  riskRank: number;
+  runId: number;
+  targetDatasetName: string;
+}
+
+export interface DefectStats {
+  totalRuns: number;
+  totalPredictedBuggy: number;
+  totalPredictedClean: number;
+  totalPredictedClasses: number;
+  defectRate: number;
+  avgF1: number | null;
+  avgRocAuc: number | null;
+  avgAccuracy: number | null;
+  avgPrecision: number | null;
+  avgRecall: number | null;
+  scoredRunsCount: number;
+  highestRiskDataset: string | null;
+  highestRiskCount: number;
+}
+
 /** Everything the overview screen renders, assembled once. */
 export interface DashboardView {
   data: DashboardData;
@@ -24,6 +48,8 @@ export interface DashboardView {
   composition: ChartData;
   quality: ChartData;
   balance: ChartData;
+  defectStats: DefectStats;
+  topHotspots: TopHotspot[];
 }
 
 /**
@@ -41,7 +67,27 @@ export class DashboardFacade {
       data: this.api.dashboard(),
       datasets: this.api.listDatasets(),
       runs: this.api.listPredictionRuns()
-    }).pipe(map(result => this.assemble(result.data, result.datasets, result.runs)));
+    }).pipe(
+      switchMap(result => {
+        const latestRun = result.runs[0];
+        if (latestRun) {
+          return this.api.predictions(latestRun.id, true, 6).pipe(
+            map(predictions => {
+              const hotspots: TopHotspot[] = predictions.map(p => ({
+                classIdentifier: p.classIdentifier,
+                defectProbability: p.defectProbability,
+                riskRank: p.riskRank,
+                runId: latestRun.id,
+                targetDatasetName: latestRun.targetDataset.displayName
+              }));
+              return this.assemble(result.data, result.datasets, result.runs, hotspots);
+            }),
+            catchError(() => of(this.assemble(result.data, result.datasets, result.runs, [])))
+          );
+        }
+        return of(this.assemble(result.data, result.datasets, result.runs, []));
+      })
+    );
   }
 
   originLabel(value: string): string {
@@ -59,7 +105,8 @@ export class DashboardFacade {
   private assemble(
     data: DashboardData,
     datasets: DatasetSummary[],
-    runs: PredictionRunSummary[]
+    runs: PredictionRunSummary[],
+    topHotspots: TopHotspot[] = []
   ): DashboardView {
     return {
       data,
@@ -69,7 +116,106 @@ export class DashboardFacade {
       volumeTotal: datasets.reduce((sum, item) => sum + item.totalFiles, 0),
       composition: this.compositionChart(datasets),
       quality: this.qualityChart(runs),
-      balance: this.balanceChart(runs)
+      balance: this.balanceChart(runs),
+      defectStats: this.calculateDefectStats(runs),
+      topHotspots
+    };
+  }
+
+  private calculateDefectStats(runs: PredictionRunSummary[]): DefectStats {
+    const totalRuns = runs.length;
+    const totalPredictedBuggy = runs.reduce(
+      (sum, r) => sum + (r.summary?.predictedBuggy ?? 0),
+      0
+    );
+    const totalPredictedClean = runs.reduce(
+      (sum, r) => sum + (r.summary?.predictedClean ?? 0),
+      0
+    );
+    const totalPredictedClasses = totalPredictedBuggy + totalPredictedClean;
+    const defectRate =
+      totalPredictedClasses > 0
+        ? (totalPredictedBuggy / totalPredictedClasses) * 100
+        : 0;
+
+    const scoredRuns = runs.filter(
+      r => r.evaluation && typeof r.evaluation.f1?.value === 'number'
+    );
+    const scoredRunsCount = scoredRuns.length;
+    const avgF1 =
+      scoredRunsCount > 0
+        ? scoredRuns.reduce((sum, r) => sum + (r.evaluation!.f1.value ?? 0), 0) /
+          scoredRunsCount
+        : null;
+
+    const rocAucRuns = runs.filter(
+      r => r.evaluation && typeof r.evaluation.rocAuc?.value === 'number'
+    );
+    const avgRocAuc =
+      rocAucRuns.length > 0
+        ? rocAucRuns.reduce(
+            (sum, r) => sum + (r.evaluation!.rocAuc.value ?? 0),
+            0
+          ) / rocAucRuns.length
+        : null;
+
+    const accRuns = runs.filter(
+      r => r.evaluation && typeof r.evaluation.accuracy?.value === 'number'
+    );
+    const avgAccuracy =
+      accRuns.length > 0
+        ? accRuns.reduce(
+            (sum, r) => sum + (r.evaluation!.accuracy.value ?? 0),
+            0
+          ) / accRuns.length
+        : null;
+
+    const precRuns = runs.filter(
+      r => r.evaluation && typeof r.evaluation.precision?.value === 'number'
+    );
+    const avgPrecision =
+      precRuns.length > 0
+        ? precRuns.reduce(
+            (sum, r) => sum + (r.evaluation!.precision.value ?? 0),
+            0
+          ) / precRuns.length
+        : null;
+
+    const recRuns = runs.filter(
+      r => r.evaluation && typeof r.evaluation.recall?.value === 'number'
+    );
+    const avgRecall =
+      recRuns.length > 0
+        ? recRuns.reduce(
+            (sum, r) => sum + (r.evaluation!.recall.value ?? 0),
+            0
+          ) / recRuns.length
+        : null;
+
+    let highestRiskDataset: string | null = null;
+    let highestRiskCount = 0;
+    for (const run of runs) {
+      const buggy = run.summary?.predictedBuggy ?? 0;
+      if (buggy > highestRiskCount) {
+        highestRiskCount = buggy;
+        highestRiskDataset = run.targetDataset?.displayName ?? `Run #${run.id}`;
+      }
+    }
+
+    return {
+      totalRuns,
+      totalPredictedBuggy,
+      totalPredictedClean,
+      totalPredictedClasses,
+      defectRate,
+      avgF1,
+      avgRocAuc,
+      avgAccuracy,
+      avgPrecision,
+      avgRecall,
+      scoredRunsCount,
+      highestRiskDataset,
+      highestRiskCount
     };
   }
 

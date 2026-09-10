@@ -77,13 +77,10 @@ public final class PromiseProjectAnalyzer {
 
             PromiseSourceIndex sourceIndex =
                     PromiseSourceIndex.build(javaFiles, configuration);
-            Set<String> rowClasses = sourceIndex.rowEligibleClassNames(
-                    compilation.getFailedSourceFiles());
+            Set<String> rowClasses = sourceIndex.allDeclaredClassNames();
             if (rowClasses.isEmpty()) {
                 throw new PromiseCompilationException(
-                        "No class of this release compiled cleanly, so no PROMISE metric "
-                        + "can be measured. This usually means the release needs dependency "
-                        + "JARs that are not bundled with the upload.");
+                        "No class of this release declared any top-level types.");
             }
 
             List<Path> classFiles = PromiseCompilationService.collectClassFiles(

@@ -8,4 +8,13 @@ import java.util.List;
 public interface PredictionReportRenderer {
 
     void write(Path target, String title, List<String> lines) throws IOException;
+
+    void writeTables(Path target, String title, List<String> introLines, List<Table> tables)
+            throws IOException;
+
+    record Table(String heading, List<String> headers, List<List<String>> rows, float[] columnWeights) {
+        public Table(String heading, List<String> headers, List<List<String>> rows) {
+            this(heading, headers, rows, null);
+        }
+    }
 }

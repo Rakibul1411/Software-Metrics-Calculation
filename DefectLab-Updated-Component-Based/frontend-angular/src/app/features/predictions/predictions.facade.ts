@@ -105,7 +105,7 @@ export class PredictionsFacade {
         label: 'Dataset alignment',
         value: run.modelConfig.coral ? 'Enabled' : 'Disabled'
       },
-      { label: 'Created', value: this.datePipe.transform(run.createdAt, 'medium') }
+      { label: 'Created', value: this.datePipe.transform(run.createdAt, 'mediumDate') }
     ];
   }
 
@@ -114,12 +114,12 @@ export class PredictionsFacade {
     const hasActual = run?.targetDataset.datasetType === 'PREDEFINED';
     const columns: TableColumn[] = [
       {
-        key: 'riskRank', label: 'Rank', align: 'right',
-        className: 'dl-col-rank', sticky: 'start', width: '8%'
+        key: 'classIdentifier', label: 'File / identifier',
+        className: 'dl-col-identifier', width: hasActual ? '46%' : '58%', sticky: 'start'
       },
       {
-        key: 'classIdentifier', label: 'File / identifier',
-        className: 'dl-col-identifier', width: hasActual ? '46%' : '58%'
+        key: 'riskRank', label: 'Rank', align: 'right',
+        className: 'dl-col-rank', width: '8%'
       },
       {
         key: 'defectProbability', label: 'Probability', align: 'right',

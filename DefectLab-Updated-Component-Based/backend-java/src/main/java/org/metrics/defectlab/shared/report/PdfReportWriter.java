@@ -20,11 +20,11 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 public final class PdfReportWriter {
 
     private static final float MARGIN = 40f;
-    private static final float BODY_SIZE = 9f;
+    private static final float BODY_SIZE = 8.5f;
     private static final float LEADING = 12.5f;
-    private static final float TITLE_SIZE = 16f;
-    private static final float HEADING_SIZE = 12f;
-    private static final float CELL_PADDING = 3f;
+    private static final float TITLE_SIZE = 17f;
+    private static final float HEADING_SIZE = 11.5f;
+    private static final float CELL_PADDING = 3.5f;
     private static final int WRAP_AT = 105;
 
     private PdfReportWriter() {
@@ -39,6 +39,7 @@ public final class PdfReportWriter {
                 writer.paragraphLine(line);
             }
             writer.close();
+            addPageNumbersAndFooters(document, title);
             document.save(target.toFile());
         }
     }
@@ -62,24 +63,72 @@ public final class PdfReportWriter {
                 if (table.heading != null && !table.heading.isBlank()) {
                     writer.sectionHeading(table.heading);
                 }
-                writer.table(table.headers, table.rows);
+                writer.table(table);
             }
             writer.close();
+            addPageNumbersAndFooters(document, title);
             document.save(target.toFile());
         }
     }
 
-    /** One table section: an optional heading, column headers, and rows. */
+    /** Adds running footers and page numbering to every page of the report. */
+    private static void addPageNumbersAndFooters(PDDocument document, String title) throws IOException {
+        int totalPages = document.getNumberOfPages();
+        for (int i = 0; i < totalPages; i++) {
+            PDPage page = document.getPage(i);
+            float width = page.getMediaBox().getWidth();
+            try (PDPageContentStream stream = new PDPageContentStream(
+                    document, page, PDPageContentStream.AppendMode.APPEND, true, true)) {
+                // Subtle footer rule
+                stream.setStrokingColor(0.82f, 0.84f, 0.88f);
+                stream.setLineWidth(0.5f);
+                stream.moveTo(MARGIN, 28f);
+                stream.lineTo(width - MARGIN, 28f);
+                stream.stroke();
+
+                // Brand / document title on left
+                stream.beginText();
+                stream.setFont(PDType1Font.HELVETICA, 7.5f);
+                stream.setNonStrokingColor(0.48f, 0.52f, 0.58f);
+                stream.newLineAtOffset(MARGIN, 17f);
+                stream.showText("DefectLab Analytics Platform | " + safe(title));
+                stream.endText();
+
+                // Page count on right
+                String pageText = "Page " + (i + 1) + " of " + totalPages;
+                float textWidth = PDType1Font.HELVETICA.getStringWidth(pageText) / 1000f * 7.5f;
+                stream.beginText();
+                stream.setFont(PDType1Font.HELVETICA, 7.5f);
+                stream.setNonStrokingColor(0.48f, 0.52f, 0.58f);
+                stream.newLineAtOffset(width - MARGIN - textWidth, 17f);
+                stream.showText(pageText);
+                stream.endText();
+            }
+        }
+    }
+
+    /** One table section: an optional heading, column headers, rows, and optional custom widths. */
     public static final class Table {
         private final String heading;
         private final List<String> headers;
         private final List<List<String>> rows;
+        private final float[] columnWeights;
 
         public Table(String heading, List<String> headers, List<List<String>> rows) {
+            this(heading, headers, rows, null);
+        }
+
+        public Table(String heading, List<String> headers, List<List<String>> rows, float[] columnWeights) {
             this.heading = heading;
             this.headers = headers;
             this.rows = rows;
+            this.columnWeights = columnWeights;
         }
+
+        public String heading() { return heading; }
+        public List<String> headers() { return headers; }
+        public List<List<String>> rows() { return rows; }
+        public float[] columnWeights() { return columnWeights; }
     }
 
     private static List<String> wrapPlain(String value) {
@@ -117,10 +166,12 @@ public final class PdfReportWriter {
                     current = new StringBuilder(word);
                 }
                 while (width(current.toString(), font, fontSize) > maxWidth && current.length() > 1) {
-                    // A single token is still too wide (e.g. a long identifier):
-                    // hard-split it rather than overflow the column.
-                    lines.add(current.substring(0, current.length() - 1));
-                    current = new StringBuilder(current.substring(current.length() - 1));
+                    int fit = 1;
+                    while (fit < current.length() && width(current.substring(0, fit + 1), font, fontSize) <= maxWidth) {
+                        fit++;
+                    }
+                    lines.add(current.substring(0, fit));
+                    current = new StringBuilder(current.substring(fit));
                 }
             }
             lines.add(current.toString());
@@ -147,6 +198,9 @@ public final class PdfReportWriter {
         private float y;
         private float pageWidth;
 
+        private List<String> activeHeaders;
+        private float[] activeWidths;
+
         private PageWriter(PDDocument document) throws IOException {
             this.document = document;
             newPage();
@@ -161,10 +215,16 @@ public final class PdfReportWriter {
             stream = new PDPageContentStream(document, page);
             pageWidth = page.getMediaBox().getWidth();
             y = page.getMediaBox().getHeight() - MARGIN;
+
+            // When repeating headers inside a multi-page table
+            if (activeHeaders != null && activeWidths != null) {
+                drawHeaderRow(activeHeaders, activeWidths, false);
+            }
         }
 
         private void ensureRoom(float needed) throws IOException {
-            if (y - needed < MARGIN) {
+            // Preserve 40pt at bottom for page footer
+            if (y - needed < MARGIN + 15f) {
                 newPage();
             }
         }
@@ -178,15 +238,34 @@ public final class PdfReportWriter {
         }
 
         private void title(String title) throws IOException {
-            ensureRoom(30f);
+            ensureRoom(36f);
+            stream.setNonStrokingColor(0.08f, 0.12f, 0.18f);
             text(MARGIN, y, title, PDType1Font.HELVETICA_BOLD, TITLE_SIZE);
-            y -= 26f;
+            y -= 14f;
+
+            // Brand caption
+            stream.setNonStrokingColor(0.45f, 0.50f, 0.56f);
+            String caption = title != null && title.toLowerCase().contains("comparison")
+                    ? "Software Metrics Analysis & Predefined Baseline Comparison"
+                    : "Software Defect Prediction & Risk Ranking Analysis";
+            text(MARGIN, y, caption, PDType1Font.HELVETICA_OBLIQUE, 8.5f);
+            y -= 14f;
+
+            // Subtle divider rule
+            stream.setStrokingColor(0.80f, 0.83f, 0.88f);
+            stream.setLineWidth(1f);
+            stream.moveTo(MARGIN, y);
+            stream.lineTo(pageWidth - MARGIN, y);
+            stream.stroke();
+            stream.setNonStrokingColor(0.15f, 0.18f, 0.22f);
+            y -= 14f;
         }
 
         private void sectionHeading(String heading) throws IOException {
-            ensureRoom(20f);
+            ensureRoom(24f);
+            stream.setNonStrokingColor(0.12f, 0.16f, 0.22f);
             text(MARGIN, y, heading, PDType1Font.HELVETICA_BOLD, HEADING_SIZE);
-            y -= 18f;
+            y -= 16f;
         }
 
         private void paragraphLine(String line) throws IOException {
@@ -194,6 +273,7 @@ public final class PdfReportWriter {
                 blank();
                 return;
             }
+            stream.setNonStrokingColor(0.20f, 0.24f, 0.30f);
             for (String wrapped : wrapPlain(line)) {
                 ensureRoom(LEADING);
                 text(MARGIN, y, wrapped, PDType1Font.HELVETICA, BODY_SIZE);
@@ -206,24 +286,37 @@ public final class PdfReportWriter {
             y -= LEADING;
         }
 
-        private void table(List<String> headers, List<List<String>> rows) throws IOException {
+        private void table(Table table) throws IOException {
+            List<String> headers = table.headers();
+            List<List<String>> rows = table.rows();
             if (headers == null || headers.isEmpty()) {
                 return;
             }
             float tableWidth = pageWidth - 2 * MARGIN;
-            float[] columnWidths = columnWidths(headers.size(), tableWidth);
+            float[] widths = columnWidths(headers, table.columnWeights(), tableWidth);
 
-            drawRow(headers, columnWidths, PDType1Font.HELVETICA_BOLD, true);
+            this.activeHeaders = headers;
+            this.activeWidths = widths;
+
+            drawHeaderRow(headers, widths, true);
+            int rowIndex = 0;
             for (List<String> row : rows) {
-                drawRow(row, columnWidths, PDType1Font.HELVETICA, false);
+                drawDataRow(row, widths, rowIndex++);
             }
+
+            this.activeHeaders = null;
+            this.activeWidths = null;
         }
 
-        /** The first column (usually a name/identifier) gets extra room. */
-        private float[] columnWidths(int columnCount, float tableWidth) {
+        private float[] columnWidths(List<String> headers, float[] customWeights, float tableWidth) {
+            int columnCount = headers.size();
             float[] weights = new float[columnCount];
-            for (int i = 0; i < columnCount; i++) {
-                weights[i] = i == 0 ? 1.6f : 1f;
+            if (customWeights != null && customWeights.length == columnCount) {
+                System.arraycopy(customWeights, 0, weights, 0, columnCount);
+            } else {
+                for (int i = 0; i < columnCount; i++) {
+                    weights[i] = i == 0 ? 1.6f : 1f;
+                }
             }
             float totalWeight = 0f;
             for (float weight : weights) {
@@ -236,43 +329,99 @@ public final class PdfReportWriter {
             return widths;
         }
 
-        private void drawRow(
-                List<String> cells, float[] columnWidths, PDFont font, boolean header) throws IOException {
+        private void drawHeaderRow(List<String> headers, float[] columnWidths, boolean checkRoom) throws IOException {
             List<List<String>> wrappedCells = new ArrayList<>();
             int maxLines = 1;
             for (int i = 0; i < columnWidths.length; i++) {
-                String value = i < cells.size() ? cells.get(i) : "";
-                List<String> wrapped = wrapToWidth(value, font, BODY_SIZE, columnWidths[i] - 2 * CELL_PADDING);
+                String value = i < headers.size() ? headers.get(i) : "";
+                List<String> wrapped = wrapToWidth(value, PDType1Font.HELVETICA_BOLD, BODY_SIZE, columnWidths[i] - 2 * CELL_PADDING);
                 wrappedCells.add(wrapped);
                 maxLines = Math.max(maxLines, wrapped.size());
             }
-            float rowHeight = maxLines * LEADING + 2 * CELL_PADDING;
+            float rowHeight = maxLines * LEADING + 2 * CELL_PADDING + 2f;
 
-            // A header must never be orphaned alone at the bottom of a page:
-            // if we're about to page-break right after drawing it, start fresh.
-            ensureRoom(header ? rowHeight + LEADING : rowHeight);
+            if (checkRoom) {
+                ensureRoom(rowHeight + LEADING);
+            }
 
             float rowTopY = y;
+            float totalWidth = sum(columnWidths);
+
+            // Shaded header background
+            stream.setNonStrokingColor(0.93f, 0.94f, 0.96f);
+            stream.addRect(MARGIN, rowTopY - rowHeight, totalWidth, rowHeight);
+            stream.fill();
+
+            // Header text
+            stream.setNonStrokingColor(0.12f, 0.16f, 0.22f);
             float x = MARGIN;
             for (int i = 0; i < columnWidths.length; i++) {
                 float cellY = rowTopY - CELL_PADDING - BODY_SIZE;
                 for (String line : wrappedCells.get(i)) {
-                    text(x + CELL_PADDING, cellY, line, font, BODY_SIZE);
+                    text(x + CELL_PADDING, cellY, line, PDType1Font.HELVETICA_BOLD, BODY_SIZE);
                     cellY -= LEADING;
                 }
                 x += columnWidths[i];
             }
 
+            // Top and bottom border lines
             float bottomY = rowTopY - rowHeight;
-            stream.setLineWidth(header ? 1f : 0.4f);
-            stream.moveTo(MARGIN, bottomY);
-            stream.lineTo(MARGIN + sum(columnWidths), bottomY);
+            stream.setStrokingColor(0.72f, 0.75f, 0.80f);
+            stream.setLineWidth(1.1f);
+            stream.moveTo(MARGIN, rowTopY);
+            stream.lineTo(MARGIN + totalWidth, rowTopY);
             stream.stroke();
-            if (header) {
-                stream.moveTo(MARGIN, rowTopY);
-                stream.lineTo(MARGIN + sum(columnWidths), rowTopY);
-                stream.stroke();
+
+            stream.setLineWidth(1.1f);
+            stream.moveTo(MARGIN, bottomY);
+            stream.lineTo(MARGIN + totalWidth, bottomY);
+            stream.stroke();
+
+            y = bottomY;
+        }
+
+        private void drawDataRow(List<String> cells, float[] columnWidths, int rowIndex) throws IOException {
+            List<List<String>> wrappedCells = new ArrayList<>();
+            int maxLines = 1;
+            for (int i = 0; i < columnWidths.length; i++) {
+                String value = i < cells.size() ? cells.get(i) : "";
+                List<String> wrapped = wrapToWidth(value, PDType1Font.HELVETICA, BODY_SIZE, columnWidths[i] - 2 * CELL_PADDING);
+                wrappedCells.add(wrapped);
+                maxLines = Math.max(maxLines, wrapped.size());
             }
+            float rowHeight = maxLines * LEADING + 2 * CELL_PADDING;
+
+            ensureRoom(rowHeight);
+
+            float rowTopY = y;
+            float totalWidth = sum(columnWidths);
+
+            // Subtle alternating row tint
+            if (rowIndex % 2 == 1) {
+                stream.setNonStrokingColor(0.985f, 0.988f, 0.993f);
+                stream.addRect(MARGIN, rowTopY - rowHeight, totalWidth, rowHeight);
+                stream.fill();
+            }
+
+            stream.setNonStrokingColor(0.18f, 0.22f, 0.28f);
+            float x = MARGIN;
+            for (int i = 0; i < columnWidths.length; i++) {
+                float cellY = rowTopY - CELL_PADDING - BODY_SIZE;
+                for (String line : wrappedCells.get(i)) {
+                    text(x + CELL_PADDING, cellY, line, PDType1Font.HELVETICA, BODY_SIZE);
+                    cellY -= LEADING;
+                }
+                x += columnWidths[i];
+            }
+
+            // Thin row divider
+            float bottomY = rowTopY - rowHeight;
+            stream.setStrokingColor(0.88f, 0.89f, 0.92f);
+            stream.setLineWidth(0.35f);
+            stream.moveTo(MARGIN, bottomY);
+            stream.lineTo(MARGIN + totalWidth, bottomY);
+            stream.stroke();
+
             y = bottomY;
         }
 
