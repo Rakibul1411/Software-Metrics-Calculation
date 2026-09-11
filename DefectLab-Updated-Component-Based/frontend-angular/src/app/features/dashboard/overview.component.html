@@ -5,8 +5,8 @@
       <h2>Research workspace</h2>
     </div>
     <div class="dl-dash-actions">
-      <ui-button icon="plus" link="/analyze">Analyze source</ui-button>
-      <ui-button variant="ghost" icon="chart" link="/predictions">New prediction</ui-button>
+      <ui-button icon="plus" link="/analyze">Analyze Source</ui-button>
+      <ui-button variant="ghost" icon="chart" link="/predictions/new">New Prediction</ui-button>
     </div>
   </header>
 
@@ -61,11 +61,73 @@
       </article>
 
       <article class="dl-dash-metric">
+        <div class="dl-dash-metric-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">A</div>
+        <span>Codebase Architecture</span>
+        <strong>Grade {{ view.architecturalStats.maintainabilityRating }}</strong>
+        <small>MI: {{ view.architecturalStats.overallMaintainabilityIndex }}/100 · {{ view.architecturalStats.totalGodClasses }} God Classes</small>
+        <span class="dl-dash-submetric">
+          {{ view.architecturalStats.totalSpaghettiCoupling }} Spaghetti Couplings
+        </span>
+        <a [routerLink]="['/reports', (view.topHotspots && view.topHotspots.length ? view.topHotspots[0].reportKey : '')]">Inspect Treemap <b>→</b></a>
+      </article>
+
+      <article class="dl-dash-metric">
         <div class="dl-dash-metric-icon warn">H</div>
         <span>Top defect hotspot</span>
         <strong [title]="view.defectStats.highestRiskDataset || 'No hotspots'">{{ view.defectStats.highestRiskDataset || 'None' }}</strong>
         <small>{{ view.defectStats.highestRiskCount > 0 ? (view.defectStats.highestRiskCount + ' buggy classes') : 'No defect alerts' }}</small>
         <a routerLink="/reports">Inspect target <b>→</b></a>
+      </article>
+    </section>
+
+    <!-- SciTools Understand™ Architectural Health Pulse -->
+    <section class="dl-dash-arch-health-section" *ngIf="view.architecturalStats && view.architecturalStats.totalAnalyzedClasses > 0">
+      <article class="dl-dash-panel">
+        <div class="dl-dash-section-head">
+          <div>
+            <span class="dl-dash-eyebrow">SciTools Understand™ Architectural Pulse</span>
+            <h3>Codebase Health & Anti-Pattern Distribution</h3>
+          </div>
+          <span class="dl-dash-period">Target: {{ (view.topHotspots && view.topHotspots.length ? view.topHotspots[0].targetDatasetName : 'Analyzed Project') }}</span>
+        </div>
+
+        <div class="dl-arch-health-grid">
+          <div class="dl-arch-health-card">
+            <span class="dl-arch-card-label">Clean / Low Risk</span>
+            <strong class="dl-arch-card-val text-success">{{ view.architecturalStats.cleanClassesCount }} Classes</strong>
+            <small>High cohesion (LCOM &lt; 0.8), low coupling</small>
+            <div class="dl-prob-track">
+              <span class="dl-prob-fill" style="background: #047857;" [style.width.%]="percent(view.architecturalStats.cleanClassesCount, view.architecturalStats.totalAnalyzedClasses)"></span>
+            </div>
+          </div>
+
+          <div class="dl-arch-health-card">
+            <span class="dl-arch-card-label">Elevated Risk / Warning</span>
+            <strong class="dl-arch-card-val text-warn">{{ view.architecturalStats.warningClassesCount }} Classes</strong>
+            <small>Elevated complexity or coupling</small>
+            <div class="dl-prob-track">
+              <span class="dl-prob-fill" style="background: #b45309;" [style.width.%]="percent(view.architecturalStats.warningClassesCount, view.architecturalStats.totalAnalyzedClasses)"></span>
+            </div>
+          </div>
+
+          <div class="dl-arch-health-card">
+            <span class="dl-arch-card-label">Critical Hotspots / God Classes</span>
+            <strong class="dl-arch-card-val text-danger">{{ view.architecturalStats.criticalHotspotsCount }} Classes</strong>
+            <small>{{ view.architecturalStats.totalGodClasses }} God Classes · {{ view.architecturalStats.totalSpaghettiCoupling }} Spaghetti</small>
+            <div class="dl-prob-track">
+              <span class="dl-prob-fill" style="background: #be123c;" [style.width.%]="percent(view.architecturalStats.criticalHotspotsCount, view.architecturalStats.totalAnalyzedClasses)"></span>
+            </div>
+          </div>
+
+          <div class="dl-arch-health-card">
+            <span class="dl-arch-card-label">SEI Maintainability Index</span>
+            <strong class="dl-arch-card-val text-accent">{{ view.architecturalStats.overallMaintainabilityIndex }}/100 (Grade {{ view.architecturalStats.maintainabilityRating }})</strong>
+            <small>Halstead Volume + McCabe Cyclomatic</small>
+            <div class="dl-prob-track">
+              <span class="dl-prob-fill" style="background: #2563eb;" [style.width.%]="view.architecturalStats.overallMaintainabilityIndex"></span>
+            </div>
+          </div>
+        </div>
       </article>
     </section>
 
@@ -88,19 +150,33 @@
           <div class="dl-hotspot-item" *ngFor="let item of view.topHotspots">
             <div class="dl-hotspot-rank">#{{ item.riskRank }}</div>
             <div class="dl-hotspot-main">
-              <strong class="dl-hotspot-name" [title]="item.classIdentifier">{{ item.classIdentifier }}</strong>
-              <small class="dl-hotspot-target">{{ item.targetDatasetName }} · Prediction run #{{ item.runId }}</small>
+              <div class="dl-hotspot-title-row">
+                <strong class="dl-hotspot-name" [title]="item.classIdentifier">{{ item.simpleName }}</strong>
+                <span class="dl-hotspot-package">{{ item.packageName }}</span>
+                <span class="dl-hotspot-smell-badge" *ngIf="item.primarySmell">
+                  ⚠️ {{ item.primarySmell }}
+                </span>
+              </div>
+              <div class="dl-hotspot-meta-row">
+                <span class="dl-hotspot-metric-pill"><strong>LOC:</strong> {{ item.loc | number }}</span>
+                <span class="dl-hotspot-metric-pill"><strong>WMC:</strong> {{ item.wmc }}</span>
+                <span class="dl-hotspot-metric-pill"><strong>CBO:</strong> {{ item.cbo }}</span>
+                <span class="dl-hotspot-metric-pill blast" *ngIf="item.blastRadius">
+                  <strong>Blast:</strong> {{ item.blastRadius }} Callers
+                </span>
+                <span class="dl-hotspot-target-name">{{ item.targetDatasetName }} · Run #{{ item.runId }}</span>
+              </div>
             </div>
             <div class="dl-hotspot-prob-box">
-              <span class="dl-hotspot-prob-number">{{ (item.defectProbability * 100) | number:'1.1-1' }}% prob</span>
+              <span class="dl-hotspot-prob-number">{{ (item.defectProbability * 100) | number:'1.1-1' }}% Risk</span>
               <div class="dl-prob-track">
                 <span class="dl-prob-fill buggy" [style.width.%]="item.defectProbability * 100"></span>
               </div>
             </div>
             <div class="dl-hotspot-action">
               <ui-badge tone="amber">Buggy (1)</ui-badge>
-              <a routerLink="/reports" class="dl-hotspot-link" title="Inspect in Reports">
-                <ui-icon name="chevron-right" [size]="14"></ui-icon>
+              <a [routerLink]="['/reports', item.reportKey]" class="dl-btn-inspect-link" title="Open SciTools Understand Treemap & Butterfly Graph">
+                Inspect ↗
               </a>
             </div>
           </div>

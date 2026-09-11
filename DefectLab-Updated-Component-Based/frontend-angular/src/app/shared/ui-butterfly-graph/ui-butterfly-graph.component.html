@@ -1,0 +1,234 @@
+<div class="dl-butterfly-wrapper">
+  <!-- Header Bar -->
+  <div class="dl-butterfly-header">
+    <div class="dl-bf-title-block">
+      <div class="dl-bf-title-row">
+        <span class="dl-bf-tag">SciTools Understand™ Dependency Topology</span>
+        <h5 class="dl-bf-title">Defect Blast Radius: {{ focusClass.className }}</h5>
+      </div>
+      <p class="dl-bf-sub">
+        Left: Upstream Dependents (Directly impacted by bugs in this class) · Right: Outbound Dependencies (Suppliers).
+      </p>
+    </div>
+
+    <!-- Architectural Index Pills -->
+    <div class="dl-bf-stats">
+      <div class="dl-bf-pill" [class.pill-danger]="focusClass.maintainabilityIndex < 55" [class.pill-success]="focusClass.maintainabilityIndex >= 80">
+        <span class="dl-pill-lbl">Maintainability (MI)</span>
+        <strong>{{ focusClass.maintainabilityIndex }}/100</strong>
+        <small>{{ focusClass.maintainabilityRating }}</small>
+      </div>
+
+      <div class="dl-bf-pill" [class.pill-danger]="focusClass.instability > 0.7">
+        <span class="dl-pill-lbl">Instability (I)</span>
+        <strong>{{ focusClass.instability | number:'1.2-2' }}</strong>
+        <small>{{ focusClass.instability > 0.7 ? 'Fragile' : 'Stable' }}</small>
+      </div>
+
+      <div class="dl-bf-pill pill-blast" [class.pill-danger]="focusClass.blastRadius >= 5">
+        <span class="dl-pill-lbl">Blast Radius</span>
+        <strong>{{ focusClass.blastRadius }} Classes</strong>
+        <small>Downstream Impact</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- SVG Butterfly Visualizer -->
+  <div class="dl-butterfly-canvas-container" [style.height.px]="height">
+    <svg
+      class="dl-butterfly-svg"
+      [attr.viewBox]="'0 0 ' + viewWidth + ' ' + viewHeight"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <defs>
+        <!-- Directional Arrowhead markers -->
+        <marker id="arrow-in" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#3b82f6" />
+        </marker>
+        <marker id="arrow-in-warn" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ef4444" />
+        </marker>
+        <marker id="arrow-out" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981" />
+        </marker>
+        <marker id="arrow-out-warn" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ef4444" />
+        </marker>
+      </defs>
+
+      <!-- Solid Curved Bezier Connections -->
+      <g class="dl-bf-links">
+        <path
+          *ngFor="let link of links"
+          [attr.d]="link.path"
+          class="dl-bf-curve-solid"
+          [class.link-highlighted]="hoveredNodeId === link.nodeId"
+          [attr.stroke]="hoveredNodeId === link.nodeId ? link.highlightColor : link.color"
+          [attr.stroke-width]="hoveredNodeId === link.nodeId ? 3.5 : 2"
+          [attr.marker-end]="link.isOutbound ? (link.highlightColor === '#ef4444' ? 'url(#arrow-out-warn)' : 'url(#arrow-out)') : (link.highlightColor === '#ef4444' ? 'url(#arrow-in-warn)' : 'url(#arrow-in)')"
+          fill="none"
+        />
+      </g>
+
+      <!-- Inbound Callers (Left Column: Blast Radius) -->
+      <g class="dl-bf-inbound-group">
+        <text x="24" y="24" class="dl-bf-col-title">⬅ Inbound Callers (Fan-In: {{ focusClass.ca }})</text>
+        <text x="24" y="42" class="dl-bf-col-sub">Direct Blast Radius: Regressed if target fails</text>
+
+        <g
+          *ngFor="let node of inboundNodes"
+          class="dl-bf-node-group"
+          [class.is-hovered]="hoveredNodeId === node.id"
+          (click)="onNodeClick(node)"
+          (mouseenter)="onNodeMouseEnter(node, $event)"
+          (mousemove)="onNodeMouseMove($event)"
+          (mouseleave)="onNodeMouseLeave()"
+          [attr.transform]="'translate(' + node.x + ', ' + node.y + ')'"
+        >
+          <title>{{ node.name }} ({{ node.loc }} LOC) — Risk: {{ (node.riskScore * 100) | number:'1.0-0' }}%</title>
+          <rect
+            [attr.width]="node.width"
+            [attr.height]="node.height"
+            rx="6"
+            class="dl-bf-node-rect"
+            [class.is-buggy]="node.predictedLabel === 1 || node.riskScore >= 0.5"
+          />
+          <text x="10" y="20" class="dl-bf-node-name" [title]="node.name">{{ node.simpleName }}</text>
+          <text x="10" y="34" class="dl-bf-node-meta">{{ node.loc }} LOC · {{ (node.riskScore * 100) | number:'1.0-0' }}% Risk</text>
+        </g>
+
+        <!-- Overflow indicator for extra callers (Clickable) -->
+        <g *ngIf="extraInboundCount > 0" transform="translate(24, 436)" class="dl-bf-extra-toggle" (click)="toggleExtraDropdown('inbound')">
+          <rect x="-6" y="-15" width="190" height="24" rx="4" class="dl-bf-extra-bg" />
+          <text x="0" y="2" class="dl-bf-more-label">📂 + {{ extraInboundCount }} more callers (Click to view)</text>
+        </g>
+      </g>
+
+      <!-- Center Target Focus Node -->
+      <g
+        class="dl-bf-center-group"
+        [attr.transform]="'translate(' + centerPos.x + ', ' + centerPos.y + ')'"
+      >
+        <title>{{ focusClass.className }} ({{ focusClass.loc }} LOC) — Defect Risk: {{ (focusClass.riskScore * 100) | number:'1.0-0' }}%</title>
+        <rect
+          [attr.width]="centerW"
+          [attr.height]="centerH"
+          rx="8"
+          class="dl-bf-center-rect"
+          [class.center-hotspot]="focusClass.riskScore >= 0.5 || focusClass.predictedLabel === 1"
+        />
+        <text x="14" y="24" class="dl-bf-center-tag">🎯 TARGET CLASS UNDER REVIEW</text>
+        <text x="14" y="46" class="dl-bf-center-name" [title]="focusClass.className">
+          {{ focusClass.className.split('.').pop() }}
+        </text>
+        <text x="14" y="64" class="dl-bf-center-package" [title]="focusClass.packageName">
+          {{ focusClass.packageName }}
+        </text>
+
+        <!-- Metric Grid inside center node -->
+        <g transform="translate(14, 82)">
+          <line x1="0" y1="0" [attr.x2]="centerW - 28" y2="0" stroke="var(--line)" stroke-width="1" />
+          <text x="0" y="16" class="dl-bf-stat-item">LOC: <tspan font-weight="700">{{ focusClass.loc }}</tspan></text>
+          <text x="68" y="16" class="dl-bf-stat-item">WMC: <tspan font-weight="700">{{ focusClass.wmc }}</tspan></text>
+          <text x="134" y="16" class="dl-bf-stat-item">CBO: <tspan font-weight="700">{{ focusClass.cbo }}</tspan></text>
+          <text x="0" y="36" class="dl-bf-stat-item" [class.stat-warn]="focusClass.riskScore >= 0.5">
+            Defect Risk: <tspan font-weight="700">{{ (focusClass.riskScore * 100) | number:'1.0-0' }}%</tspan>
+          </text>
+          <text x="100" y="36" class="dl-bf-stat-item">
+            I: <tspan font-weight="700">{{ focusClass.instability | number:'1.2-2' }}</tspan>
+          </text>
+        </g>
+      </g>
+
+      <!-- Outbound Dependencies (Right Column: Callees) -->
+      <g class="dl-bf-outbound-group">
+        <text [attr.x]="viewWidth - 196" y="24" class="dl-bf-col-title">Outbound Callees (Fan-Out: {{ focusClass.ce }}) ➡</text>
+        <text [attr.x]="viewWidth - 196" y="42" class="dl-bf-col-sub">Supplier dependencies invoked by target</text>
+
+        <g
+          *ngFor="let node of outboundNodes"
+          class="dl-bf-node-group"
+          [class.is-hovered]="hoveredNodeId === node.id"
+          (click)="onNodeClick(node)"
+          (mouseenter)="onNodeMouseEnter(node, $event)"
+          (mousemove)="onNodeMouseMove($event)"
+          (mouseleave)="onNodeMouseLeave()"
+          [attr.transform]="'translate(' + node.x + ', ' + node.y + ')'"
+        >
+          <title>{{ node.name }} ({{ node.loc }} LOC) — Risk: {{ (node.riskScore * 100) | number:'1.0-0' }}%</title>
+          <rect
+            [attr.width]="node.width"
+            [attr.height]="node.height"
+            rx="6"
+            class="dl-bf-node-rect"
+            [class.is-buggy]="node.predictedLabel === 1 || node.riskScore >= 0.5"
+          />
+          <text x="10" y="20" class="dl-bf-node-name" [title]="node.name">{{ node.simpleName }}</text>
+          <text x="10" y="34" class="dl-bf-node-meta">{{ node.loc }} LOC · {{ (node.riskScore * 100) | number:'1.0-0' }}% Risk</text>
+        </g>
+
+        <!-- Overflow indicator for extra dependencies (Clickable) -->
+        <g *ngIf="extraOutboundCount > 0" [attr.transform]="'translate(' + (viewWidth - 196) + ', 436)'" class="dl-bf-extra-toggle" (click)="toggleExtraDropdown('outbound')">
+          <rect x="-6" y="-15" width="190" height="24" rx="4" class="dl-bf-extra-bg" />
+          <text x="0" y="2" class="dl-bf-more-label">📂 + {{ extraOutboundCount }} more dependencies (Click to view)</text>
+        </g>
+      </g>
+    </svg>
+
+    <!-- Floating Hover Tooltip for Butterfly Nodes -->
+    <div
+      *ngIf="hoveredNode"
+      class="dl-bf-tooltip"
+      [style.left.px]="tooltipPos.x"
+      [style.top.px]="tooltipPos.y"
+    >
+      <div class="dl-tt-header">
+        <strong class="dl-tt-name">{{ hoveredNode.simpleName }}</strong>
+        <span
+          class="dl-badge-risk"
+          [class.badge-critical]="hoveredNode.riskScore >= 0.5 || hoveredNode.predictedLabel === 1"
+          [class.badge-clean]="hoveredNode.riskScore < 0.4"
+        >
+          {{ hoveredNode.riskScore >= 0.5 || hoveredNode.predictedLabel === 1 ? 'High Risk' : 'Low Risk' }}
+        </span>
+      </div>
+      <div class="dl-tt-sub">{{ hoveredNode.packageName || hoveredNode.name }}</div>
+      <div class="dl-tt-metrics">
+        <span><strong>LOC:</strong> {{ hoveredNode.loc }}</span>
+        <span><strong>Defect Risk:</strong> {{ (hoveredNode.riskScore * 100) | number:'1.0-0' }}%</span>
+      </div>
+      <div class="dl-tt-footer">Click to focus on this class</div>
+    </div>
+
+    <!-- Extra Callers / Dependencies Modal Drawer -->
+    <div *ngIf="showExtraDropdown" class="dl-bf-extra-modal">
+      <div class="dl-bf-extra-header">
+        <span class="dl-bf-extra-title">
+          {{ showExtraDropdown === 'inbound' ? 'All Inbound Callers (' + (inboundNodes.length + extraInboundCount) + ')' : 'All Outbound Dependencies (' + (outboundNodes.length + extraOutboundCount) + ')' }}
+        </span>
+        <button type="button" class="dl-bf-extra-close" (click)="showExtraDropdown = null">✕</button>
+      </div>
+      <div class="dl-bf-extra-list">
+        <button
+          *ngFor="let c of (showExtraDropdown === 'inbound' ? hiddenInboundClasses : hiddenOutboundClasses)"
+          type="button"
+          class="dl-bf-extra-item"
+          (click)="selectExtraClass(c)"
+          (mouseenter)="onExtraItemMouseEnter(c)"
+          (mouseleave)="onExtraItemMouseLeave()"
+          title="Click to inspect {{ c.className }}"
+        >
+          <div class="dl-extra-left">
+            <span class="dl-extra-dot" [class.dot-critical]="c.riskScore >= 0.5 || c.predictedLabel === 1"></span>
+            <strong>{{ c.className.split('.').pop() }}</strong>
+            <small>{{ c.packageName }}</small>
+          </div>
+          <div class="dl-extra-right">
+            <span>{{ c.loc }} LOC</span>
+            <span class="dl-extra-badge" [class.badge-warn]="c.riskScore >= 0.5">{{ (c.riskScore * 100) | number:'1.0-0' }}% Risk</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

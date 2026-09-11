@@ -1,15 +1,21 @@
 import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { BaseDetailComponent } from '../../core/base';
 import {
+  DatasetPreview,
   EvaluationMetrics,
   MetricValue,
   PredictionRow,
   PredictionRunGroup,
   PredictionRunSummary
 } from '../../core/models/defectlab.model';
+import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
 import { MatchedPredictionRow, ReportDetailView, ReportsFacade } from './reports.facade';
+
+import { CodeSmellService } from '../../core/services/code-smell.service';
+import { ClassAnalysisResult } from '../../core/models/code-smell.model';
 
 @Component({
   selector: 'app-report-detail',
@@ -21,8 +27,33 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
   protected readonly missingMessage = 'The report group was not specified.';
   protected override readonly routeParam = 'groupKey';
 
-  constructor(readonly facade: ReportsFacade) {
+  viewMode: 'table' | 'treemap' = 'table';
+  manualDatasetRows: Array<Record<string, string | number>> = [];
+  predefinedDatasetRows: Array<Record<string, string | number>> = [];
+
+  manualTreemapItems: ClassAnalysisResult[] = [];
+  predefinedTreemapItems: ClassAnalysisResult[] = [];
+
+  constructor(
+    readonly facade: ReportsFacade,
+    readonly codeSmellService: CodeSmellService,
+    private readonly api: DefectLabApiService
+  ) {
     super();
+  }
+
+  setViewMode(mode: 'table' | 'treemap'): void {
+    this.viewMode = mode;
+  }
+
+  updateTreemapItems(view?: ReportDetailView): void {
+    const v = view || this.item;
+    const mRows = v?.manualRows ?? [];
+    const pRows = v?.predefinedRows ?? [];
+    this.manualTreemapItems = this.codeSmellService.parsePredictionWithDatasetRows(
+      mRows, this.manualDatasetRows);
+    this.predefinedTreemapItems = this.codeSmellService.parsePredictionWithDatasetRows(
+      pRows, this.predefinedDatasetRows);
   }
 
   get manualColumns() {
@@ -267,11 +298,53 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     return this.facade.correctness(value);
   }
 
-  protected fetch(key: string): Observable<ReportDetailView> {
+  protected override fetch(key: string): Observable<ReportDetailView> {
     this.manualPage = 1;
     this.predefinedPage = 1;
     this.matchedPage = 1;
-    return this.facade.detail(key);
+    return this.facade.detail(key).pipe(
+      tap(view => {
+        if (!view.manualRun && view.predefinedRun) {
+          this.activeTab = 'predefined';
+        } else if (view.manualRun && !view.predefinedRun) {
+          this.activeTab = 'manual';
+        }
+        this.updateTreemapItems(view);
+        if (view.manualRun?.targetDataset?.id) {
+          this.api.previewDataset(view.manualRun.targetDataset.id, 0, 5000).subscribe({
+            next: preview => {
+              this.manualDatasetRows = this.toDictRows(preview);
+              this.updateTreemapItems(view);
+            },
+            error: () => {}
+          });
+        }
+        if (view.predefinedRun?.targetDataset?.id) {
+          this.api.previewDataset(view.predefinedRun.targetDataset.id, 0, 5000).subscribe({
+            next: preview => {
+              this.predefinedDatasetRows = this.toDictRows(preview);
+              this.updateTreemapItems(view);
+            },
+            error: () => {}
+          });
+        }
+      })
+    );
+  }
+
+  private toDictRows(preview: DatasetPreview): Array<Record<string, string | number>> {
+    if (!preview?.headers || !preview?.rows) return [];
+    return preview.rows.map(rowVals => {
+      const obj: Record<string, string | number> = {};
+      preview.headers.forEach((h, i) => {
+        const val = rowVals[i];
+        const num = Number(val);
+        const parsed = !isNaN(num) && val !== '' && val !== null && val !== undefined ? num : val;
+        obj[h] = parsed;
+        obj[h.toLowerCase()] = parsed;
+      });
+      return obj;
+    });
   }
 
   /** Report groups are addressed by a string key rather than a numeric id. */

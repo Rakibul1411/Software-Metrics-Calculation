@@ -1,28 +1,42 @@
-<div class="dl-grid dl-grid-2 dl-grid-fill">
-  <ui-card heading="Profile">
-    <dl class="dl-kv" *ngIf="session.user as user">
-      <dt>Name</dt><dd>{{ user.name }}</dd>
-      <dt>Email</dt><dd>{{ user.email }}</dd>
-      <dt>Member since</dt><dd>{{ user.createdAt | date:'mediumDate' }}</dd>
-    </dl>
-  </ui-card>
+<ui-card cardClass="dl-page-card">
+  <div class="dl-detail-header">
+    <nav class="dl-breadcrumb">
+      <a routerLink="/overview">Workspace</a>
+      <ui-icon name="chevron-right" [size]="14"></ui-icon>
+      <span class="dl-breadcrumb-current">Account Settings</span>
+    </nav>
+    <h2>User Profile &amp; Security</h2>
+    <p>Manage your account credentials, workspace preferences, and security settings.</p>
+  </div>
 
-  <ui-card heading="Change password">
-    <form (ngSubmit)="submit()" class="dl-form-stack">
-      <ui-input label="Current password" type="password" autocomplete="current-password"
-                 [disabled]="busy"
-                 [value]="currentPassword" (valueChange)="currentPassword = $event">
-      </ui-input>
-      <ui-input label="New password" type="password" autocomplete="new-password"
-                 [minlength]="8" [maxlength]="12" [disabled]="busy" helper="8–12 characters."
-                 [value]="newPassword" (valueChange)="newPassword = $event">
-      </ui-input>
+  <div class="dl-detail-section dl-fill">
+    <div class="dl-grid dl-grid-2 dl-grid-fill">
+      <ui-card heading="Profile">
+        <dl class="dl-kv" *ngIf="session.user as user">
+          <dt>Name</dt><dd>{{ user.name }}</dd>
+          <dt>Email</dt><dd>{{ user.email }}</dd>
+          <dt>Member since</dt><dd>{{ user.createdAt | date:'mediumDate' }}</dd>
+        </dl>
+      </ui-card>
 
-      <ui-state *ngIf="saved" kind="success" message="Password updated."></ui-state>
+      <ui-card heading="Change password">
+        <form (ngSubmit)="submit()" class="dl-form-stack">
+          <ui-input label="Current password" type="password" autocomplete="current-password"
+                     [disabled]="busy"
+                     [value]="currentPassword" (valueChange)="currentPassword = $event">
+          </ui-input>
+          <ui-input label="New password" type="password" autocomplete="new-password"
+                     [minlength]="8" [maxlength]="12" [disabled]="busy" helper="8–12 characters."
+                     [value]="newPassword" (valueChange)="newPassword = $event">
+          </ui-input>
 
-      <ui-button type="submit" [disabled]="!canSubmit || busy" [loading]="busy">
-        {{ busy ? 'Saving…' : 'Update password' }}
-      </ui-button>
-    </form>
-  </ui-card>
-</div>
+          <ui-state *ngIf="saved" kind="success" message="Password updated."></ui-state>
+
+          <ui-button type="submit" [disabled]="!canSubmit || busy" [loading]="busy">
+            {{ busy ? 'Saving…' : 'Update password' }}
+          </ui-button>
+        </form>
+      </ui-card>
+    </div>
+  </div>
+</ui-card>

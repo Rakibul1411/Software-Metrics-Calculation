@@ -6,6 +6,9 @@ import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.mode
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
 import { DatasetsFacade } from './datasets.facade';
 
+import { CodeSmellService } from '../../core/services/code-smell.service';
+import { ClassAnalysisResult } from '../../core/models/code-smell.model';
+
 @Component({
   selector: 'app-dataset-detail',
   standalone: false,
@@ -14,11 +17,16 @@ import { DatasetsFacade } from './datasets.facade';
 export class DatasetDetailComponent extends BaseDetailComponent<DatasetSummary> {
   preview: DatasetPreview | null = null;
   previewLoading = true;
+  classAnalysisList: ClassAnalysisResult[] = [];
+  viewMode: 'table' | 'treemap' = 'table';
 
   protected readonly listRoute = ['/datasets'];
   protected readonly missingMessage = 'The dataset was not specified.';
 
-  constructor(readonly facade: DatasetsFacade) {
+  constructor(
+    readonly facade: DatasetsFacade,
+    readonly codeSmellService: CodeSmellService
+  ) {
     super();
   }
 
@@ -57,11 +65,16 @@ export class DatasetDetailComponent extends BaseDetailComponent<DatasetSummary> 
       next: preview => {
         this.preview = preview;
         this.allRows = this.facade.previewRows(preview);
+        this.classAnalysisList = this.codeSmellService.parseClassAnalysisList(this.allRows);
         this.page = 1;
         this.previewLoading = false;
       },
       error: () => (this.previewLoading = false)
     });
+  }
+
+  setViewMode(mode: 'table' | 'treemap'): void {
+    this.viewMode = mode;
   }
 
   onPageChange(page: number): void {

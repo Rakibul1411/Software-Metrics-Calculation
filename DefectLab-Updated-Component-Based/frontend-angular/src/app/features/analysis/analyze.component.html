@@ -1,7 +1,12 @@
 <ui-card cardClass="dl-page-card">
   <div class="dl-detail-header">
-    <h2>{{ mode === 'archive' ? 'Analyze Java archive' : 'Analyze GitHub repository' }}</h2>
-    <p>Extracted metrics are saved to Metric Storage automatically.</p>
+    <nav class="dl-breadcrumb">
+      <a routerLink="/overview">Workspace</a>
+      <ui-icon name="chevron-right" [size]="14"></ui-icon>
+      <span class="dl-breadcrumb-current">Analyze Source</span>
+    </nav>
+    <h2>{{ mode === 'archive' ? 'Analyze Java Archive' : 'Analyze GitHub Repository' }}</h2>
+    <p>Calculate software metrics from Java source code archives or GitHub repositories into Metric Storage.</p>
   </div>
 
   <div class="dl-detail-section dl-form-fill">
@@ -45,7 +50,7 @@
       <div class="dl-form-actions">
         <ui-button type="button" variant="ghost" icon="undo" [disabled]="busy" (pressed)="cancel()">Cancel</ui-button>
         <ui-button type="submit" [disabled]="busy || !canSubmit()" [loading]="busy">
-          {{ busy ? 'Extracting metrics…' : 'Extract metrics' }}
+          {{ busy ? ('Extracting metrics… (' + formattedTime + ')') : 'Extract metrics' }}
         </ui-button>
       </div>
     </form>

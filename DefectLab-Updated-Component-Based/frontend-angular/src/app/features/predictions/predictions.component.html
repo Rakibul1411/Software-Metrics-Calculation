@@ -8,7 +8,7 @@
         </ui-search-toggle>
       </div>
       <div class="dl-actions">
-        <ui-button icon="plus" link="/predictions/new">Run prediction</ui-button>
+        <ui-button icon="plus" link="/predictions/new">Run Prediction</ui-button>
       </div>
     </div>
   </div>
@@ -19,7 +19,7 @@
     </ui-select>
   </div>
 
-  <div class="dl-fill">
+  <div class="dl-detail-section dl-fill">
     <ui-state *ngIf="loading" kind="loading" message="Loading prediction runs…"></ui-state>
     <div class="dl-table-box" *ngIf="!loading && filtered.length; else emptyRuns">
       <ui-table [columns]="runsColumns" [rows]="pageRows" trackByKey="id">
@@ -47,9 +47,26 @@
       </ui-pagination>
     </div>
     <ng-template #emptyRuns>
-      <ui-state *ngIf="!loading" kind="empty"
-                [message]="runs.length ? 'No matching prediction runs.' : 'No prediction runs yet.'">
-      </ui-state>
+      <div *ngIf="!loading" class="dl-empty-state-card">
+        <div class="dl-empty-card-icon">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <h3 class="dl-empty-card-title">
+          {{ runs.length ? 'No matching prediction runs found' : 'No Prediction Runs Yet' }}
+        </h3>
+        <p class="dl-empty-card-desc">
+          {{ runs.length
+             ? 'Try searching with another keyword or clearing the metric family filter.'
+             : 'Train a KNN classifier on labeled source datasets to predict defects in target systems.' }}
+        </p>
+        <div class="dl-empty-card-actions">
+          <ui-button icon="plus" link="/predictions/new">Run Prediction Now</ui-button>
+          <ui-button variant="ghost" icon="chart" link="/datasets">View Metric Storage</ui-button>
+        </div>
+      </div>
     </ng-template>
   </div>
 </ui-card>

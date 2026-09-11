@@ -3,8 +3,14 @@
     <nav class="dl-breadcrumb">
       <a (click)="back()">Predictions</a>
       <ui-icon name="chevron-right" [size]="14"></ui-icon>
+      <span class="dl-breadcrumb-current">{{ run ? ('Run #' + run.id + ' · ' + run.targetDataset.displayName) : 'Prediction Run Details' }}</span>
     </nav>
-    <h2>{{ run ? ('Run #' + run.id) : 'Prediction run' }}</h2>
+    <div class="dl-detail-title" *ngIf="run as item">
+      <h2>Run #{{ item.id }} · {{ item.targetDataset.displayName }}</h2>
+      <ui-badge [tone]="item.modelConfig.datasetFamily">{{ item.modelConfig.datasetFamily }}</ui-badge>
+      <ui-badge tone="blue">{{ item.modelConfig.modelName }} (K={{ item.modelConfig.k }})</ui-badge>
+    </div>
+    <h2 *ngIf="!run">Prediction run</h2>
     <div class="dl-actions" *ngIf="run as item">
       <ui-button *ngIf="item.predictionFileAvailable" variant="ghost" icon="download"
                  [href]="facade.predictionDownloadUrl(item.id)"

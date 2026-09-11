@@ -47,7 +47,7 @@ export class ReportsFacade {
     { key: 'source', label: 'Source' },
     { key: 'targets', label: 'Targets' },
     { key: 'model', label: 'Model' },
-    { key: 'created', label: 'Created at' },
+    { key: 'created', label: 'Created' },
     { key: 'view', label: 'Actions', sticky: 'end', className: 'dl-col-actions', width: '8%' }
   ];
 
@@ -78,21 +78,27 @@ export class ReportsFacade {
 
   constructor(private readonly api: DefectLabApiService) {}
 
-  /** Only groups holding both a MANUAL and a PREDEFINED run are reportable. */
+  /** Returns reportable groups. Complete dual-target groups are prioritized; all valid groups with runs can be viewed. */
   listReportableGroups(): Observable<PredictionRunGroup[]> {
     return this.api.listPredictionGroups().pipe(
-      switchMap(groups => of(groups.filter(group => this.isComplete(group)))));
+      switchMap(groups => {
+        const complete = groups.filter(group => this.isComplete(group));
+        if (complete.length > 0) {
+          return of(complete);
+        }
+        return of(groups.filter(group => group.runs && group.runs.length > 0));
+      }));
   }
 
-  /** Resolves one report end to end: group lookup, both runs, then matching. */
+  /** Resolves one report end to end: group lookup, runs, then matching. */
   detail(key: string): Observable<ReportDetailView> {
     return this.api.listPredictionGroups().pipe(
       switchMap(groups => {
         const group = groups.find(
-          item => this.groupKey(item) === key && this.isComplete(item));
-        if (!group) {
+          item => this.groupKey(item) === key);
+        if (!group || !group.runs.length) {
           return throwError(() => new Error(
-            'A report requires both MANUAL and PREDEFINED target runs.'));
+            'Prediction report not found or has no executed runs.'));
         }
         const requests = group.runs.map(
           run => this.api.predictions(run.id, false, ReportsFacade.MAX_ROWS));

@@ -31,7 +31,8 @@ export type UiIconName =
   | 'chevron-left'
   | 'chevrons-left'
   | 'chevrons-right'
-  | 'info';
+  | 'info'
+  | 'clock';
 
 const PATHS: Record<UiIconName, string> = {
   'check': 'M4 12.5 9 17.5 20 6.5',
@@ -57,7 +58,8 @@ const PATHS: Record<UiIconName, string> = {
   'chevron-left': 'M15 19l-7-7 7-7',
   'chevrons-left': 'M11 19l-7-7 7-7m8 14l-7-7 7-7',
   'chevrons-right': 'M13 5l7 7-7 7M5 5l7 7-7 7',
-  'info': 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-8v5m0-9v.01'
+  'info': 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-8v5m0-9v.01',
+  'clock': 'M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z'
 };
 
 @Component({

@@ -18,27 +18,55 @@ const PAGES: Record<string, PageHeading> = {
   },
   analyze: {
     title: 'Analyze Source',
-    description: 'Calculate PROMISE or AEEEM metrics from source code or GitHub.'
+    description: 'Calculate PROMISE or AEEEM metrics directly from Java source code or GitHub.'
   },
   datasets: {
     title: 'Metric Storage',
     description: 'Manage predefined and manually extracted datasets.'
   },
+  'datasets/new': {
+    title: 'Add Dataset',
+    description: 'Upload and register a new labeled or unlabeled metric dataset.'
+  },
+  'datasets/detail': {
+    title: 'Dataset Details',
+    description: 'Inspect stored software metrics, distribution, and architectural treemap.'
+  },
   predictions: {
     title: 'Predictions',
-    description: 'Train KNN models against labeled datasets and review saved prediction runs.'
+    description: 'Train models against labeled datasets and review saved prediction runs.'
+  },
+  'predictions/new': {
+    title: 'Run Prediction',
+    description: 'Train KNN classifiers on source datasets and evaluate target defect risks.'
+  },
+  'predictions/detail': {
+    title: 'Prediction Run Details',
+    description: 'Review prediction scores, confusion matrix, and evaluated classes.'
   },
   'metric-comparisons': {
     title: 'Compare Metrics',
-    description: 'Compare paired MANUAL and PREDEFINED metrics from saved storage.'
+    description: 'Compare paired manual and predefined metrics from saved storage.'
+  },
+  'metric-comparisons/new': {
+    title: 'New Comparison',
+    description: 'Evaluate metric consistency between manual and predefined extractions.'
+  },
+  'metric-comparisons/detail': {
+    title: 'Metric Comparison Details',
+    description: 'Detailed statistical comparison between manual and predefined metrics.'
   },
   reports: {
-    title: 'Reports',
-    description: 'Review prediction evaluation and downloadable reports.'
+    title: 'Prediction Reports',
+    description: 'Review cross-project defect predictions, model agreements, and treemaps.'
+  },
+  'reports/detail': {
+    title: 'Prediction Report Details',
+    description: 'Detailed cross-project evaluation, agreement analysis, and Hotspot Treemap.'
   },
   account: {
-    title: 'Account',
-    description: 'Manage your profile and workspace security.'
+    title: 'Account Settings',
+    description: 'Manage your profile and workspace security credentials.'
   }
 };
 
@@ -59,11 +87,23 @@ export class ShellFacade {
     { path: '/reports', label: 'Reports', icon: 'M6 3h9l3 3v15H6V3Zm3 6h6m-6 4h6m-6 4h4' }
   ];
 
-  /** Resolves the heading from the first path segment of a URL. */
+  /** Resolves the heading from the URL path, matching exact subroutes where applicable. */
   headingFor(url: string): PageHeading {
-    const segment = url.split('?')[0].split('/')
-      .filter(part => part.length > 0)[0] ?? 'overview';
-    return PAGES[segment] ?? PAGES['overview'];
+    const parts = url.split('?')[0].split('/').filter(part => part.length > 0);
+    if (!parts.length) return PAGES['overview'];
+
+    const first = parts[0];
+    const second = parts[1];
+
+    if (second === 'new') {
+      const key = `${first}/new`;
+      if (PAGES[key]) return PAGES[key];
+    } else if (second) {
+      const key = `${first}/detail`;
+      if (PAGES[key]) return PAGES[key];
+    }
+
+    return PAGES[first] ?? PAGES['overview'];
   }
 
   initials(name: string): string {

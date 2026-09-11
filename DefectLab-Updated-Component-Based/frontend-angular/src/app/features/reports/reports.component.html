@@ -7,15 +7,23 @@
             [query]="search" (queryChange)="search = $event">
         </ui-search-toggle>
       </div>
+      <div class="dl-actions">
+        <ui-button icon="plus" link="/predictions/new">
+          Run Prediction
+        </ui-button>
+      </div>
     </div>
   </div>
 
-  <div class="dl-fill">
+  <div class="dl-detail-section dl-fill">
     <ui-state *ngIf="loading" kind="loading" message="Loading reports…"></ui-state>
     <div class="dl-table-box" *ngIf="!loading && filtered.length; else empty">
       <ui-table [columns]="columns" [rows]="pageRows">
         <ng-template uiTableCell="group" let-row>
-          <span [title]="row.comparisonGroupId || ''">{{ groupLabel(row) }}</span>
+          <span [title]="row.comparisonGroupId || ''" class="dl-mono" style="font-weight: 600;">{{ groupLabel(row) }}</span>
+          <span *ngIf="row.runs.length > 1" class="dl-badge-risk badge-clean" style="margin-left: 6px; font-size: 9.5px;">
+            Dual Target
+          </span>
         </ng-template>
         <ng-template uiTableCell="source" let-row>{{ row.runs[0].sourceDataset.displayName }}</ng-template>
         <ng-template uiTableCell="targets" let-row>{{ targetNames(row) }}</ng-template>
@@ -23,8 +31,9 @@
         <ng-template uiTableCell="created" let-row>{{ row.runs[0].createdAt | date:'mediumDate' }}</ng-template>
         <ng-template uiTableCell="view" let-row>
           <ui-button variant="ghost" size="sm" icon="view"
-                     title="View report details" ariaLabel="View report details"
-                     (pressed)="view(row)"></ui-button>
+                     [link]="['/reports', groupKey(row)]"
+                     (pressed)="view(row)"
+                     title="View report details & Hotspot Treemap" ariaLabel="View report details"></ui-button>
         </ng-template>
       </ui-table>
       <ui-pagination [total]="filtered.length" [page]="page" [pageSize]="pageSize" noun="reports"
@@ -32,9 +41,33 @@
       </ui-pagination>
     </div>
     <ng-template #empty>
-      <ui-state *ngIf="!loading" kind="empty"
-                [message]="groups.length ? 'No matching reports.' : 'No complete dual-target prediction reports yet.'">
-      </ui-state>
+      <div *ngIf="!loading" class="dl-empty-state-card">
+        <div class="dl-empty-card-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <h3 class="dl-empty-card-title">
+          {{ groups.length ? 'No matching reports found' : 'No Prediction Reports Available' }}
+        </h3>
+        <p class="dl-empty-card-desc">
+          {{ groups.length
+             ? 'Try searching with another keyword or clear the search filter.'
+             : 'Execute a cross-version or cross-project prediction to generate evaluation metrics, agreement analysis, and SciTools Understand™ Treemaps.' }}
+        </p>
+        <div class="dl-empty-card-actions" *ngIf="!groups.length">
+          <ui-button icon="plus" link="/predictions/new">
+            Run Prediction Now
+          </ui-button>
+          <ui-button variant="ghost" icon="chart" link="/datasets">
+            View Metric Storage
+          </ui-button>
+        </div>
+      </div>
     </ng-template>
   </div>
 </ui-card>

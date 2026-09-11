@@ -8,7 +8,7 @@
         </ui-search-toggle>
       </div>
       <div class="dl-actions">
-        <ui-button icon="plus" link="/metric-comparisons/new">New comparison</ui-button>
+        <ui-button icon="plus" link="/metric-comparisons/new">New Comparison</ui-button>
       </div>
     </div>
   </div>
@@ -31,8 +31,9 @@
         </ng-template>
         <ng-template uiTableCell="actions" let-row>
           <ui-button variant="ghost" size="sm" icon="view"
-                     title="View comparison" ariaLabel="View comparison"
-                     (pressed)="view(row)"></ui-button>
+                     [link]="['/metric-comparisons', row.comparisonId]"
+                     (pressed)="view(row)"
+                     title="View comparison" ariaLabel="View comparison"></ui-button>
         </ng-template>
       </ui-table>
       <ui-pagination [total]="filtered.length" [page]="page" [pageSize]="pageSize" noun="comparisons"
@@ -40,9 +41,27 @@
       </ui-pagination>
     </div>
     <ng-template #empty>
-      <ui-state *ngIf="!loading" kind="empty"
-                [message]="pairs.length ? 'No matching comparisons.' : 'No comparisons yet. Start one from New Comparison.'">
-      </ui-state>
+      <div *ngIf="!loading" class="dl-empty-state-card">
+        <div class="dl-empty-card-icon">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </div>
+        <h3 class="dl-empty-card-title">
+          {{ pairs.length ? 'No matching comparisons found' : 'No Metric Comparisons Yet' }}
+        </h3>
+        <p class="dl-empty-card-desc">
+          {{ pairs.length
+             ? 'Try searching with another project name or clearing the family filter.'
+             : 'Compare manual metrics against predefined PROMISE or AEEEM baselines to verify calculation consistency.' }}
+        </p>
+        <div class="dl-empty-card-actions">
+          <ui-button icon="plus" link="/metric-comparisons/new">Start New Comparison</ui-button>
+          <ui-button variant="ghost" icon="chart" link="/datasets">View Metric Storage</ui-button>
+        </div>
+      </div>
     </ng-template>
   </div>
 </ui-card>

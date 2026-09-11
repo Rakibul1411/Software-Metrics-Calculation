@@ -20,12 +20,68 @@ export class AnalyzeComponent extends BaseFormComponent {
   githubUrl = '';
   aeeemProfile = 'current';
 
+  // Live timer tracking for backend processing
+  startTime: number | null = null;
+  elapsedSeconds = 0;
+  private timerInterval: ReturnType<typeof setInterval> | null = null;
+  completedDuration: string | null = null;
+  lastExecutionDuration: string | null = null;
+  lastExecutionStatus: 'idle' | 'running' | 'success' | 'error' = 'idle';
+
   readonly familyOptions = FAMILY_RADIO_OPTIONS;
 
   private readonly pendingExtraction = inject(PendingExtractionService);
 
   constructor(readonly facade: AnalysisFacade) {
     super();
+    this.destroyRef.onDestroy(() => this.stopTimer());
+  }
+
+  get formattedTime(): string {
+    const m = Math.floor(this.elapsedSeconds / 60);
+    const s = this.elapsedSeconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
+  get formattedDuration(): string {
+    const m = Math.floor(this.elapsedSeconds / 60);
+    const s = this.elapsedSeconds % 60;
+    if (m > 0) {
+      return `${m}m ${s}s`;
+    }
+    return `${s}s`;
+  }
+
+  get estimatedTaskDescription(): string {
+    if (this.family === 'AEEEM') {
+      return 'Analyzing Git repository: parsing ASTs, calculating 56 OO metrics & mining change history across bi-weekly snapshots…';
+    }
+    return 'Extracting Java source classes: calculating CK metrics, McCabe complexity & OO predictor features…';
+  }
+
+  startTimer(): void {
+    this.stopTimer();
+    this.startTime = Date.now();
+    this.elapsedSeconds = 0;
+    this.completedDuration = null;
+    this.lastExecutionStatus = 'running';
+    this.timerInterval = setInterval(() => {
+      if (this.startTime) {
+        this.elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
+      }
+    }, 1000);
+  }
+
+  stopTimer(status: 'idle' | 'success' | 'error' = 'idle'): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+    if (this.startTime && this.elapsedSeconds > 0) {
+      this.completedDuration = this.formattedDuration;
+      this.lastExecutionDuration = this.completedDuration;
+    }
+    this.lastExecutionStatus = status;
   }
 
   get aeeemProfileOptions() {
@@ -88,11 +144,15 @@ export class AnalyzeComponent extends BaseFormComponent {
   }
 
   cancel(): void {
+    this.stopTimer('idle');
     this.projectName = '';
     this.projectVersion = '';
     this.archive = null;
     this.githubUrl = '';
     this.aeeemProfile = 'current';
+    this.completedDuration = null;
+    this.lastExecutionDuration = null;
+    this.lastExecutionStatus = 'idle';
   }
 
   canSubmit(): boolean {
@@ -103,15 +163,20 @@ export class AnalyzeComponent extends BaseFormComponent {
     if (!this.canSubmit()) {
       return;
     }
-    // Extraction runs synchronously on the backend and can take a while
-    // (AEEEM especially). If the user refreshes or navigates away before
-    // this request returns, the backend keeps working -- this marker lets
-    // us tell them once it's done even though this page is gone by then.
+    this.startTimer();
     this.pendingExtraction.start(this.family, this.projectName, this.projectVersion);
     this.submitWith(this.facade.analyze(this.request), {
-      success: 'Dataset analyzed and saved successfully.',
+      success: () => `Dataset analyzed and saved successfully in ${this.formattedDuration}.`,
       redirect: ['/datasets'],
-      onSettled: () => this.pendingExtraction.clear()
+      onSuccess: () => {
+        this.stopTimer('success');
+      },
+      onSettled: () => {
+        if (this.lastExecutionStatus !== 'success') {
+          this.stopTimer('error');
+        }
+        this.pendingExtraction.clear();
+      }
     });
   }
 

@@ -1,0 +1,531 @@
+<div class="dl-treemap-wrapper">
+  <!-- Treemap Control Header -->
+  <div class="dl-treemap-header">
+    <div class="dl-treemap-title-area">
+      <div class="dl-treemap-heading-row">
+        <h4 class="dl-treemap-title">{{ title }}</h4>
+        <span class="dl-treemap-badge">{{ items.length }} Classes</span>
+      </div>
+      <p class="dl-treemap-subtitle">{{ subtitle }}</p>
+    </div>
+
+    <!-- Summary Stats Chips -->
+    <div class="dl-treemap-stats">
+      <button
+        type="button"
+        class="dl-stat-chip"
+        [class.active]="filter === 'all'"
+        (click)="setFilter('all')"
+        title="Show all codebase classes"
+      >
+        <span class="dl-stat-dot dot-all"></span>
+        <span>All</span>
+        <strong>{{ items.length }}</strong>
+      </button>
+
+      <button
+        type="button"
+        class="dl-stat-chip chip-hotspots"
+        [class.active]="filter === 'hotspots'"
+        (click)="setFilter('hotspots')"
+        title="Show high-risk defect hotspots and critical classes"
+      >
+        <span class="dl-stat-dot dot-hotspot"></span>
+        <span>Hotspots</span>
+        <strong>{{ hotspotCount }}</strong>
+      </button>
+
+      <button
+        type="button"
+        class="dl-stat-chip chip-god"
+        [class.active]="filter === 'god_class'"
+        (click)="setFilter('god_class')"
+        title="Classes violating WMC > 40 and LOC > 500"
+      >
+        <span class="dl-stat-dot dot-god"></span>
+        <span>God Classes</span>
+        <strong>{{ godClassCount }}</strong>
+      </button>
+
+      <button
+        type="button"
+        class="dl-stat-chip chip-coupling"
+        [class.active]="filter === 'coupling'"
+        (click)="setFilter('coupling')"
+        title="Classes violating CBO > 20 or RFC > 15"
+      >
+        <span class="dl-stat-dot dot-coupling"></span>
+        <span>Spaghetti Coupling</span>
+        <strong>{{ couplingRiskCount }}</strong>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter & Legend Toolbar -->
+  <div class="dl-treemap-toolbar">
+    <div class="dl-treemap-search">
+      <ui-icon name="search" class="dl-search-icon"></ui-icon>
+      <input
+        type="text"
+        placeholder="Filter class by name..."
+        [value]="searchQuery"
+        (input)="onSearchChange($any($event.target).value)"
+        class="dl-treemap-input"
+      />
+      <button
+        *ngIf="searchQuery"
+        type="button"
+        class="dl-btn-clear"
+        (click)="onSearchChange('')"
+        title="Clear search"
+      >
+        <ui-icon name="close"></ui-icon>
+      </button>
+    </div>
+
+    <!-- Package Selector Dropdown -->
+    <div class="dl-package-selector" *ngIf="availablePackages.length > 1">
+      <span class="dl-pkg-label">Package:</span>
+      <select
+        class="dl-pkg-select"
+        [ngModel]="selectedPackage || 'ALL'"
+        (ngModelChange)="selectPackage($event === 'ALL' ? null : $event)"
+        title="Focus on a specific architectural package"
+      >
+        <option value="ALL">📁 All Packages ({{ availablePackages.length }})</option>
+        <option *ngFor="let pkg of availablePackages" [value]="pkg.name">
+          {{ pkg.name }} ({{ pkg.count }} classes · {{ pkg.loc | number }} LOC{{ pkg.hotspots ? ' · ⚠️' + pkg.hotspots : '' }})
+        </option>
+      </select>
+    </div>
+
+    <!-- Understand Mode Toggle -->
+    <div class="dl-treemap-view-toggles">
+      <button
+        type="button"
+        class="dl-toggle-btn"
+        [class.active]="layoutMode === 'package' && !selectedPackage"
+        (click)="setLayoutMode('package'); selectedPackage = null; recompute()"
+        title="Group classes by Architectural Package (SciTools Understand)"
+      >
+        📁 By Package
+      </button>
+      <button
+        type="button"
+        class="dl-toggle-btn"
+        [class.active]="layoutMode === 'flat' && !selectedPackage"
+        (click)="setLayoutMode('flat'); selectedPackage = null; recompute()"
+        title="Global Aerial View without package boundaries"
+      >
+        🌐 Global Aerial
+      </button>
+    </div>
+
+    <div class="dl-treemap-legend">
+      <span class="dl-legend-label">Risk Key:</span>
+      <span class="dl-legend-item"><span class="dl-legend-box box-clean"></span> Clean / Low Risk</span>
+      <span class="dl-legend-item"><span class="dl-legend-box box-warning"></span> Warning / Elevated</span>
+      <span class="dl-legend-item"><span class="dl-legend-box box-critical"></span> Critical Hotspot</span>
+    </div>
+  </div>
+
+  <!-- Package Focus Breadcrumb Banner (when drilled into a package) -->
+  <div *ngIf="selectedPackage" class="dl-package-focus-banner">
+    <div class="dl-focus-left">
+      <span class="dl-focus-badge">PACKAGE DRILL-DOWN</span>
+      <strong class="dl-focus-title">📁 {{ selectedPackage }}</strong>
+      <span class="dl-focus-meta">Showing {{ filteredItems.length }} classes in this package</span>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-secondary dl-btn-focus-back" (click)="selectPackage(null)">
+      ← Back to All Packages ({{ availablePackages.length }})
+    </button>
+  </div>
+
+  <!-- Visualization & Inspector Layout -->
+  <div class="dl-treemap-body">
+    <!-- SVG Treemap Canvas -->
+    <div #container class="dl-treemap-canvas-container" [style.height.px]="viewHeight">
+      <svg
+        *ngIf="cells.length > 0"
+        class="dl-treemap-svg"
+        [class.is-ready]="isReady"
+        [attr.viewBox]="'0 0 ' + viewWidth + ' ' + viewHeight"
+      >
+        <defs>
+          <clipPath *ngFor="let cell of cells; let i = index" [id]="'cell-clip-' + i">
+            <rect
+              [attr.x]="cell.x + 1"
+              [attr.y]="cell.y + 1"
+              [attr.width]="Math.max(0, cell.width - 2)"
+              [attr.height]="Math.max(0, cell.height - 2)"
+              rx="2"
+            />
+          </clipPath>
+        </defs>
+
+        <!-- SciTools Understand Package Group Boundaries -->
+        <g *ngIf="layoutMode === 'package' && !selectedPackage" class="dl-treemap-packages">
+          <g
+            *ngFor="let pkg of packageGroups"
+            class="dl-pkg-group"
+            [class.is-target-package]="(externalHoveredCell && externalHoveredCell.packageName === pkg.packageName) || (selectedCell && selectedCell.packageName === pkg.packageName)"
+            (click)="selectPackage(pkg.packageName)"
+            title="Click to drill down into {{ pkg.packageName }}"
+          >
+            <rect
+              [attr.x]="pkg.x"
+              [attr.y]="pkg.y"
+              [attr.width]="pkg.width"
+              [attr.height]="pkg.height"
+              class="dl-pkg-boundary"
+              rx="4"
+            />
+            <!-- Package Header Banner -->
+            <rect
+              [attr.x]="pkg.x"
+              [attr.y]="pkg.y"
+              [attr.width]="pkg.width"
+              height="21"
+              class="dl-pkg-header-rect"
+              rx="3"
+            />
+            <text
+              *ngIf="pkg.width >= 70"
+              [attr.x]="pkg.x + 6"
+              [attr.y]="pkg.y + 14"
+              class="dl-pkg-title"
+            >
+              📁 {{ pkg.packageName }} ({{ pkg.totalSize | number }} LOC{{ pkg.hotspotCount ? ' · ' + pkg.hotspotCount + ' Hotspots' : '' }}) ↗
+            </text>
+          </g>
+        </g>
+
+        <!-- Class Tiles -->
+        <g
+          *ngFor="let cell of cells; let i = index"
+          class="dl-treemap-cell-group"
+          [class.is-selected]="selectedCell?.id === cell.id"
+          [class.is-hovered]="hoveredCell?.id === cell.id"
+          [class.is-external-hovered]="externalHoveredCell?.id === cell.id"
+          [class.is-pulsing]="pulseCellId === cell.id"
+          (click)="onCellClick(cell)"
+          (mouseenter)="onCellMouseEnter(cell, $event)"
+          (mousemove)="onCellMouseMove($event)"
+          (mouseleave)="onCellMouseLeave()"
+        >
+          <title>{{ cell.name }} ({{ cell.size | number }} LOC) — Risk: {{ (cell.riskScore * 100) | number:'1.0-0' }}%{{ cell.smells.length > 0 ? ' · ⚠️ ' + cell.smells[0].name : '' }}</title>
+          <rect
+            class="dl-treemap-cell-rect"
+            [attr.x]="cell.x"
+            [attr.y]="cell.y"
+            [attr.width]="cell.width"
+            [attr.height]="cell.height"
+            [attr.fill]="cell.color"
+            rx="3"
+          />
+          <!-- Class Name (clipped so it fits cleanly even on tight boxes) -->
+          <text
+            *ngIf="cell.width >= 26 && cell.height >= 14"
+            class="dl-cell-name"
+            [attr.x]="cell.x + 4"
+            [attr.y]="cell.y + (cell.height >= 38 ? 16 : Math.round(cell.height / 2) + 4)"
+            [attr.font-size]="cell.width >= 85 ? '11px' : (cell.width >= 44 ? '9.5px' : '8px')"
+            [attr.clip-path]="'url(#cell-clip-' + i + ')'"
+          >
+            {{ cell.simpleName }}
+          </text>
+          <!-- LOC Subtitle: only displayed when tile is tall enough (>= 38px) to fit 2 distinct non-overlapping lines -->
+          <text
+            *ngIf="cell.width >= 36 && cell.height >= 38"
+            class="dl-cell-loc"
+            [attr.x]="cell.x + 4"
+            [attr.y]="cell.y + 30"
+            [attr.font-size]="cell.width >= 48 ? '9.5px' : '8px'"
+            [attr.clip-path]="'url(#cell-clip-' + i + ')'"
+          >
+            {{ cell.size | number }} LOC
+          </text>
+          <!-- Critical Smell tag if ample space (>= 58px) -->
+          <text
+            *ngIf="cell.width >= 90 && cell.height >= 58 && cell.smells.length > 0"
+            class="dl-cell-smell-badge"
+            [attr.x]="cell.x + 4"
+            [attr.y]="cell.y + 46"
+            [attr.clip-path]="'url(#cell-clip-' + i + ')'"
+          >
+            ⚠️ {{ cell.smells[0].name }}
+          </text>
+
+          <!-- Interactive Locator Pin / Beacon when hovered or selected from Dependency Graph -->
+          <g
+            *ngIf="externalHoveredCell?.id === cell.id || pulseCellId === cell.id"
+            class="dl-cell-locator-beacon"
+          >
+            <rect
+              [attr.x]="cell.x"
+              [attr.y]="Math.max(2, cell.y - 20)"
+              [attr.width]="Math.max(140, cell.simpleName.length * 8 + 28)"
+              height="20"
+              rx="4"
+              class="dl-locator-bg"
+            />
+            <text
+              [attr.x]="cell.x + 6"
+              [attr.y]="Math.max(16, cell.y - 6)"
+              class="dl-locator-text"
+            >
+              📍 {{ cell.simpleName }} · {{ cell.size | number }} LOC
+            </text>
+          </g>
+        </g>
+      </svg>
+
+      <!-- Empty State -->
+      <div *ngIf="cells.length === 0" class="dl-treemap-empty">
+        <ui-icon name="chart" class="dl-empty-icon"></ui-icon>
+        <p class="dl-empty-title">No classes match the current filter or search criteria</p>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="setFilter('all'); onSearchChange('')">
+          Reset Filters
+        </button>
+      </div>
+
+      <!-- Floating Hover Tooltip: Always visible on cursor hover, even when inspector panel is open -->
+      <div
+        *ngIf="hoveredCell"
+        class="dl-treemap-tooltip"
+        [style.left.px]="tooltipPos.x"
+        [style.top.px]="tooltipPos.y"
+      >
+        <div class="dl-tt-header">
+          <strong class="dl-tt-name" [title]="hoveredCell.name">{{ hoveredCell.simpleName }}</strong>
+          <span
+            class="dl-badge-risk"
+            [class.badge-critical]="hoveredCell.riskScore >= 0.5 || hoveredCell.predictedLabel === 1 || hoveredCell.smells.length > 0"
+            [class.badge-clean]="hoveredCell.riskScore < 0.4 && hoveredCell.smells.length === 0"
+          >
+            {{ hoveredCell.riskScore >= 0.5 || hoveredCell.predictedLabel === 1 ? 'High Risk Hotspot' : 'Clean / Low Risk' }}
+          </span>
+        </div>
+        <div class="dl-tt-sub">{{ hoveredCell.packageName || hoveredCell.name }}</div>
+        <div class="dl-tt-metrics">
+          <span><strong>LOC:</strong> {{ hoveredCell.size | number }}</span>
+          <span><strong>WMC:</strong> {{ hoveredCell.data.wmc }}</span>
+          <span><strong>CBO:</strong> {{ hoveredCell.data.cbo }}</span>
+          <span><strong>LCOM:</strong> {{ hoveredCell.data.lcom }}</span>
+        </div>
+        <div *ngIf="hoveredCell.smells.length > 0" class="dl-tt-smells">
+          <span *ngFor="let s of hoveredCell.smells" class="dl-tt-smell-tag">
+            ⚠️ {{ s.name }}
+          </span>
+        </div>
+        <div class="dl-tt-footer">Click class to inspect architecture &amp; blast radius</div>
+      </div>
+    </div>
+
+    <!-- Inspector Side Panel (when a class is clicked) -->
+    <div *ngIf="selectedCell" class="dl-treemap-inspector" [class.inspector-expanded]="inspectorTab === 'butterfly'">
+      <div class="dl-inspector-header">
+        <div class="dl-inspector-title-area">
+          <span class="dl-inspector-tag">Class Architecture Inspector</span>
+          <h5 class="dl-inspector-name" [title]="selectedCell.name">{{ selectedCell.simpleName }}</h5>
+          <span class="dl-inspector-package">{{ selectedCell.packageName || selectedCell.name }}</span>
+        </div>
+        <button
+          type="button"
+          class="dl-inspector-close"
+          (click)="closeInspector()"
+          title="Close Inspector"
+        >
+          <ui-icon name="close"></ui-icon>
+        </button>
+      </div>
+
+      <!-- Inspector Sub-Tabs -->
+      <div class="dl-inspector-tabs">
+        <button
+          type="button"
+          class="dl-insp-tab-btn"
+          [class.active]="inspectorTab === 'metrics'"
+          (click)="setInspectorTab('metrics')"
+        >
+          <ui-icon name="chart" [size]="13"></ui-icon>
+          Architecture &amp; Metrics
+        </button>
+        <button
+          type="button"
+          class="dl-insp-tab-btn"
+          [class.active]="inspectorTab === 'butterfly'"
+          (click)="setInspectorTab('butterfly')"
+        >
+          <ui-icon name="view" [size]="13"></ui-icon>
+          Butterfly Dependency Graph
+        </button>
+      </div>
+
+      <!-- Tab 1: Architecture & Metrics -->
+      <div class="dl-inspector-content" *ngIf="inspectorTab === 'metrics'">
+        <!-- Defect & Risk Assessment Status -->
+        <div
+          class="dl-assessment-card"
+          [class.assessment-critical]="selectedCell.riskScore >= 0.6 || selectedCell.smells.length > 0"
+          [class.assessment-clean]="selectedCell.riskScore < 0.4 && selectedCell.smells.length === 0"
+        >
+          <div class="dl-assessment-left">
+            <span class="dl-assessment-status">
+              {{ selectedCell.predictedLabel === 1 || selectedCell.riskScore >= 0.5 ? 'Hotspot Detected' : 'Reliable Class' }}
+            </span>
+            <span class="dl-assessment-score">
+              Defect Risk: <strong>{{ (selectedCell.riskScore * 100) | number:'1.0-1' }}%</strong>
+            </span>
+          </div>
+          <div class="dl-assessment-badge" [class.badge-defective]="selectedCell.predictedLabel === 1">
+            {{ selectedCell.predictedLabel === 1 ? 'Defect Prone' : 'Clean' }}
+          </div>
+        </div>
+
+        <!-- Multi-Metric Dimensional Grid (Size, Coupling, Instability, Maintainability) -->
+        <div class="dl-inspector-metrics-grid">
+          <!-- Maintainability Index -->
+          <div class="dl-metric-tile dl-tile-highlight">
+            <span class="dl-mt-label">Maintainability (MI)</span>
+            <strong class="dl-mt-value">{{ selectedCell.data.maintainabilityIndex }}/100</strong>
+            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.maintainabilityIndex < 60">
+              {{ selectedCell.data.maintainabilityRating }} Maintainability
+            </span>
+          </div>
+
+          <!-- Instability Index -->
+          <div class="dl-metric-tile dl-tile-highlight">
+            <span class="dl-mt-label">Instability (I = Ce/Total)</span>
+            <strong class="dl-mt-value">{{ selectedCell.data.instability | number:'1.2-2' }}</strong>
+            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.instability > 0.7">
+              {{ selectedCell.data.instability > 0.7 ? 'Fragile Interface' : (selectedCell.data.instability < 0.3 ? 'Stable Core' : 'Balanced') }}
+            </span>
+          </div>
+
+          <!-- Lines of Code -->
+          <div class="dl-metric-tile">
+            <span class="dl-mt-label">Lines of Code (LOC)</span>
+            <strong class="dl-mt-value">{{ selectedCell.data.loc }}</strong>
+            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.loc > 500">
+              {{ selectedCell.data.loc > 500 ? 'Excessive Size' : 'Normal' }}
+            </span>
+          </div>
+
+          <!-- Complexity (WMC) -->
+          <div class="dl-metric-tile">
+            <span class="dl-mt-label">Complexity (WMC)</span>
+            <strong class="dl-mt-value">{{ selectedCell.data.wmc }}</strong>
+            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.wmc > 40">
+              {{ selectedCell.data.wmc > 40 ? 'High Complexity' : 'Normal' }}
+            </span>
+          </div>
+
+          <!-- Inbound Afferent Callers (Blast Radius) -->
+          <div class="dl-metric-tile">
+            <span class="dl-mt-label">Inbound Callers (Ca)</span>
+            <strong class="dl-mt-value">{{ selectedCell.data.ca }}</strong>
+            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.ca >= 8">
+              {{ selectedCell.data.ca >= 8 ? 'High Blast Radius' : 'Low Impact' }}
+            </span>
+          </div>
+
+          <!-- Outbound Efferent Dependencies (Ce) -->
+          <div class="dl-metric-tile">
+            <span class="dl-mt-label">Outbound Callees (Ce)</span>
+            <strong class="dl-mt-value">{{ selectedCell.data.ce }}</strong>
+            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.ce > 15">
+              {{ selectedCell.data.ce > 15 ? 'Excessive Dependencies' : 'Normal' }}
+            </span>
+          </div>
+
+          <!-- Coupling Between Objects (CBO) -->
+          <div class="dl-metric-tile">
+            <span class="dl-mt-label">Coupling (CBO)</span>
+            <strong class="dl-mt-value">{{ selectedCell.data.cbo }}</strong>
+            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.cbo > 20">
+              {{ selectedCell.data.cbo > 20 ? 'Tightly Coupled' : 'Normal' }}
+            </span>
+          </div>
+
+          <!-- Lack of Cohesion (LCOM) -->
+          <div class="dl-metric-tile">
+            <span class="dl-mt-label">Lack of Cohesion (LCOM)</span>
+            <strong class="dl-mt-value">{{ selectedCell.data.lcom }}</strong>
+            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.lcom >= 0.8">
+              {{ selectedCell.data.lcom >= 0.8 ? 'Poor Cohesion' : 'Normal' }}
+            </span>
+          </div>
+
+          <!-- Response for Class (RFC) -->
+          <div class="dl-metric-tile">
+            <span class="dl-mt-label">Response for Class (RFC)</span>
+            <strong class="dl-mt-value">{{ selectedCell.data.rfc }}</strong>
+            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.rfc > 50">
+              {{ selectedCell.data.rfc > 50 ? 'High Response' : 'Normal' }}
+            </span>
+          </div>
+
+          <!-- Inheritance Depth (DIT) -->
+          <div class="dl-metric-tile">
+            <span class="dl-mt-label">Inheritance Depth (DIT)</span>
+            <strong class="dl-mt-value">{{ selectedCell.data.dit }}</strong>
+            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.dit > 5">
+              {{ selectedCell.data.dit > 5 ? 'Deep Hierarchy' : 'Normal' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Anti-Pattern & Fowler Refactoring Recommendations -->
+        <div class="dl-inspector-smells-section">
+          <h6 class="dl-smells-section-title">
+            <ui-icon name="warning" class="dl-icon-sm"></ui-icon>
+            Architectural Anti-Patterns &amp; Recommendations
+          </h6>
+
+          <!-- No smells clean state -->
+          <div *ngIf="selectedCell.smells.length === 0" class="dl-smell-clean-state">
+            <span class="dl-clean-icon">✨</span>
+            <div class="dl-clean-body">
+              <strong>Well-Structured Architecture</strong>
+              <p>No structural code smells or anti-patterns detected across dimensions. Metric thresholds comply with Fowler's design principles.</p>
+            </div>
+          </div>
+
+          <!-- Detected Smells List -->
+          <div *ngFor="let smell of selectedCell.smells" class="dl-smell-item-card" [class.smell-critical]="smell.severity === 'CRITICAL'">
+            <div class="dl-smell-card-header">
+              <div class="dl-smell-name-row">
+                <span class="dl-smell-badge" [class.badge-critical]="smell.severity === 'CRITICAL'">
+                  {{ smell.severity }}
+                </span>
+                <strong class="dl-smell-title">{{ smell.title || smell.name }}</strong>
+              </div>
+              <span class="dl-smell-heuristic-tag">{{ smell.metricTrigger || smell.heuristic }}</span>
+            </div>
+
+            <p class="dl-smell-desc">{{ smell.summary || smell.description }}</p>
+
+            <div class="dl-recommendation-box">
+              <span class="dl-rec-header">
+                <ui-icon name="info" class="dl-rec-icon"></ui-icon>
+                Refactoring Action (Martin Fowler Pattern)
+              </span>
+              <p class="dl-rec-text">{{ smell.recommendation }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Butterfly Dependency & Defect Blast Radius Graph -->
+      <div class="dl-inspector-butterfly-content" *ngIf="inspectorTab === 'butterfly'">
+        <ui-butterfly-graph
+          [focusClass]="selectedCell.data"
+          [allClasses]="items"
+          (selectClass)="onButterflySelect($event)"
+          (hoverClass)="onExternalHoverClass($event)"
+        ></ui-butterfly-graph>
+      </div>
+    </div>
+  </div>
+</div>

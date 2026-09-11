@@ -3,8 +3,13 @@
     <nav class="dl-breadcrumb">
       <a (click)="back()">Compare Metrics</a>
       <ui-icon name="chevron-right" [size]="14"></ui-icon>
+      <span class="dl-breadcrumb-current">{{ comparison ? (comparison.manualDataset.displayName + ' ↔ ' + comparison.predefinedDataset.displayName) : 'Comparison Details' }}</span>
     </nav>
-    <h2>{{ comparison ? (comparison.manualDataset.displayName + ' ↔ ' + comparison.predefinedDataset.displayName) : 'Metric comparison' }}</h2>
+    <div class="dl-detail-title" *ngIf="comparison as item">
+      <h2>{{ item.manualDataset.displayName }} ↔ {{ item.predefinedDataset.displayName }}</h2>
+      <ui-badge [tone]="item.manualDataset.datasetFamily">{{ item.manualDataset.datasetFamily }}</ui-badge>
+    </div>
+    <h2 *ngIf="!comparison">Metric comparison</h2>
     <div class="dl-actions" *ngIf="comparison as item">
       <ui-button icon="download" [href]="facade.reportUrl(item.id)"
                  (click)="downloadStarted()">Download report</ui-button>

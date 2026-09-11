@@ -3,6 +3,7 @@
     <nav class="dl-breadcrumb">
       <a (click)="back()">Metric Storage</a>
       <ui-icon name="chevron-right" [size]="14"></ui-icon>
+      <span class="dl-breadcrumb-current">{{ dataset ? dataset.displayName : 'Dataset Details' }}</span>
     </nav>
     <div class="dl-detail-title" *ngIf="dataset as item">
       <h2>{{ item.displayName }}</h2>
@@ -33,9 +34,36 @@
   <ui-detail-fields *ngIf="dataset" [fields]="detailFields"></ui-detail-fields>
 
   <div class="dl-detail-section" *ngIf="dataset">
-    <h3>Stored values</h3>
+    <div class="dl-view-toggle-bar">
+      <h3>Stored values</h3>
+      <div class="dl-view-toggle" *ngIf="preview && classAnalysisList.length > 0">
+        <button
+          type="button"
+          class="dl-view-btn"
+          [class.active]="viewMode === 'table'"
+          (click)="setViewMode('table')"
+          title="Tabular dataset metric viewer"
+        >
+          <ui-icon name="view" [size]="14"></ui-icon>
+          Table View
+        </button>
+        <button
+          type="button"
+          class="dl-view-btn"
+          [class.active]="viewMode === 'treemap'"
+          (click)="setViewMode('treemap')"
+          title="SciTools Understand-style Hotspot Treemap"
+        >
+          <ui-icon name="chart" [size]="14"></ui-icon>
+          Hotspot Treemap
+        </button>
+      </div>
+    </div>
+
     <ui-state *ngIf="previewLoading" kind="loading" message="Loading preview…"></ui-state>
-    <div class="dl-table-box" *ngIf="preview">
+
+    <!-- Table View -->
+    <div class="dl-table-box" *ngIf="preview && viewMode === 'table'">
       <ui-table [columns]="previewColumns" [rows]="previewRows">
       </ui-table>
       <ui-pagination [total]="totalRows"
@@ -45,6 +73,15 @@
                      (pageChange)="onPageChange($event)"
                      (pageSizeChange)="onPageSizeChange($event)">
       </ui-pagination>
+    </div>
+
+    <!-- Hotspot Treemap View -->
+    <div *ngIf="preview && viewMode === 'treemap'">
+      <ui-treemap
+        [items]="classAnalysisList"
+        [title]="dataset.displayName + ' — Architectural Treemap'"
+        subtitle="Full-codebase aerial map: Box Size = Lines of Code (LOC); Color = Defect Risk & Anti-Pattern Severity."
+      ></ui-treemap>
     </div>
   </div>
 </ui-card>

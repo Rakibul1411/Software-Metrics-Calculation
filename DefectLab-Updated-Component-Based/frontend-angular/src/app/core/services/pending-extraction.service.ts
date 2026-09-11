@@ -79,7 +79,11 @@ export class PendingExtractionService {
         next: datasets => {
           const match = datasets.find(dataset => this.matches(dataset, marker));
           if (match) {
-            this.toast.success(`Background extraction finished: ${match.displayName}.`);
+            const elapsed = Math.round((Date.now() - marker.startedAt) / 1000);
+            const duration = elapsed >= 60
+              ? `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`
+              : `${elapsed}s`;
+            this.toast.success(`Background extraction finished: ${match.displayName} (${duration}).`);
             this.clear();
           }
         },

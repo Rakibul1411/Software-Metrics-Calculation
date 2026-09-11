@@ -43,6 +43,8 @@ import { UiStateComponent } from './shared/ui-state/ui-state.component';
 import { UiTableCellDirective } from './shared/ui-table/ui-table-cell.directive';
 import { UiTableComponent } from './shared/ui-table/ui-table.component';
 import { UiToastComponent } from './shared/ui-toast/ui-toast.component';
+import { UiTreemapComponent } from './shared/ui-treemap/ui-treemap.component';
+import { UiButterflyGraphComponent } from './shared/ui-butterfly-graph/ui-butterfly-graph.component';
 
 @NgModule({
   declarations: [
@@ -51,6 +53,8 @@ import { UiToastComponent } from './shared/ui-toast/ui-toast.component';
     UiCardComponent,
     UiBadgeComponent,
     UiBarChartComponent,
+    UiTreemapComponent,
+    UiButterflyGraphComponent,
     UiFilePickerComponent,
     UiMetricCardComponent,
     UiStateComponent,
@@ -92,3 +96,4 @@ import { UiToastComponent } from './shared/ui-toast/ui-toast.component';
   bootstrap: [AppComponent]
 })
 export class AppModule {}
+// Trigger hot reload
