@@ -57,10 +57,10 @@ class AeeemHistoryCalculatorsTest {
 
         double firstEntropy = binaryEntropy(0.8d, 0.2d);
         double secondEntropy = binaryEntropy(2d / 3d, 1d / 3d);
-        double expected = firstEntropy / 2d + secondEntropy;
+        double expected = (firstEntropy / 2d + secondEntropy) / 10d;
         assertEquals(expected, release.get("demo.A").getLdhhWmc(), 1.0e-12);
         assertEquals(expected, release.get("demo.B").getLdhhWmc(), 1.0e-12);
-        assertEquals(1.2792598814981706d, expected, 1.0e-12);
+        assertEquals(0.12792598814981706d, expected, 1.0e-12);
         assertEquals(0d, release.get("demo.A").getLdhhDit(), 1.0e-12);
     }
 

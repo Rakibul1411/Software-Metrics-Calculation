@@ -7,7 +7,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -64,6 +66,14 @@ public final class AeeemJavaSourceParser {
             Path projectRoot,
             Path sourceScope,
             AeeemBenchmarkProfile profile) throws IOException {
+        return parseProject(projectRoot, sourceScope, profile, null);
+    }
+
+    public static List<AeeemMetricResult> parseProject(
+            Path projectRoot,
+            Path sourceScope,
+            AeeemBenchmarkProfile profile,
+            SourceFileCache cache) throws IOException {
         Path normalizedRoot = projectRoot.toAbsolutePath().normalize();
         Path normalizedScope = sourceScope.toAbsolutePath().normalize();
         if (!normalizedScope.startsWith(normalizedRoot)) {
@@ -71,47 +81,80 @@ public final class AeeemJavaSourceParser {
                     "AEEEM source scope must be inside the Git repository.");
         }
         if (!Files.isDirectory(normalizedScope)) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
         List<Path> javaFiles = ProductionSourceSelector.collectJavaFiles(normalizedScope);
         if (javaFiles.isEmpty()) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
         AeeemBenchmarkProfile effectiveProfile = profile == null
                 ? AeeemBenchmarkProfile.CURRENT : profile;
-        ResolvedJavaProject configuration = JavaParserConfigurationResolver.resolve(
-                normalizedRoot, javaFiles, languageFallback(effectiveProfile));
-        for (String diagnostic : configuration.getDiagnostics()) {
-            System.err.println("AEEEM JDT configuration warning: " + diagnostic);
-        }
-        String[] classPath = JdtProjectEnvironment.collectJarClassPath(
-                normalizedRoot,
-                path -> !ProductionSourceSelector.isExcludedPath(
-                        normalizedRoot, path));
-        String[] sourceRoots = inferSourceRoots(javaFiles, configuration)
-                .toArray(new String[0]);
+
         List<AeeemMetricResult> results = new ArrayList<>();
-        int[] diagnosticCounts = new int[2];
-        int batchSize = configuredBatchSize();
-        for (Map.Entry<JavaLanguageConfiguration, List<Path>> entry
-                : configuration.getFilesByConfiguration().entrySet()) {
-            List<Path> configuredFiles = entry.getValue();
-            for (int start = 0; start < configuredFiles.size(); start += batchSize) {
-                int end = Math.min(configuredFiles.size(), start + batchSize);
-                parseBatch(
-                        normalizedRoot,
-                        configuredFiles.subList(start, end),
-                        classPath,
-                        sourceRoots,
-                        entry.getKey(),
-                        effectiveProfile.isBenchmark(),
-                        results,
-                        diagnosticCounts);
+        List<Path> filesToParse = new ArrayList<>();
+        if (cache != null) {
+            for (Path file : javaFiles) {
+                List<AeeemMetricResult> cached = cache.get(file);
+                if (cached != null) {
+                    results.addAll(cached);
+                } else {
+                    filesToParse.add(file);
+                }
             }
+        } else {
+            filesToParse.addAll(javaFiles);
         }
-        if (diagnosticCounts[1] > 0) {
-            System.err.println("AEEEM JDT warning: " + diagnosticCounts[1]
-                    + " additional diagnostics were suppressed for this snapshot.");
+
+        if (!filesToParse.isEmpty()) {
+            ResolvedJavaProject configuration = JavaParserConfigurationResolver.resolve(
+                    normalizedRoot, filesToParse, languageFallback(effectiveProfile));
+            for (String diagnostic : configuration.getDiagnostics()) {
+                System.err.println("AEEEM JDT configuration warning: " + diagnostic);
+            }
+            String[] classPath = JdtProjectEnvironment.collectJarClassPath(
+                    normalizedRoot,
+                    path -> !ProductionSourceSelector.isExcludedPath(
+                            normalizedRoot, path));
+            String[] sourceRoots = inferSourceRoots(javaFiles, configuration)
+                    .toArray(new String[0]);
+            int[] diagnosticCounts = new int[2];
+            int batchSize = configuredBatchSize();
+            for (Map.Entry<JavaLanguageConfiguration, List<Path>> entry
+                    : configuration.getFilesByConfiguration().entrySet()) {
+                List<Path> configuredFiles = entry.getValue();
+                for (int start = 0; start < configuredFiles.size(); start += batchSize) {
+                    int end = Math.min(configuredFiles.size(), start + batchSize);
+                    List<Path> batch = configuredFiles.subList(start, end);
+                    List<AeeemMetricResult> batchResults = new ArrayList<>();
+                    parseBatch(
+                            normalizedRoot,
+                            batch,
+                            classPath,
+                            sourceRoots,
+                            entry.getKey(),
+                            effectiveProfile.isBenchmark(),
+                            batchResults,
+                            diagnosticCounts);
+                    results.addAll(batchResults);
+                    if (cache != null) {
+                        Map<Path, List<AeeemMetricResult>> byFile = new HashMap<>();
+                        for (AeeemMetricResult r : batchResults) {
+                            if (r.getSourcePath() != null) {
+                                Path filePath = normalizedRoot.resolve(r.getSourcePath()).normalize();
+                                byFile.computeIfAbsent(filePath, k -> new ArrayList<>()).add(r);
+                            }
+                        }
+                        for (Path f : batch) {
+                            List<AeeemMetricResult> fResults = byFile.getOrDefault(f, Collections.emptyList());
+                            cache.put(f, fResults);
+                        }
+                    }
+                }
+            }
+            if (diagnosticCounts[1] > 0) {
+                System.err.println("AEEEM JDT warning: " + diagnosticCounts[1]
+                        + " additional diagnostics were suppressed for this snapshot.");
+            }
         }
         Map<String, AeeemMetricResult> unique = new LinkedHashMap<>();
         results.stream()
@@ -319,6 +362,66 @@ public final class AeeemJavaSourceParser {
             diagnosticCounts[0]++;
         } else {
             diagnosticCounts[1]++;
+        }
+    }
+
+    /**
+     * In-memory cache for parsed file metrics across bi-weekly snapshots.
+     * Caches AST results by file path, last-modified timestamp, and file size,
+     * avoiding re-parsing unchanged files across consecutive Git snapshots.
+     */
+    public static final class SourceFileCache {
+        private final Map<Path, CacheEntry> entries = new LinkedHashMap<>();
+
+        public List<AeeemMetricResult> get(Path file) {
+            CacheEntry entry = entries.get(file);
+            if (entry == null || !entry.isValid(file)) {
+                return null;
+            }
+            List<AeeemMetricResult> copies = new ArrayList<>(entry.results.size());
+            for (AeeemMetricResult result : entry.results) {
+                copies.add(result.copy());
+            }
+            return copies;
+        }
+
+        public void put(Path file, List<AeeemMetricResult> results) {
+            try {
+                long lastModified = Files.getLastModifiedTime(file).toMillis();
+                long size = Files.size(file);
+                List<AeeemMetricResult> copies = new ArrayList<>(results.size());
+                for (AeeemMetricResult result : results) {
+                    copies.add(result.copy());
+                }
+                entries.put(file, new CacheEntry(lastModified, size, copies));
+            } catch (IOException ignored) {
+            }
+        }
+
+        public void clear() {
+            entries.clear();
+        }
+
+        private static final class CacheEntry {
+            final long lastModified;
+            final long size;
+            final List<AeeemMetricResult> results;
+
+            CacheEntry(long lastModified, long size, List<AeeemMetricResult> results) {
+                this.lastModified = lastModified;
+                this.size = size;
+                this.results = results;
+            }
+
+            boolean isValid(Path file) {
+                try {
+                    return Files.exists(file)
+                            && Files.getLastModifiedTime(file).toMillis() == lastModified
+                            && Files.size(file) == size;
+                } catch (IOException exception) {
+                    return false;
+                }
+            }
         }
     }
 }

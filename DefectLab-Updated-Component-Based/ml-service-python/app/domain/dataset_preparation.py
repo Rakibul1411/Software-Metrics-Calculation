@@ -27,6 +27,10 @@ MISSING_MARKERS: tuple[float, ...] = (-1.0, -999.0)
 # Values like -1e-12 in a non-negative metric are floating-point noise.
 NEGATIVE_ZERO_TOLERANCE = 1e-9
 
+IDENTIFIER_COLUMNS: tuple[str, ...] = (
+    "name", "classname", "class_name", "file", "classidentifier", "identifier"
+)
+
 
 class SchemaError(ValueError):
     """Raised when a dataset cannot be used at all."""
@@ -115,7 +119,7 @@ def validate(rows: list[dict], family: str | None = None) -> dict:
         for column in frame.columns
         if column not in profile.features
         and column != label_column
-        and column != "name"
+        and column not in IDENTIFIER_COLUMNS
         and column not in excluded
     ]
 
@@ -198,9 +202,10 @@ def prepare(rows: list[dict], family: str | None = None,
     profile = detect_profile(frame.columns)
     assert profile is not None  # validate() already proved this
 
+    id_col = next((c for c in IDENTIFIER_COLUMNS if c in frame.columns), None)
     identifiers = (
-        frame["name"].astype(str).tolist()
-        if "name" in frame.columns
+        frame[id_col].astype(str).tolist()
+        if id_col is not None
         else [f"row_{index}" for index in range(len(frame))]
     )
 

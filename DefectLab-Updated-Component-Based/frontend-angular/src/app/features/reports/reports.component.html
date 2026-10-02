@@ -1,19 +1,12 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header">
-    <div class="dl-detail-title-row">
-      <div class="dl-heading-search">
-        <h2>Prediction reports</h2>
-        <ui-search-toggle label="Search reports" placeholder="Group, source or target"
-            [query]="search" (queryChange)="search = $event">
-        </ui-search-toggle>
-      </div>
-      <div class="dl-actions">
-        <ui-button icon="plus" link="/predictions/new">
-          Run Prediction
-        </ui-button>
-      </div>
-    </div>
-  </div>
+  <ui-page-header title="Prediction Reports">
+    <ui-search-toggle header-search label="Search reports" placeholder="Group, source or target"
+        [query]="search" (queryChange)="search = $event">
+    </ui-search-toggle>
+    <ui-button header-actions icon="plus" link="/defect-predictions/new">
+      Run Prediction
+    </ui-button>
+  </ui-page-header>
 
   <div class="dl-detail-section dl-fill">
     <ui-state *ngIf="loading" kind="loading" message="Loading reports…"></ui-state>
@@ -31,7 +24,7 @@
         <ng-template uiTableCell="created" let-row>{{ row.runs[0].createdAt | date:'mediumDate' }}</ng-template>
         <ng-template uiTableCell="view" let-row>
           <ui-button variant="ghost" size="sm" icon="view"
-                     [link]="['/reports', groupKey(row)]"
+                     [link]="['/prediction-reports', groupKey(row)]"
                      (pressed)="view(row)"
                      title="View report details & Hotspot Treemap" ariaLabel="View report details"></ui-button>
         </ng-template>
@@ -41,33 +34,21 @@
       </ui-pagination>
     </div>
     <ng-template #empty>
-      <div *ngIf="!loading" class="dl-empty-state-card">
-        <div class="dl-empty-card-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
-        </div>
-        <h3 class="dl-empty-card-title">
-          {{ groups.length ? 'No matching reports found' : 'No Prediction Reports Available' }}
-        </h3>
-        <p class="dl-empty-card-desc">
-          {{ groups.length
-             ? 'Try searching with another keyword or clear the search filter.'
-             : 'Execute a cross-version or cross-project prediction to generate evaluation metrics, agreement analysis, and SciTools Understand™ Treemaps.' }}
-        </p>
+      <ui-empty-state *ngIf="!loading"
+        icon="chart"
+        [title]="groups.length ? 'No matching reports found' : 'No Prediction Reports Available'"
+        [description]="groups.length
+           ? 'Try searching with another keyword or clear the search filter.'
+           : 'Run a model prediction to generate cross-project evaluation reports, agreement statistics, and architectural treemaps.'">
         <div class="dl-empty-card-actions" *ngIf="!groups.length">
-          <ui-button icon="plus" link="/predictions/new">
+          <ui-button icon="plus" link="/defect-predictions/new">
             Run Prediction Now
           </ui-button>
-          <ui-button variant="ghost" icon="chart" link="/datasets">
+          <ui-button variant="ghost" icon="chart" link="/metric-storage">
             View Metric Storage
           </ui-button>
         </div>
-      </div>
+      </ui-empty-state>
     </ng-template>
   </div>
 </ui-card>

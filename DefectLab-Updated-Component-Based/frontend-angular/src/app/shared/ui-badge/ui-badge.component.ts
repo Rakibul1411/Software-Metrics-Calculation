@@ -14,7 +14,7 @@ export type BadgeTone =
 @Component({
   selector: 'ui-badge',
   standalone: false,
-  template: `<span class="dl-badge" [ngClass]="badgeClass"><ng-content></ng-content></span>`
+  templateUrl: './ui-badge.component.html'
 })
 export class UiBadgeComponent {
   @Input() tone: BadgeTone = 'blue';

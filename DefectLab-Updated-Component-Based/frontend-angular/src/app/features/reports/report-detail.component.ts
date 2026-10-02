@@ -23,7 +23,7 @@ import { ClassAnalysisResult } from '../../core/models/code-smell.model';
   templateUrl: './report-detail.component.html'
 })
 export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView, string> {
-  protected readonly listRoute = ['/reports'];
+  protected readonly listRoute = ['/prediction-reports'];
   protected readonly missingMessage = 'The report group was not specified.';
   protected override readonly routeParam = 'groupKey';
 
@@ -260,10 +260,10 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     return this.predefinedRun?.evaluation ?? null;
   }
 
-  /** The identifier-joined panel only applies to PROMISE report groups. */
+  /** The identifier-joined panel applies when both runs share matching class/file identifiers. */
   get showMatchedComparison(): boolean {
     return !!this.manualRun && !!this.predefinedRun
-      && this.facade.supportsIdentifierMatching(this.item);
+      && (this.matchedRows.length > 0 || this.facade.supportsIdentifierMatching(this.item));
   }
 
   get manualCorrectCount(): number {
@@ -298,19 +298,39 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     return this.facade.correctness(value);
   }
 
-  protected override fetch(key: string): Observable<ReportDetailView> {
+  override load(key: string): void {
     this.manualPage = 1;
     this.predefinedPage = 1;
     this.matchedPage = 1;
+    this.manualDatasetRows = [];
+    this.predefinedDatasetRows = [];
+    super.load(key);
+  }
+
+  private clampPages(): void {
+    const maxManual = Math.max(1, Math.ceil(this.filteredManualRows.length / this.manualPageSize));
+    if (this.manualPage > maxManual) this.manualPage = maxManual;
+
+    const maxPredefined = Math.max(1, Math.ceil(this.filteredPredefinedRows.length / this.predefinedPageSize));
+    if (this.predefinedPage > maxPredefined) this.predefinedPage = maxPredefined;
+
+    const maxMatched = Math.max(1, Math.ceil(this.filteredMatchedRows.length / this.matchedPageSize));
+    if (this.matchedPage > maxMatched) this.matchedPage = maxMatched;
+  }
+
+  protected override fetch(key: string): Observable<ReportDetailView> {
     return this.facade.detail(key).pipe(
       tap(view => {
-        if (!view.manualRun && view.predefinedRun) {
-          this.activeTab = 'predefined';
-        } else if (view.manualRun && !view.predefinedRun) {
-          this.activeTab = 'manual';
+        if (!this.item) {
+          if (!view.manualRun && view.predefinedRun) {
+            this.activeTab = 'predefined';
+          } else if (view.manualRun && !view.predefinedRun) {
+            this.activeTab = 'manual';
+          }
         }
         this.updateTreemapItems(view);
-        if (view.manualRun?.targetDataset?.id) {
+        this.clampPages();
+        if (view.manualRun?.targetDataset?.id && !this.manualDatasetRows.length) {
           this.api.previewDataset(view.manualRun.targetDataset.id, 0, 5000).subscribe({
             next: preview => {
               this.manualDatasetRows = this.toDictRows(preview);
@@ -319,7 +339,7 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
             error: () => {}
           });
         }
-        if (view.predefinedRun?.targetDataset?.id) {
+        if (view.predefinedRun?.targetDataset?.id && !this.predefinedDatasetRows.length) {
           this.api.previewDataset(view.predefinedRun.targetDataset.id, 0, 5000).subscribe({
             next: preview => {
               this.predefinedDatasetRows = this.toDictRows(preview);

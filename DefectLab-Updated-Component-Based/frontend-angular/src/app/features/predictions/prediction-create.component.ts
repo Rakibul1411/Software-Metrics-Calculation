@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { timer } from 'rxjs';
 import { BaseFormComponent } from '../../core/base';
 import { FAMILY_RADIO_OPTIONS } from '../../core/constants/dataset-filter.options';
 import { DatasetFamily } from '../../core/models/defectlab.model';
@@ -24,7 +25,7 @@ export class PredictionCreateComponent extends BaseFormComponent implements OnIn
   readonly kOptions: SelectOption[] =
     [1, 2, 3, 4, 5].map(value => ({ value, label: String(value) }));
 
-  protected override readonly listRoute = ['/predictions'];
+  protected override readonly listRoute = ['/defect-predictions'];
 
   constructor(
     private readonly targets: PredictionTargetsFacade,
@@ -35,6 +36,15 @@ export class PredictionCreateComponent extends BaseFormComponent implements OnIn
 
   ngOnInit(): void {
     this.watch(this.targets.load()).subscribe({ error: () => {} });
+    this.initAutoRefresh();
+  }
+
+  protected initAutoRefresh(intervalMs = 5000): void {
+    this.watch(timer(intervalMs, intervalMs)).subscribe(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (this.busy) return;
+      this.watch(this.targets.load()).subscribe({ error: () => {} });
+    });
   }
 
   get modelName(): string {

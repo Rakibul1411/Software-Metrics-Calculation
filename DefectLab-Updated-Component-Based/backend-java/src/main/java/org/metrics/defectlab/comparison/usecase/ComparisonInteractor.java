@@ -146,17 +146,17 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
         Object raw = body.get("comparisonConfig");
         Map<String, Object> input = raw instanceof Map
                 ? (Map<String, Object>) raw : body;
-        boolean defaultIdentifier = manual.getDatasetFamily() == MetricDataset.Family.PROMISE
-                && manualTable.indexOf("name") >= 0
-                && predefinedTable.indexOf("name") >= 0;
+        int manualIdIndex = findIdentifierColumn(manualTable);
+        int predefinedIdIndex = findIdentifierColumn(predefinedTable);
+        boolean defaultIdentifier = manualIdIndex >= 0 && predefinedIdIndex >= 0;
         boolean hasIdentifier = booleanValue(
                 input.getOrDefault("hasIdentifierColumn", defaultIdentifier));
         String identifierName = nullableText(input.get("identifierColumnName"));
         if (hasIdentifier && identifierName == null) {
-            identifierName = "name";
+            identifierName = manualIdIndex >= 0 ? manualTable.getHeaders().get(manualIdIndex) : "name";
         }
-        if (hasIdentifier && (manualTable.indexOf(identifierName) < 0
-                || predefinedTable.indexOf(identifierName) < 0)) {
+        if (hasIdentifier && (findIdentifierIndex(manualTable, identifierName) < 0
+                || findIdentifierIndex(predefinedTable, identifierName) < 0)) {
             throw new IllegalArgumentException(
                     "identifierColumnName must exist in both datasets.");
         }
@@ -220,8 +220,8 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
             MetricDataset dataset, DatasetTable manual, DatasetTable predefined,
             Map<String, Object> config) {
         String identifier = String.valueOf(config.get("identifierColumnName"));
-        int manualId = manual.indexOf(identifier);
-        int predefinedId = predefined.indexOf(identifier);
+        int manualId = findIdentifierIndex(manual, identifier);
+        int predefinedId = findIdentifierIndex(predefined, identifier);
         List<String> metrics = commonNumericMetrics(dataset, manual, predefined);
         Map<String, List<String>> left = rowsByIdentifier(manual, manualId);
         Map<String, List<String>> right = rowsByIdentifier(predefined, predefinedId);
@@ -450,6 +450,29 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
             pair.put("cached", cached != null);
             result.add(pair);
         }
+
+        Set<Long> emittedComparisonIds = result.stream()
+                .map(m -> (Long) m.get("comparisonId"))
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        for (MetricComparison comp : saved) {
+            if (emittedComparisonIds.contains(comp.getId())) continue;
+            MetricDataset manual = byId.get(comp.getManualDatasetId());
+            MetricDataset target = byId.get(comp.getPredefinedDatasetId());
+            if (manual == null || target == null) continue;
+            Map<String, Object> pair = new LinkedHashMap<>();
+            pair.put("key", "saved-" + comp.getId());
+            pair.put("displayName", manual.getDisplayName() + " vs " + target.getDisplayName());
+            pair.put("datasetFamily", manual.getDatasetFamily().name());
+            pair.put("projectName", manual.getProjectName());
+            pair.put("projectVersion", manual.getProjectVersion());
+            pair.put("manualDatasetId", manual.getId());
+            pair.put("predefinedDatasetId", target.getId());
+            pair.put("comparisonId", comp.getId());
+            pair.put("cached", true);
+            result.add(pair);
+        }
+
         result.sort((left, right) -> String.valueOf(left.get("displayName"))
                 .compareToIgnoreCase(String.valueOf(right.get("displayName"))));
         return result;
@@ -633,8 +656,29 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
 
     private static String normalizeIdentifier(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT)
-                .replace('\\', '/').replaceAll("\\.java$", "")
+                .replace('\\', '/')
+                .replaceAll("::", "/")
+                .replaceAll("\\.java$", "")
+                .replace('.', '/')
                 .replaceAll("\\s+", "");
+    }
+
+    private static int findIdentifierIndex(DatasetTable table, String requested) {
+        if (table == null) return -1;
+        if (requested != null) {
+            int idx = table.indexOf(requested);
+            if (idx >= 0) return idx;
+        }
+        return findIdentifierColumn(table);
+    }
+
+    private static int findIdentifierColumn(DatasetTable table) {
+        if (table == null) return -1;
+        for (String candidate : List.of("name", "classname", "class_name", "file", "classidentifier", "identifier")) {
+            int idx = table.indexOf(candidate);
+            if (idx >= 0) return idx;
+        }
+        return -1;
     }
 
     private static String status(

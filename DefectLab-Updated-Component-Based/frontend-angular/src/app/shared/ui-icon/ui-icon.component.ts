@@ -29,10 +29,18 @@ export type UiIconName =
   | 'undo'
   | 'chevron-right'
   | 'chevron-left'
+  | 'chevron-down'
+  | 'chevron-up'
+  | 'expand-more'
+  | 'expand-less'
   | 'chevrons-left'
   | 'chevrons-right'
   | 'info'
-  | 'clock';
+  | 'clock'
+  | 'shield'
+  | 'target'
+  | 'database'
+  | 'code';
 
 const PATHS: Record<UiIconName, string> = {
   'check': 'M4 12.5 9 17.5 20 6.5',
@@ -56,21 +64,24 @@ const PATHS: Record<UiIconName, string> = {
   'undo': 'M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12',
   'chevron-right': 'M9 5l7 7-7 7',
   'chevron-left': 'M15 19l-7-7 7-7',
+  'chevron-down': 'M6 9l6 6 6-6',
+  'chevron-up': 'M18 15l-6-6-6 6',
+  'expand-more': 'M6 9l6 6 6-6',
+  'expand-less': 'M18 15l-6-6-6 6',
   'chevrons-left': 'M11 19l-7-7 7-7m8 14l-7-7 7-7',
   'chevrons-right': 'M13 5l7 7-7 7M5 5l7 7-7 7',
   'info': 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-8v5m0-9v.01',
-  'clock': 'M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z'
+  'clock': 'M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z',
+  'shield': 'M12 3s7 3 7 8c0 5-7 10-7 10S5 16 5 11c0-5 7-8 7-8Z',
+  'target': 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm0-6a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
+  'database': 'M12 4c4.4 0 8 1.3 8 3v10c0 1.7-3.6 3-8 3s-8-1.3-8-3V7c0-1.7 3.6-3 8-3Zm0 6c4.4 0 8-1.3 8-3M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+  'code': 'M8 9l-4 3 4 3m8-6l4 3-4 3m-6 3l2-12'
 };
 
 @Component({
   selector: 'ui-icon',
   standalone: false,
-  template: `
-    <svg class="ui-icon" [attr.width]="size" [attr.height]="size"
-         viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path [attr.d]="path"/>
-    </svg>
-  `
+  templateUrl: './ui-icon.component.html'
 })
 export class UiIconComponent {
   @Input({ required: true }) name!: UiIconName;

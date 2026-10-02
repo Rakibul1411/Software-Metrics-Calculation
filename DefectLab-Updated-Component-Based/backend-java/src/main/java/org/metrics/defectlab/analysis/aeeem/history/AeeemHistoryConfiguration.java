@@ -3,9 +3,10 @@ package org.metrics.defectlab.analysis.aeeem.history;
 /**
  * Parameters used by the history formulas.
  *
- * <p>The papers fix WCHU alpha at 0.01 but do not publish numeric values for
- * every decay factor. The decay factors therefore default to 1.0 and can be
- * supplied explicitly through environment variables.</p>
+ * <p>The papers fix WCHU alpha at 0.01. For linear decay, Hassan (ICSE 2009)
+ * established a decay factor of phi_2 = 10.0, which was adopted by D'Ambros et al.
+ * (2012). The linear decay factor therefore defaults to 10.0 and can be customized
+ * through environment variables.</p>
  */
 public final class AeeemHistoryConfiguration {
 
@@ -36,13 +37,13 @@ public final class AeeemHistoryConfiguration {
     public static AeeemHistoryConfiguration fromEnvironment() {
         return new AeeemHistoryConfiguration(
                 environmentDouble(EXP_DECAY_VARIABLE, 1d),
-                environmentDouble(LINEAR_DECAY_VARIABLE, 1d),
+                environmentDouble(LINEAR_DECAY_VARIABLE, 10d),
                 environmentDouble(LOG_DECAY_VARIABLE, 1d),
                 environmentInteger(RECENT_PERIODS_VARIABLE, 6));
     }
 
     public static AeeemHistoryConfiguration defaults() {
-        return new AeeemHistoryConfiguration(1d, 1d, 1d, 6);
+        return new AeeemHistoryConfiguration(1d, 10d, 1d, 6);
     }
 
     public double getExponentialDecayFactor() {

@@ -35,10 +35,10 @@ class LdhhCalculatorTest {
 
         LdhhCalculator.apply(List.of(s0, s1), s1);
 
-        // Single interval, default decay factor of 1.0 -> denominator is 1.
-        // A and B changed (delta > 0), so each receives the interval's entropy.
-        assertEquals(expectedEntropy, s1.get("A").getLdhhWmc(), 1e-9);
-        assertEquals(expectedEntropy, s1.get("B").getLdhhWmc(), 1e-9);
+        // Single interval, default decay factor of 10.0 -> denominator is 10.
+        // A and B changed (delta > 0), so each receives the interval's entropy / 10.
+        assertEquals(expectedEntropy / 10d, s1.get("A").getLdhhWmc(), 1e-9);
+        assertEquals(expectedEntropy / 10d, s1.get("B").getLdhhWmc(), 1e-9);
         // Per Eq. 17 of D'Ambros et al. 2012, only classes that change (delta > 0)
         // receive system entropy. C never changed its own wmc, so its LDHH is 0.
         assertEquals(0.0d, s1.get("C").getLdhhWmc(), 1e-9);

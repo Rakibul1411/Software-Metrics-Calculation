@@ -4,7 +4,8 @@ import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from
 @Component({
   selector: 'ui-download-menu',
   standalone: false,
-  templateUrl: './ui-download-menu.component.html'
+  templateUrl: './ui-download-menu.component.html',
+  styleUrls: ['./ui-download-menu.component.css']
 })
 export class UiDownloadMenuComponent {
   @Input() label = 'Download';

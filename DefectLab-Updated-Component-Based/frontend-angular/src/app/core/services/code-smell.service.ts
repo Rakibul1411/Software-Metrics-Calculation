@@ -59,14 +59,17 @@ export class CodeSmellService {
       });
     }
 
-    // --- Heuristic Rule 2: Spaghetti Coupling (CBO > 20 or RFC > 15 or Ce > 15) ---
-    if (cbo > 20 || fanOut > 15 || ce > 15) {
-      const trigger = cbo > 20 ? `CBO: ${cbo} (>20)` : (ce > 15 ? `Ce: ${ce} (>15)` : `RFC: ${fanOut} (>15)`);
+    // --- Heuristic Rule 2: Spaghetti Coupling (CBO > 20 or RFC > 50 or Ce > 20) ---
+    const isExtremeCoupling = (cbo > 30) || (cbo > 20 && wmc > 25);
+    const hasCouplingSmell = cbo > 20 || fanOut > 50 || ce > 20;
+
+    if (hasCouplingSmell || isExtremeCoupling) {
+      const trigger = cbo > 20 ? `CBO: ${cbo} (>20)` : (ce > 20 ? `Ce: ${ce} (>20)` : `RFC: ${fanOut} (>50)`);
       smells.push({
         type: 'SPAGHETTI_COUPLING',
         title: 'Spaghetti Coupling',
         name: 'Spaghetti Coupling',
-        severity: 'CRITICAL',
+        severity: isExtremeCoupling ? 'CRITICAL' : 'WARNING',
         metricTrigger: trigger,
         heuristic: trigger,
         summary: 'Tightly coupled with excessive external entities. High regression blast radius.',
@@ -160,27 +163,32 @@ export class CodeSmellService {
 
   /**
    * Computes the SEI / Coleman-Oman Maintainability Index (0 to 100).
+   * Formula: MI = 171 - 5.2 * ln(Halstead Volume) - 0.23 * CC - 16.2 * ln(LOC)
+   * Standard SEI rating thresholds:
+   *   - score >= 75: HIGH (green - clean, easy to maintain)
+   *   - 55 <= score < 75: MODERATE (yellow - average maintainability)
+   *   - score < 55: LOW (red - complex, hard to maintain)
    */
   calculateMaintainabilityIndex(loc: number, wmc: number): { score: number; rating: 'HIGH' | 'MODERATE' | 'LOW' } {
     const safeLoc = Math.max(5, loc);
     const safeWmc = Math.max(1, wmc);
 
-    // Standard formula: 171 - 5.2 * ln(Halstead Volume) - 0.23 * CC - 16.2 * ln(LOC)
+    // Standard Coleman-Oman formula (Oman & Hagemeister 1992, Coleman et al. 1994, SEI)
     // Halstead volume approximated as LOC * 6
     const approxVolume = safeLoc * 6;
     const rawMI = 171 - (5.2 * Math.log(approxVolume)) - (0.23 * safeWmc) - (16.2 * Math.log(safeLoc));
 
-    // Normalize from [0..171] to [0..100]
-    const normalized = Math.max(0, Math.min(100, Math.round((rawMI / 171) * 100)));
+    // Clamped SEI Maintainability Index [0..100]
+    const score = Math.max(0, Math.min(100, Math.round(rawMI)));
 
     let rating: 'HIGH' | 'MODERATE' | 'LOW' = 'HIGH';
-    if (normalized < 55) {
+    if (score < 55) {
       rating = 'LOW';
-    } else if (normalized < 80) {
+    } else if (score < 75) {
       rating = 'MODERATE';
     }
 
-    return { score: normalized, rating };
+    return { score, rating };
   }
 
   /**
@@ -208,7 +216,26 @@ export class CodeSmellService {
     defectProbability?: number,
     predictedLabel?: number
   ): ClassAnalysisResult {
-    const rawName = String(row['name'] || row['className'] || row['classIdentifier'] || row['identifier'] || 'Unknown');
+    let rawName = String(
+      row['name'] || row['Name'] ||
+      row['className'] || row['ClassName'] || row['classname'] ||
+      row['class'] || row['Class'] ||
+      row['file'] || row['File'] ||
+      row['filename'] || row['Filename'] ||
+      row['relname'] || row['Relname'] ||
+      row['classIdentifier'] || row['ClassIdentifier'] ||
+      row['identifier'] || row['Identifier'] || ''
+    );
+    if (!rawName || rawName === 'Unknown') {
+      for (const [k, v] of Object.entries(row)) {
+        if (typeof v === 'string' && v.trim() !== '' && isNaN(Number(v)) && k.toLowerCase() !== 'id' && !k.toLowerCase().includes('bug') && !k.toLowerCase().includes('label')) {
+          rawName = v;
+          break;
+        }
+      }
+    }
+    if (!rawName) rawName = 'Class_' + (Math.floor(Math.random() * 900) + 100);
+
     const className = rawName
       .replace(/\\/g, '.')
       .replace(/\//g, '.')
@@ -225,9 +252,12 @@ export class CodeSmellService {
       }
     }
 
-    const loc = this.getNumeric(metricsNum, ['loc', 'LOC', 'ck_oo_loc', 'ck_oo_linesOfCode']) || 15;
-    const wmc = this.getNumeric(metricsNum, ['wmc', 'WMC', 'ck_oo_wmc', 'ck_oo_numberOfMethods']) || 1;
-    const cbo = this.getNumeric(metricsNum, ['cbo', 'CBO', 'ck_oo_cbo', 'ck_oo_fanOut']) || 0;
+    const loc = this.getNumeric(metricsNum, [
+      'loc', 'LOC', 'ck_oo_loc', 'ck_oo_linesOfCode', 'linesOfCode', 'lines', 'Lines',
+      'CountLineCode', 'countLineCode', 'sloc', 'SLOC', 'ncloc', 'size'
+    ]) || Math.max(20, Math.round((this.getNumeric(metricsNum, ['wmc', 'WMC']) || 2) * 20));
+    const wmc = this.getNumeric(metricsNum, ['wmc', 'WMC', 'ck_oo_wmc', 'ck_oo_numberOfMethods', 'numberOfMethods', 'complexity', 'methods']) || 1;
+    const cbo = this.getNumeric(metricsNum, ['cbo', 'CBO', 'ck_oo_cbo', 'ck_oo_fanOut', 'fanOut']) || 0;
     const lcom = this.getNumeric(metricsNum, ['lcom', 'LCOM', 'ck_oo_lcom']) || 0;
     const dit = this.getNumeric(metricsNum, ['dit', 'DIT', 'ck_oo_dit']) || 1;
     const rfc = this.getNumeric(metricsNum, ['rfc', 'RFC', 'fanout', 'fanOut', 'ck_oo_rfc']) || 0;
@@ -372,17 +402,29 @@ export class CodeSmellService {
     const instability = this.calculateInstability(ca, ce);
 
     const smells: CodeSmell[] = [];
-    if (riskScore >= 0.65) {
+    if (wmc > 35 && loc > 450) {
       smells.push({
         type: 'GOD_CLASS',
-        title: 'High Defect Susceptibility Hotspot',
-        name: 'High Defect Susceptibility Hotspot',
+        title: 'God Class',
+        name: 'God Class',
         severity: 'CRITICAL',
-        metricTrigger: `Model Confidence: ${(riskScore * 100).toFixed(1)}% (Rank #${r.riskRank})`,
-        heuristic: `Model Confidence: ${(riskScore * 100).toFixed(1)}% (Rank #${r.riskRank})`,
-        summary: 'Supervised ML model predicts high defect probability under cross-version validation.',
-        description: 'Supervised ML model predicts high defect probability under cross-version validation.',
-        recommendation: 'Prioritize unit testing and code review; decompose complex routines into smaller methods.'
+        metricTrigger: `WMC: ${wmc}, LOC: ${loc}`,
+        heuristic: `WMC: ${wmc}, LOC: ${loc}`,
+        summary: 'Large, overly complex component centralizing excessive logic.',
+        description: 'Large, overly complex component centralizing excessive logic.',
+        recommendation: 'Decompose this class into smaller, cohesive units.'
+      });
+    } else if (cbo > 12) {
+      smells.push({
+        type: 'SPAGHETTI_COUPLING',
+        title: 'Spaghetti Coupling',
+        name: 'Spaghetti Coupling',
+        severity: 'WARNING',
+        metricTrigger: `CBO: ${cbo}`,
+        heuristic: `CBO: ${cbo}`,
+        summary: 'High coupling to external components.',
+        description: 'High coupling to external components.',
+        recommendation: 'Decouple dependencies using interfaces or mediators.'
       });
     }
 

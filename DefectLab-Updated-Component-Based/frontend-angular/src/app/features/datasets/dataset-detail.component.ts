@@ -20,7 +20,7 @@ export class DatasetDetailComponent extends BaseDetailComponent<DatasetSummary> 
   classAnalysisList: ClassAnalysisResult[] = [];
   viewMode: 'table' | 'treemap' = 'table';
 
-  protected readonly listRoute = ['/datasets'];
+  protected readonly listRoute = ['/metric-storage'];
   protected readonly missingMessage = 'The dataset was not specified.';
 
   constructor(

@@ -1,16 +1,14 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header dl-detail-header-grid">
-    <nav class="dl-breadcrumb">
-      <a (click)="back()">Compare Metrics</a>
-      <ui-icon name="chevron-right" [size]="14"></ui-icon>
-      <span class="dl-breadcrumb-current">{{ comparison ? (comparison.manualDataset.displayName + ' ↔ ' + comparison.predefinedDataset.displayName) : 'Comparison Details' }}</span>
-    </nav>
-    <div class="dl-detail-title" *ngIf="comparison as item">
-      <h2>{{ item.manualDataset.displayName }} ↔ {{ item.predefinedDataset.displayName }}</h2>
+  <ui-page-header
+    parentLabel="Compare Metrics"
+    [parentLink]="['/metric-comparisons']"
+    [title]="comparison ? (comparison.manualDataset.displayName + ' ↔ ' + comparison.predefinedDataset.displayName) : ''"
+    fallbackTitle="Metric comparison"
+    (parentClick)="back()">
+    <ng-container header-badges *ngIf="comparison as item">
       <ui-badge [tone]="item.manualDataset.datasetFamily">{{ item.manualDataset.datasetFamily }}</ui-badge>
-    </div>
-    <h2 *ngIf="!comparison">Metric comparison</h2>
-    <div class="dl-actions" *ngIf="comparison as item">
+    </ng-container>
+    <ng-container header-actions *ngIf="comparison as item">
       <ui-button icon="download" [href]="facade.reportUrl(item.id)"
                  (click)="downloadStarted()">Download report</ui-button>
       <ui-delete-action label="Delete" dialogTitle="Delete comparison"
@@ -18,8 +16,8 @@
           successMessage="Comparison deleted successfully."
           [deleteFn]="deleteComparison" (deleted)="onDeleted()">
       </ui-delete-action>
-    </div>
-  </div>
+    </ng-container>
+  </ui-page-header>
 
   <ui-state *ngIf="loading" kind="loading" message="Loading comparison…"></ui-state>
 
@@ -40,7 +38,7 @@
       </div>
 
       <div class="dl-detail-section">
-        <h3>Metric-wise mean &amp; std (manual vs predefined)</h3>
+        <h3>Statistical Metric Comparison</h3>
         <div class="dl-table-box">
           <ui-table [columns]="metricStatsColumns" [rows]="pagedAggregateRows"
                     trackByKey="metric">
@@ -73,13 +71,13 @@
           <button type="button" role="tab" [class.active]="activeTab === 'metrics'"
                   [attr.aria-selected]="activeTab === 'metrics'"
                   (click)="activeTab = 'metrics'">
-            Metric-wise mean &amp; std
+            Metric Statistics
             <span class="dl-tab-badge">{{ instanceMetricStats.length }}</span>
           </button>
           <button type="button" role="tab" [class.active]="activeTab === 'files'"
                   [attr.aria-selected]="activeTab === 'files'"
                   (click)="activeTab = 'files'">
-            File-wise comparison
+            File-Wise Comparison
             <span class="dl-tab-badge">{{ instanceRows.length | number }}</span>
           </button>
         </div>

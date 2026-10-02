@@ -69,39 +69,48 @@ public final class GitHistoryAnalyzer {
                     + options.getProfile().getReferenceSnapshotCount()
                     + " parsed versions. SCM migration and inactive periods can differ.");
         }
-        for (int index = 0; index < snapshots.size(); index++) {
-            if (Thread.currentThread().isInterrupted()) {
-                throw new IOException("AEEEM history analysis was cancelled.");
-            }
-            BiWeeklySnapshotGenerator.Snapshot snapshot = snapshots.get(index);
-            String treeIdentity = treeIdentity(repository, snapshot.getCommit(),
-                    options.getModulePath());
-            Map<String, AeeemMetricResult> cached = metricsByTree.get(treeIdentity);
-            if (cached != null) {
-                history.add(cached);
-                System.out.println("AEEEM snapshot " + (index + 1) + "/" + snapshots.size()
-                        + " reused (" + snapshot.getDate()
-                        + ", selected module tree is unchanged).");
-                continue;
-            }
-            Path worktree = null;
-            try {
+        AeeemJavaSourceParser.SourceFileCache fileCache =
+                new AeeemJavaSourceParser.SourceFileCache();
+        Path worktree = null;
+        try {
+            worktree = snapshotGenerator.createWorktree(repository, snapshots.get(0));
+            for (int index = 0; index < snapshots.size(); index++) {
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new IOException("AEEEM history analysis was cancelled.");
+                }
+                BiWeeklySnapshotGenerator.Snapshot snapshot = snapshots.get(index);
+                String treeIdentity = treeIdentity(repository, snapshot.getCommit(),
+                        options.getModulePath());
+                Map<String, AeeemMetricResult> cached = metricsByTree.get(treeIdentity);
+                if (cached != null) {
+                    history.add(cached);
+                    System.out.println("AEEEM snapshot " + (index + 1) + "/" + snapshots.size()
+                            + " reused (" + snapshot.getDate()
+                            + ", selected module tree is unchanged).");
+                    continue;
+                }
+
                 System.out.println("AEEEM snapshot " + (index + 1) + "/" + snapshots.size()
                         + " started (" + snapshot.getDate() + ").");
-                worktree = snapshotGenerator.createWorktree(repository, snapshot);
+                if (index > 0) {
+                    snapshotGenerator.checkoutCommit(worktree, snapshot);
+                }
                 Path sourceScope = resolveSourceScope(worktree, options.getModulePath());
                 List<AeeemMetricResult> metrics =
                         AeeemJavaSourceParser.parseProject(
                                 worktree,
                                 sourceScope,
-                                options.getProfile());
+                                options.getProfile(),
+                                fileCache);
                 AeeemProjectMetricsCalculator.apply(metrics);
                 Map<String, AeeemMetricResult> snapshotMetrics = byName(metrics);
                 metricsByTree.put(treeIdentity, snapshotMetrics);
                 history.add(snapshotMetrics);
                 System.out.println("AEEEM snapshot " + (index + 1) + "/" + snapshots.size()
                         + " completed: " + metrics.size() + " production classes.");
-            } finally {
+            }
+        } finally {
+            if (worktree != null) {
                 snapshotGenerator.removeWorktree(repository, worktree);
             }
         }

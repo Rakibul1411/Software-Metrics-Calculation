@@ -293,4 +293,77 @@ public class AeeemMetricResult {
     public double getCvsExpEntropy() { return cvsExpEntropy; }
     public void setCvsExpEntropy(double val) { this.cvsExpEntropy = val; }
 
+    public AeeemMetricResult copy() {
+        AeeemMetricResult clone = new AeeemMetricResult(this.fullyQualifiedName);
+        clone.sourcePath = this.sourcePath;
+        clone.superclassName = this.superclassName;
+        clone.isInterface = this.isInterface;
+        clone.dependencies = new HashSet<>(this.dependencies);
+        clone.declaredMethodSignatures = new HashSet<>(this.declaredMethodSignatures);
+        clone.inheritableMethodSignatures = new HashSet<>(this.inheritableMethodSignatures);
+        clone.declaredAttributeCount = this.declaredAttributeCount;
+        clone.inheritableDeclaredAttributeCount = this.inheritableDeclaredAttributeCount;
+
+        clone.ckOoNumberOfPrivateMethods = this.ckOoNumberOfPrivateMethods;
+        clone.ckOoNumberOfPublicAttributes = this.ckOoNumberOfPublicAttributes;
+        clone.ckOoNoc = this.ckOoNoc;
+        clone.ckOoWmc = this.ckOoWmc;
+        clone.ckOoFanOut = this.ckOoFanOut;
+        clone.ckOoNumberOfLinesOfCode = this.ckOoNumberOfLinesOfCode;
+        clone.ckOoNumberOfAttributesInherited = this.ckOoNumberOfAttributesInherited;
+        clone.ckOoNumberOfMethods = this.ckOoNumberOfMethods;
+        clone.ckOoDit = this.ckOoDit;
+        clone.ckOoFanIn = this.ckOoFanIn;
+        clone.ckOoLcom = this.ckOoLcom;
+        clone.ckOoRfc = this.ckOoRfc;
+        clone.ckOoCbo = this.ckOoCbo;
+        clone.ckOoNumberOfAttributes = this.ckOoNumberOfAttributes;
+        clone.ckOoNumberOfPrivateAttributes = this.ckOoNumberOfPrivateAttributes;
+        clone.ckOoNumberOfMethodsInherited = this.ckOoNumberOfMethodsInherited;
+        clone.ckOoNumberOfPublicMethods = this.ckOoNumberOfPublicMethods;
+
+        clone.ldhhLcom = this.ldhhLcom;
+        clone.ldhhFanIn = this.ldhhFanIn;
+        clone.ldhhNumberOfPublicMethods = this.ldhhNumberOfPublicMethods;
+        clone.ldhhNumberOfPrivateAttributes = this.ldhhNumberOfPrivateAttributes;
+        clone.ldhhNumberOfPublicAttributes = this.ldhhNumberOfPublicAttributes;
+        clone.ldhhNumberOfPrivateMethods = this.ldhhNumberOfPrivateMethods;
+        clone.ldhhNumberOfAttributesInherited = this.ldhhNumberOfAttributesInherited;
+        clone.ldhhNoc = this.ldhhNoc;
+        clone.ldhhWmc = this.ldhhWmc;
+        clone.ldhhNumberOfAttributes = this.ldhhNumberOfAttributes;
+        clone.ldhhNumberOfLinesOfCode = this.ldhhNumberOfLinesOfCode;
+        clone.ldhhDit = this.ldhhDit;
+        clone.ldhhFanOut = this.ldhhFanOut;
+        clone.ldhhNumberOfMethodsInherited = this.ldhhNumberOfMethodsInherited;
+        clone.ldhhRfc = this.ldhhRfc;
+        clone.ldhhCbo = this.ldhhCbo;
+        clone.ldhhNumberOfMethods = this.ldhhNumberOfMethods;
+
+        clone.wchuNumberOfPublicAttributes = this.wchuNumberOfPublicAttributes;
+        clone.wchuNumberOfAttributes = this.wchuNumberOfAttributes;
+        clone.wchuFanIn = this.wchuFanIn;
+        clone.wchuNumberOfPrivateMethods = this.wchuNumberOfPrivateMethods;
+        clone.wchuNumberOfMethods = this.wchuNumberOfMethods;
+        clone.wchuNumberOfPrivateAttributes = this.wchuNumberOfPrivateAttributes;
+        clone.wchuNoc = this.wchuNoc;
+        clone.wchuWmc = this.wchuWmc;
+        clone.wchuDit = this.wchuDit;
+        clone.wchuNumberOfAttributesInherited = this.wchuNumberOfAttributesInherited;
+        clone.wchuFanOut = this.wchuFanOut;
+        clone.wchuLcom = this.wchuLcom;
+        clone.wchuRfc = this.wchuRfc;
+        clone.wchuNumberOfPublicMethods = this.wchuNumberOfPublicMethods;
+        clone.wchuCbo = this.wchuCbo;
+        clone.wchuNumberOfMethodsInherited = this.wchuNumberOfMethodsInherited;
+        clone.wchuNumberOfLinesOfCode = this.wchuNumberOfLinesOfCode;
+
+        clone.cvsWEntropy = this.cvsWEntropy;
+        clone.cvsEntropy = this.cvsEntropy;
+        clone.cvsLogEntropy = this.cvsLogEntropy;
+        clone.cvsLinEntropy = this.cvsLinEntropy;
+        clone.cvsExpEntropy = this.cvsExpEntropy;
+
+        return clone;
+    }
 }

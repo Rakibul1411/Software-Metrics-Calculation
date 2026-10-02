@@ -157,6 +157,8 @@ export class DashboardFacade {
               };
             });
 
+            hotspots.sort((a, b) => (a.riskRank ?? 0) - (b.riskRank ?? 0) || (b.defectProbability ?? 0) - (a.defectProbability ?? 0));
+
             const archStats = this.computeArchStats(analyzedAll);
 
             return this.assemble(
@@ -372,7 +374,11 @@ export class DashboardFacade {
       .sort((a, b) => b.totalFiles - a.totalFiles)
       .slice(0, VOLUME_LIMIT);
     return {
-      categories: top.map(item => `${item.displayName} · ${item.datasetFamily}`),
+      categories: top.map(item =>
+        item.datasetType === 'MANUAL'
+          ? `${item.displayName} (Manual) · ${item.datasetFamily}`
+          : `${item.displayName} (Predefined) · ${item.datasetFamily}`
+      ),
       series: [{ label: 'Classes', values: top.map(item => item.totalFiles) }]
     };
   }

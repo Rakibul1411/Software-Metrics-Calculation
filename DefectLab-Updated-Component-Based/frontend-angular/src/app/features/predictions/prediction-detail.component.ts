@@ -12,7 +12,7 @@ import { PredictionsFacade } from './predictions.facade';
   templateUrl: './prediction-detail.component.html'
 })
 export class PredictionDetailComponent extends BaseDetailComponent<PredictionRunDetail> {
-  protected readonly listRoute = ['/predictions'];
+  protected readonly listRoute = ['/defect-predictions'];
   protected readonly missingMessage = 'The prediction run was not specified.';
 
   page = 1;
@@ -56,8 +56,12 @@ export class PredictionDetailComponent extends BaseDetailComponent<PredictionRun
 
   deletePredictionRun = (): Observable<unknown> => this.facade.delete(this.item!.id);
 
-  protected fetch(id: number): Observable<PredictionRunDetail> {
+  override load(id: number): void {
     this.page = 1;
+    super.load(id);
+  }
+
+  protected fetch(id: number): Observable<PredictionRunDetail> {
     return this.facade.get(id);
   }
 }

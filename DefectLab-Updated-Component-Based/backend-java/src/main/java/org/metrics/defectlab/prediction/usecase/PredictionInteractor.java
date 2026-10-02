@@ -21,8 +21,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.metrics.defectlab.dataset.api.DatasetFileWriter;
 import org.metrics.defectlab.dataset.domain.DatasetTable;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
+import org.metrics.defectlab.dataset.infrastructure.DatasetFileParser;
 import org.metrics.defectlab.dataset.usecase.DatasetSummaryMapper;
 import org.metrics.defectlab.dataset.usecase.GetDatasetUseCase;
 import org.metrics.defectlab.dataset.usecase.LoadDatasetTableUseCase;
@@ -72,7 +74,6 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
      * after both targets (for a dual request) have completed successfully.
      */
     @Override
-    @Transactional
     public Map<String, Object> execute(Long userId, Map<String, Object> body)
             throws IOException {
         MetricDataset source = getDatasetUseCase.require(
@@ -274,7 +275,7 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
                     ignored -> new ArrayDeque<>())
                     .add(integerValue(prediction.get("predictedLabel"), 0));
         }
-        int identifierIndex = target.indexOf("name");
+        int identifierIndex = findIdentifierColumn(target);
         try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8);
              CSVPrinter printer = new CSVPrinter(writer,
                      CSVFormat.DEFAULT.builder()
@@ -491,6 +492,24 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
     }
 
     @Override
+    public byte[] predictionArff(Long userId, Long runId) throws IOException {
+        PredictionRun run = require(userId, runId);
+        DatasetTable table;
+        String relationName = "prediction_" + runId + "_labeled";
+        if (run.getPredictionFilePath() != null) {
+            Path file = requireFile(run.getPredictionFilePath());
+            table = DatasetFileParser.parse(file);
+        } else {
+            MetricDataset target = getDatasetUseCase.require(userId, run.getTargetDatasetId());
+            table = loadDatasetTableUseCase.load(target);
+            relationName = DatasetFileWriter.sanitizedRelationName(
+                    target.getProjectName(), target.getProjectVersion());
+        }
+        String arff = DatasetFileWriter.toArff(table, relationName);
+        return arff.getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Override
     public Path reportFile(Long userId, Long runId) {
         PredictionRun run = require(userId, runId);
         Path report = requireFile(run.getReportFilePath());
@@ -566,7 +585,7 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
             try {
                 DatasetTable targetTable = loadDatasetTableUseCase.load(target);
                 if (targetTable != null && targetTable.getRows() != null) {
-                    int identifierIndex = targetTable.indexOf("name");
+                    int identifierIndex = findIdentifierColumn(targetTable);
                     rowOrder = new LinkedHashMap<>();
                     for (int i = 0; i < targetTable.getRows().size(); i++) {
                         List<String> r = targetTable.getRows().get(i);
@@ -594,6 +613,15 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
             return naturalCompare(idA, idB);
         });
         return sorted;
+    }
+
+    private static int findIdentifierColumn(DatasetTable table) {
+        if (table == null) return -1;
+        for (String candidate : List.of("name", "classname", "class_name", "file", "classidentifier", "identifier")) {
+            int idx = table.indexOf(candidate);
+            if (idx >= 0) return idx;
+        }
+        return -1;
     }
 
     private static int naturalCompare(String s1, String s2) {

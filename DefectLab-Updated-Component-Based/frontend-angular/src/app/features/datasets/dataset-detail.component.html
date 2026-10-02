@@ -1,18 +1,16 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header dl-detail-header-grid">
-    <nav class="dl-breadcrumb">
-      <a (click)="back()">Metric Storage</a>
-      <ui-icon name="chevron-right" [size]="14"></ui-icon>
-      <span class="dl-breadcrumb-current">{{ dataset ? dataset.displayName : 'Dataset Details' }}</span>
-    </nav>
-    <div class="dl-detail-title" *ngIf="dataset as item">
-      <h2>{{ item.displayName }}</h2>
+  <ui-page-header
+    parentLabel="Metric Storage"
+    [parentLink]="['/metric-storage']"
+    [title]="dataset ? dataset.displayName : ''"
+    fallbackTitle="Dataset details"
+    (parentClick)="back()">
+    <ng-container header-badges *ngIf="dataset as item">
       <ui-badge [tone]="item.hasActualLabel ? 'green' : 'amber'">
         {{ item.hasActualLabel ? 'Labeled' : 'Unlabeled' }}
       </ui-badge>
-    </div>
-    <h2 *ngIf="!dataset">Dataset details</h2>
-    <div class="dl-actions" *ngIf="dataset as item">
+    </ng-container>
+    <ng-container header-actions *ngIf="dataset as item">
       <ui-download-menu label="Download"
           [csvUrl]="facade.downloadUrl(item.id, 'csv')"
           [arffUrl]="facade.downloadUrl(item.id, 'arff')"
@@ -24,8 +22,8 @@
           successMessage="Dataset deleted successfully."
           [deleteFn]="deleteDataset" (deleted)="onDeleted()">
       </ui-delete-action>
-    </div>
-  </div>
+    </ng-container>
+  </ui-page-header>
 
   <ui-state *ngIf="loading" kind="loading" message="Loading dataset details…"></ui-state>
 
@@ -36,28 +34,10 @@
   <div class="dl-detail-section" *ngIf="dataset">
     <div class="dl-view-toggle-bar">
       <h3>Stored values</h3>
-      <div class="dl-view-toggle" *ngIf="preview && classAnalysisList.length > 0">
-        <button
-          type="button"
-          class="dl-view-btn"
-          [class.active]="viewMode === 'table'"
-          (click)="setViewMode('table')"
-          title="Tabular dataset metric viewer"
-        >
-          <ui-icon name="view" [size]="14"></ui-icon>
-          Table View
-        </button>
-        <button
-          type="button"
-          class="dl-view-btn"
-          [class.active]="viewMode === 'treemap'"
-          (click)="setViewMode('treemap')"
-          title="SciTools Understand-style Hotspot Treemap"
-        >
-          <ui-icon name="chart" [size]="14"></ui-icon>
-          Hotspot Treemap
-        </button>
-      </div>
+      <ui-view-toggle *ngIf="preview && classAnalysisList.length > 0"
+                      [mode]="viewMode"
+                      (modeChange)="setViewMode($event)">
+      </ui-view-toggle>
     </div>
 
     <ui-state *ngIf="previewLoading" kind="loading" message="Loading preview…"></ui-state>
@@ -80,7 +60,7 @@
       <ui-treemap
         [items]="classAnalysisList"
         [title]="dataset.displayName + ' — Architectural Treemap'"
-        subtitle="Full-codebase aerial map: Box Size = Lines of Code (LOC); Color = Defect Risk & Anti-Pattern Severity."
+        subtitle="Box size: Lines of Code (LOC) · Color: Defect risk & anti-pattern severity"
       ></ui-treemap>
     </div>
   </div>

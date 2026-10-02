@@ -1,17 +1,10 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header">
-    <div class="dl-detail-title-row">
-      <div class="dl-heading-search">
-        <h2>Saved prediction runs</h2>
-        <ui-search-toggle label="Search prediction runs" placeholder="Project name"
-            [query]="search" (queryChange)="search = $event">
-        </ui-search-toggle>
-      </div>
-      <div class="dl-actions">
-        <ui-button icon="plus" link="/predictions/new">Run Prediction</ui-button>
-      </div>
-    </div>
-  </div>
+  <ui-page-header title="Prediction Runs">
+    <ui-search-toggle header-search label="Search prediction runs" placeholder="Project name"
+        [query]="search" (queryChange)="search = $event">
+    </ui-search-toggle>
+    <ui-button header-actions icon="plus" link="/defect-predictions/new">Run Prediction</ui-button>
+  </ui-page-header>
 
   <div class="dl-form-row dl-form-row-3">
     <ui-select label="Metric family" [options]="familyFilterOptions"
@@ -38,7 +31,7 @@
         <ng-template uiTableCell="buggy" let-row>{{ row.summary.predictedBuggy }}</ng-template>
         <ng-template uiTableCell="created" let-row>{{ row.createdAt | date:'mediumDate' }}</ng-template>
         <ng-template uiTableCell="inspect" let-row>
-          <ui-button variant="ghost" size="sm" icon="view" [link]="['/predictions', row.id]"
+          <ui-button variant="ghost" size="sm" icon="view" [link]="['/defect-predictions', row.id]"
                      title="Inspect" ariaLabel="Inspect run"></ui-button>
         </ng-template>
       </ui-table>
@@ -47,26 +40,15 @@
       </ui-pagination>
     </div>
     <ng-template #emptyRuns>
-      <div *ngIf="!loading" class="dl-empty-state-card">
-        <div class="dl-empty-card-icon">
-          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-        </div>
-        <h3 class="dl-empty-card-title">
-          {{ runs.length ? 'No matching prediction runs found' : 'No Prediction Runs Yet' }}
-        </h3>
-        <p class="dl-empty-card-desc">
-          {{ runs.length
-             ? 'Try searching with another keyword or clearing the metric family filter.'
-             : 'Train a KNN classifier on labeled source datasets to predict defects in target systems.' }}
-        </p>
-        <div class="dl-empty-card-actions">
-          <ui-button icon="plus" link="/predictions/new">Run Prediction Now</ui-button>
-          <ui-button variant="ghost" icon="chart" link="/datasets">View Metric Storage</ui-button>
-        </div>
-      </div>
+      <ui-empty-state *ngIf="!loading"
+        icon="clock"
+        [title]="runs.length ? 'No matching prediction runs found' : 'No Prediction Runs Yet'"
+        [description]="runs.length
+           ? 'Try searching with another keyword or clearing the metric family filter.'
+           : 'Train a KNN classifier on labeled source datasets to predict defects in target systems.'">
+        <ui-button icon="plus" link="/defect-predictions/new">Run Prediction Now</ui-button>
+        <ui-button variant="ghost" icon="chart" link="/metric-storage">View Metric Storage</ui-button>
+      </ui-empty-state>
     </ng-template>
   </div>
 </ui-card>

@@ -63,7 +63,7 @@ export class AuthPageComponent extends BaseComponent {
       this.mode === 'login'
         ? this.facade.login(this.credentials)
         : this.facade.register(this.credentials),
-      () => this.navigateTo(['/overview']));
+      () => this.navigateTo(['/dashboard']));
   }
 
   private submitForgot(): void {

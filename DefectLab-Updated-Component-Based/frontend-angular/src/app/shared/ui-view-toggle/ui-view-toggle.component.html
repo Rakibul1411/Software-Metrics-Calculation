@@ -1,0 +1,22 @@
+<div class="dl-view-toggle">
+  <button
+    type="button"
+    class="dl-view-btn"
+    [class.active]="mode === 'table'"
+    (click)="selectMode('table')"
+    [title]="tableTitle"
+  >
+    <ui-icon name="view" [size]="14"></ui-icon>
+    Table View
+  </button>
+  <button
+    type="button"
+    class="dl-view-btn"
+    [class.active]="mode === 'treemap'"
+    (click)="selectMode('treemap')"
+    [title]="treemapTitle"
+  >
+    <ui-icon name="chart" [size]="14"></ui-icon>
+    Hotspot Treemap
+  </button>
+</div>

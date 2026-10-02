@@ -1,17 +1,15 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header dl-detail-header-grid">
-    <nav class="dl-breadcrumb">
-      <a (click)="back()">Reports</a>
-      <ui-icon name="chevron-right" [size]="14"></ui-icon>
-      <span class="dl-breadcrumb-current">{{ groupTitle || 'Prediction Report Details' }}</span>
-    </nav>
-    <div class="dl-detail-title" *ngIf="groupTitle">
-      <h2>{{ groupTitle }}</h2>
+  <ui-page-header
+    parentLabel="Reports"
+    [parentLink]="['/prediction-reports']"
+    [title]="groupTitle"
+    fallbackTitle="Prediction report details"
+    (parentClick)="back()">
+    <ng-container header-badges>
       <ui-badge *ngIf="predefinedRun?.modelConfig as cfg" [tone]="cfg.datasetFamily">{{ cfg.datasetFamily }}</ui-badge>
       <ui-badge *ngIf="manualRun && predefinedRun" tone="blue">Dual Target</ui-badge>
-    </div>
-    <h2 *ngIf="!groupTitle">Prediction report details</h2>
-  </div>
+    </ng-container>
+  </ui-page-header>
 
   <ui-state *ngIf="loading" kind="loading"
             message="Loading complete prediction details…"></ui-state>
@@ -33,8 +31,11 @@
             </div>
           </div>
           <div class="dl-actions" *ngIf="manualRun as run">
-            <ui-button variant="ghost" icon="download" [href]="facade.predictionDownloadUrl(run.id)"
-                       (click)="downloadStarted('Labeled CSV')">Labeled CSV</ui-button>
+            <ui-download-menu variant="ghost" label="Download dataset"
+                              [csvUrl]="facade.predictionDownloadUrl(run.id, 'csv')"
+                              [arffUrl]="facade.predictionDownloadUrl(run.id, 'arff')"
+                              (downloaded)="downloadStarted('Labeled ' + $event)">
+            </ui-download-menu>
             <ui-button icon="download" [href]="facade.reportDownloadUrl(run.id)"
                        (click)="downloadStarted('PDF report')">Download report</ui-button>
           </div>
@@ -62,6 +63,11 @@
             </div>
           </div>
           <div class="dl-actions" *ngIf="predefinedRun as run">
+            <ui-download-menu variant="ghost" label="Download dataset"
+                              [csvUrl]="facade.datasetDownloadUrl(run.targetDataset.id, 'csv')"
+                              [arffUrl]="facade.datasetDownloadUrl(run.targetDataset.id, 'arff')"
+                              (downloaded)="downloadStarted('Dataset ' + $event)">
+            </ui-download-menu>
             <ui-button icon="download" [href]="facade.reportDownloadUrl(run.id)"
                        (click)="downloadStarted('PDF report')">Download report</ui-button>
           </div>
@@ -88,79 +94,7 @@
     </div>
 
     <div class="dl-eval-layout">
-      <div class="dl-eval-group dl-cm-group">
-        <div class="dl-eval-group-title">Confusion matrix (Actual vs Predicted)</div>
-        <div class="dl-confusion-matrix-wrapper">
-          <table class="dl-confusion-table">
-            <thead>
-              <tr>
-                <th class="dl-cm-corner">Actual \ Predicted</th>
-                <th class="dl-cm-head-col">Predicted Buggy (1)</th>
-                <th class="dl-cm-head-col">Predicted Clean (0)</th>
-                <th class="dl-cm-head-total">Actual Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th class="dl-cm-head-row">
-                  <span class="dl-cm-tag danger">Actual Buggy (1)</span>
-                </th>
-                <td class="dl-cm-cell dl-cm-tp">
-                  <div class="dl-cm-metric">
-                    <span class="dl-cm-name">True Positive (TP)</span>
-                    <strong class="dl-cm-val">{{ scores.confusionMatrix.truePositive | number }}</strong>
-                    <small class="dl-cm-desc">Caught defects</small>
-                  </div>
-                </td>
-                <td class="dl-cm-cell dl-cm-fn">
-                  <div class="dl-cm-metric">
-                    <span class="dl-cm-name">False Negative (FN)</span>
-                    <strong class="dl-cm-val">{{ scores.confusionMatrix.falseNegative | number }}</strong>
-                    <small class="dl-cm-desc">Missed defects (Risk)</small>
-                  </div>
-                </td>
-                <td class="dl-cm-total-cell">
-                  <strong>{{ (scores.confusionMatrix.truePositive + scores.confusionMatrix.falseNegative) | number }}</strong>
-                </td>
-              </tr>
-              <tr>
-                <th class="dl-cm-head-row">
-                  <span class="dl-cm-tag success">Actual Clean (0)</span>
-                </th>
-                <td class="dl-cm-cell dl-cm-fp">
-                  <div class="dl-cm-metric">
-                    <span class="dl-cm-name">False Positive (FP)</span>
-                    <strong class="dl-cm-val">{{ scores.confusionMatrix.falsePositive | number }}</strong>
-                    <small class="dl-cm-desc">False alarms</small>
-                  </div>
-                </td>
-                <td class="dl-cm-cell dl-cm-tn">
-                  <div class="dl-cm-metric">
-                    <span class="dl-cm-name">True Negative (TN)</span>
-                    <strong class="dl-cm-val">{{ scores.confusionMatrix.trueNegative | number }}</strong>
-                    <small class="dl-cm-desc">Clean confirmed</small>
-                  </div>
-                </td>
-                <td class="dl-cm-total-cell">
-                  <strong>{{ (scores.confusionMatrix.falsePositive + scores.confusionMatrix.trueNegative) | number }}</strong>
-                </td>
-              </tr>
-              <tr class="dl-cm-total-row">
-                <th class="dl-cm-head-row">Predicted Total</th>
-                <td class="dl-cm-total-cell">
-                  <strong>{{ (scores.confusionMatrix.truePositive + scores.confusionMatrix.falsePositive) | number }}</strong>
-                </td>
-                <td class="dl-cm-total-cell">
-                  <strong>{{ (scores.confusionMatrix.falseNegative + scores.confusionMatrix.trueNegative) | number }}</strong>
-                </td>
-                <td class="dl-cm-total-cell dl-cm-grand-total">
-                  <strong>{{ (scores.confusionMatrix.truePositive + scores.confusionMatrix.falseNegative + scores.confusionMatrix.falsePositive + scores.confusionMatrix.trueNegative) | number }}</strong>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ui-confusion-matrix [matrix]="scores.confusionMatrix"></ui-confusion-matrix>
 
       <div class="dl-eval-group dl-metrics-group">
         <div class="dl-eval-group-title">Performance metrics</div>
@@ -180,19 +114,19 @@
       <button type="button" role="tab" [class.active]="activeTab === 'manual'"
               [attr.aria-selected]="activeTab === 'manual'"
               (click)="activeTab = 'manual'" *ngIf="manualRun">
-        Manual target: {{ manualRun.targetDataset.displayName }}
+        Manual: {{ manualRun.targetDataset.displayName }}
         <span class="dl-tab-badge">{{ manualRows.length | number }}</span>
       </button>
       <button type="button" role="tab" [class.active]="activeTab === 'predefined'"
               [attr.aria-selected]="activeTab === 'predefined'"
               (click)="activeTab = 'predefined'" *ngIf="predefinedRun">
-        Predefined target: {{ predefinedRun.targetDataset.displayName }}
+        Predefined: {{ predefinedRun.targetDataset.displayName }}
         <span class="dl-tab-badge">{{ predefinedRows.length | number }}</span>
       </button>
       <button type="button" role="tab" [class.active]="activeTab === 'matched'"
               [attr.aria-selected]="activeTab === 'matched'"
               (click)="activeTab = 'matched'" *ngIf="showMatchedComparison">
-        Target comparison &amp; agreement
+        Target Agreement
         <span class="dl-tab-badge">{{ matchedRows.length | number }}</span>
       </button>
     </div>
@@ -214,28 +148,10 @@
         <div *ngIf="viewMode === 'treemap'"></div>
 
         <div class="dl-actions">
-          <div class="dl-view-toggle" *ngIf="manualRows.length > 0">
-            <button
-              type="button"
-              class="dl-view-btn"
-              [class.active]="viewMode === 'table'"
-              (click)="setViewMode('table')"
-              title="Tabular prediction viewer"
-            >
-              <ui-icon name="view" [size]="14"></ui-icon>
-              Table View
-            </button>
-            <button
-              type="button"
-              class="dl-view-btn"
-              [class.active]="viewMode === 'treemap'"
-              (click)="setViewMode('treemap')"
-              title="SciTools Understand-style Hotspot Treemap"
-            >
-              <ui-icon name="chart" [size]="14"></ui-icon>
-              Hotspot Treemap
-            </button>
-          </div>
+          <ui-view-toggle *ngIf="manualRows.length > 0"
+                          [mode]="viewMode"
+                          (modeChange)="setViewMode($event)">
+          </ui-view-toggle>
         </div>
       </div>
 
@@ -244,23 +160,18 @@
         <ui-treemap
           [items]="manualTreemapItems"
           [title]="(manualRun.targetDataset.displayName || 'Manual Target') + ' — Defect Hotspot Treemap'"
-          subtitle="Full-codebase aerial map: Box Size = Defect Rank & LOC; Color = ML Defect Susceptibility."
+          subtitle="Box Size: LOC & Defect Rank · Color: Defect Probability"
         ></ui-treemap>
       </div>
 
       <!-- Table View -->
       <ng-container *ngIf="viewMode === 'table'">
         <div class="dl-table-toolbar">
-          <div class="dl-table-search-box">
-            <span class="dl-search-icon">
-              <ui-icon name="search" [size]="14"></ui-icon>
-            </span>
-            <input type="text" placeholder="Search by file or class identifier…"
-                   [value]="manualSearch" (input)="onManualSearch($any($event.target).value)" />
-            <button type="button" *ngIf="manualSearch" class="dl-search-clear" (click)="onManualSearch('')">
-              <ui-icon name="close" [size]="12"></ui-icon>
-            </button>
-          </div>
+          <ui-search-bar
+            placeholder="Search by file or class identifier…"
+            [query]="manualSearch"
+            (queryChange)="onManualSearch($event)">
+          </ui-search-bar>
         </div>
 
         <div class="dl-table-box" *ngIf="filteredManualRows.length; else noManualMatches">
@@ -278,7 +189,7 @@
             </ng-template>
             <ng-template uiTableCell="predictedLabel" let-row>
               <ui-badge [tone]="row.predictedLabel === 1 ? 'amber' : 'neutral'">
-                {{ row.predictedLabel === 1 ? 'Buggy (1)' : 'Clean (0)' }}
+                {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}
               </ui-badge>
             </ng-template>
           </ui-table>
@@ -309,28 +220,10 @@
         <div *ngIf="viewMode === 'treemap'"></div>
 
         <div class="dl-actions">
-          <div class="dl-view-toggle" *ngIf="predefinedRows.length > 0">
-            <button
-              type="button"
-              class="dl-view-btn"
-              [class.active]="viewMode === 'table'"
-              (click)="setViewMode('table')"
-              title="Tabular prediction viewer"
-            >
-              <ui-icon name="view" [size]="14"></ui-icon>
-              Table View
-            </button>
-            <button
-              type="button"
-              class="dl-view-btn"
-              [class.active]="viewMode === 'treemap'"
-              (click)="setViewMode('treemap')"
-              title="SciTools Understand-style Hotspot Treemap"
-            >
-              <ui-icon name="chart" [size]="14"></ui-icon>
-              Hotspot Treemap
-            </button>
-          </div>
+          <ui-view-toggle *ngIf="predefinedRows.length > 0"
+                          [mode]="viewMode"
+                          (modeChange)="setViewMode($event)">
+          </ui-view-toggle>
         </div>
       </div>
 
@@ -339,23 +232,18 @@
         <ui-treemap
           [items]="predefinedTreemapItems"
           [title]="(predefinedRun.targetDataset.displayName || 'Predefined Target') + ' — Defect Hotspot Treemap'"
-          subtitle="Full-codebase aerial map: Box Size = Defect Rank & LOC; Color = ML Defect Susceptibility."
+          subtitle="Box Size: LOC & Defect Rank · Color: Defect Probability"
         ></ui-treemap>
       </div>
 
       <!-- Table View -->
       <ng-container *ngIf="viewMode === 'table'">
         <div class="dl-table-toolbar">
-          <div class="dl-table-search-box">
-            <span class="dl-search-icon">
-              <ui-icon name="search" [size]="14"></ui-icon>
-            </span>
-            <input type="text" placeholder="Search by file or class identifier…"
-                   [value]="predefinedSearch" (input)="onPredefinedSearch($any($event.target).value)" />
-            <button type="button" *ngIf="predefinedSearch" class="dl-search-clear" (click)="onPredefinedSearch('')">
-              <ui-icon name="close" [size]="12"></ui-icon>
-            </button>
-          </div>
+          <ui-search-bar
+            placeholder="Search by file or class identifier…"
+            [query]="predefinedSearch"
+            (queryChange)="onPredefinedSearch($event)">
+          </ui-search-bar>
         </div>
 
         <div class="dl-table-box" *ngIf="filteredPredefinedRows.length; else noPredefinedMatches">
@@ -373,13 +261,13 @@
             </ng-template>
             <ng-template uiTableCell="predictedLabel" let-row>
               <ui-badge [tone]="row.predictedLabel === 1 ? 'amber' : 'neutral'">
-                {{ row.predictedLabel === 1 ? 'Buggy (1)' : 'Clean (0)' }}
+                {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}
               </ui-badge>
             </ng-template>
             <ng-template uiTableCell="actualLabel" let-row>
               <ui-badge *ngIf="row.actualLabel !== null; else noActualPredefined"
                         [tone]="row.actualLabel === 1 ? 'red' : 'green'">
-                {{ row.actualLabel === 1 ? 'Buggy (1)' : 'Clean (0)' }}
+                {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
               </ui-badge>
               <ng-template #noActualPredefined>—</ng-template>
             </ng-template>
@@ -409,16 +297,11 @@
           </button>
         </div>
 
-        <div class="dl-table-search-box">
-          <span class="dl-search-icon">
-            <ui-icon name="search" [size]="14"></ui-icon>
-          </span>
-          <input type="text" placeholder="Search by file identifier…"
-                 [value]="matchedSearch" (input)="onMatchedSearch($any($event.target).value)" />
-          <button type="button" *ngIf="matchedSearch" class="dl-search-clear" (click)="onMatchedSearch('')">
-            <ui-icon name="close" [size]="12"></ui-icon>
-          </button>
-        </div>
+        <ui-search-bar
+          placeholder="Search by file identifier…"
+          [query]="matchedSearch"
+          (queryChange)="onMatchedSearch($event)">
+        </ui-search-bar>
       </div>
 
       <div class="dl-grid dl-grid-3 dl-matched-summary-grid">
@@ -433,14 +316,14 @@
       <div class="dl-table-box" *ngIf="filteredMatchedRows.length; else noMatchedMatches">
         <ui-table [columns]="matchedColumns" [rows]="pagedMatchedRows" trackByKey="identifier">
           <ng-template uiTableCell="manualPrediction" let-row>
-            <ui-badge [tone]="row.manualPrediction === 1 ? 'amber' : 'neutral'">{{ row.manualPrediction === 1 ? 'Buggy (1)' : 'Clean (0)' }}</ui-badge>
+            <ui-badge [tone]="row.manualPrediction === 1 ? 'amber' : 'neutral'">{{ row.manualPrediction === 1 ? 'Buggy' : 'Clean' }}</ui-badge>
           </ng-template>
           <ng-template uiTableCell="predefinedPrediction" let-row>
-            <ui-badge [tone]="row.predefinedPrediction === 1 ? 'amber' : 'neutral'">{{ row.predefinedPrediction === 1 ? 'Buggy (1)' : 'Clean (0)' }}</ui-badge>
+            <ui-badge [tone]="row.predefinedPrediction === 1 ? 'amber' : 'neutral'">{{ row.predefinedPrediction === 1 ? 'Buggy' : 'Clean' }}</ui-badge>
           </ng-template>
           <ng-template uiTableCell="actualLabel" let-row>
             <ui-badge *ngIf="row.actualLabel !== null; else noActualMatched" [tone]="row.actualLabel === 1 ? 'red' : 'green'">
-              {{ row.actualLabel === 1 ? 'Buggy (1)' : 'Clean (0)' }}
+              {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
             </ui-badge>
             <ng-template #noActualMatched>—</ng-template>
           </ng-template>

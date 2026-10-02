@@ -120,18 +120,23 @@ public final class BiWeeklySnapshotGenerator {
             String branch,
             AeeemAnalysisOptions options) throws IOException {
         if (options.getReleaseRef() != null) {
+            String ref = options.getReleaseRef();
             for (String candidate : new String[] {
-                    options.getReleaseRef(),
-                    "refs/tags/" + options.getReleaseRef(),
-                    "refs/heads/" + options.getReleaseRef(),
-                    "refs/remotes/origin/" + options.getReleaseRef()}) {
+                    ref,
+                    "refs/tags/" + ref,
+                    ref + "_e_3_3",
+                    "refs/tags/" + ref + "_e_3_3",
+                    ref + "_e_3_4",
+                    "refs/tags/" + ref + "_e_3_4",
+                    "refs/heads/" + ref,
+                    "refs/remotes/origin/" + ref}) {
                 try {
                     String commit = GitCommandRunner.run(
                             repository, "rev-parse", "--verify",
                             candidate + "^{commit}");
                     if (containsJavaSource(repository, commit, options)) {
                         return new ResolvedRelease(
-                                commit, "release ref " + options.getReleaseRef(), null);
+                                commit, "release ref " + candidate, null);
                     }
                 } catch (IOException ignored) {
                 }
@@ -293,6 +298,10 @@ public final class BiWeeklySnapshotGenerator {
         GitCommandRunner.run(repository, "worktree", "add", "--detach", "--force",
                 worktree.toString(), snapshot.getCommit());
         return worktree;
+    }
+
+    public void checkoutCommit(Path worktree, Snapshot snapshot) throws IOException {
+        GitCommandRunner.run(worktree, "checkout", "--detach", "--force", snapshot.getCommit());
     }
 
     public void removeWorktree(Path repository, Path worktree) {

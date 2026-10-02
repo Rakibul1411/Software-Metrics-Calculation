@@ -1,0 +1,7 @@
+<div class="dl-detail-fields">
+  <div class="dl-detail-field" *ngFor="let field of fields; trackBy: trackByLabel">
+    <span class="dl-detail-field-label">{{ field.label }}</span>
+    <span class="dl-detail-field-colon">:</span>
+    <span class="dl-detail-field-value">{{ field.value ?? '—' }}</span>
+  </div>
+</div>

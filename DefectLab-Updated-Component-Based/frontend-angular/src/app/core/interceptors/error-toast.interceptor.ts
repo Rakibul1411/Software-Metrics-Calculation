@@ -43,12 +43,45 @@ export class ErrorToastInterceptor implements HttpInterceptor {
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
         if (!this.isSilent(request)) {
-          const message = error?.error?.error ?? 'Something went wrong. Please try again.';
+          const message = this.extractErrorMessage(error);
           this.toast.error(message);
         }
         return throwError(() => error);
       })
     );
+  }
+
+  private extractErrorMessage(error: HttpErrorResponse): string {
+    if (error.status === 0) {
+      return 'Unable to reach the DefectLab server. Please check your connection or verify the backend is running.';
+    }
+    if (error.status === 503) {
+      if (typeof error.error === 'object' && error.error?.error) {
+        return error.error.error;
+      }
+      return 'The service is temporarily unavailable. Please try again in a moment.';
+    }
+    if (error.status === 504) {
+      return 'The request timed out. Please try again.';
+    }
+    if (typeof error.error === 'string' && error.error.trim().length > 0) {
+      return error.error;
+    }
+    if (typeof error.error === 'object' && error.error !== null) {
+      if (error.error.error && typeof error.error.error === 'string') {
+        return error.error.error;
+      }
+      if (error.error.message && typeof error.error.message === 'string') {
+        return error.error.message;
+      }
+      if (error.error.detail && typeof error.error.detail === 'string') {
+        return error.error.detail;
+      }
+    }
+    if (error.message && !error.message.includes('Http failure response')) {
+      return error.message;
+    }
+    return 'Something went wrong. Please try again.';
   }
 
   private isSilent(request: HttpRequest<unknown>): boolean {

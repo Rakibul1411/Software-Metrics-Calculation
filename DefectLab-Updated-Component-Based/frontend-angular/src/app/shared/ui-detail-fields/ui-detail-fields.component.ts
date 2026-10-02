@@ -10,16 +10,12 @@ import { DetailField } from './ui-detail-fields.model';
 @Component({
   selector: 'ui-detail-fields',
   standalone: false,
-  template: `
-    <div class="dl-detail-fields">
-      <div class="dl-detail-field" *ngFor="let field of fields">
-        <span class="dl-detail-field-label">{{ field.label }}</span>
-        <span class="dl-detail-field-colon">:</span>
-        <span class="dl-detail-field-value">{{ field.value ?? '—' }}</span>
-      </div>
-    </div>
-  `
+  templateUrl: './ui-detail-fields.component.html'
 })
 export class UiDetailFieldsComponent {
   @Input({ required: true }) fields: DetailField[] = [];
+
+  trackByLabel(_index: number, field: DetailField): string {
+    return field.label;
+  }
 }

@@ -1,6 +1,6 @@
 import { Directive, OnInit, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, timer } from 'rxjs';
 import { BaseComponent } from './base.component';
 
 /**
@@ -31,6 +31,9 @@ export abstract class BaseDetailComponent<T, K = number>
     'This record is not available. It may have been deleted — use the link above to go back.';
   protected readonly routeParam: string = 'id';
 
+  protected autoRefreshEnabled = true;
+  protected autoRefreshIntervalMs = 5000;
+
   ngOnInit(): void {
     const key = this.readRouteKey();
     if (key === null) {
@@ -40,6 +43,7 @@ export abstract class BaseDetailComponent<T, K = number>
       return;
     }
     this.load(key);
+    this.initAutoRefresh();
   }
 
   load(key: K): void {
@@ -56,6 +60,46 @@ export abstract class BaseDetailComponent<T, K = number>
         this.reportLocalError(error);
       }
     });
+  }
+
+  /**
+   * Background silent auto-refresh: polls internally to keep detail records
+   * in sync without triggering loading spinners or disrupting active tab/scroll.
+   */
+  protected initAutoRefresh(intervalMs = this.autoRefreshIntervalMs): void {
+    if (!this.autoRefreshEnabled) {
+      return;
+    }
+    this.watch(timer(intervalMs, intervalMs)).subscribe(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      if (this.loading || this.failed) {
+        return;
+      }
+      const key = this.readRouteKey();
+      if (key === null) {
+        return;
+      }
+      this.watch(this.fetch(key)).subscribe({
+        next: freshItem => {
+          if (!this.areItemsEqual(this.item, freshItem)) {
+            this.item = freshItem;
+          }
+        },
+        error: () => {}
+      });
+    });
+  }
+
+  protected areItemsEqual(current: T | null, incoming: T | null): boolean {
+    if (current === incoming) return true;
+    if (!current || !incoming) return false;
+    try {
+      return JSON.stringify(current) === JSON.stringify(incoming);
+    } catch {
+      return false;
+    }
   }
 
   back(): void {

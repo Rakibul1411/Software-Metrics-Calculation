@@ -3,7 +3,7 @@
              [attr.aria-expanded]="open" (pressed)="open = !open">
     {{ label }}
   </ui-button>
-  <div class="dl-dropdown-menu" *ngIf="open">
+  <div class="dl-dropdown-menu" *ngIf="open" style="left: 50% !important; right: auto !important; transform: translateX(-50%) !important;">
     <a class="dl-dropdown-item" [href]="csvUrl" (click)="open = false; downloaded.emit('CSV')">CSV</a>
     <a class="dl-dropdown-item" [href]="arffUrl" (click)="open = false; downloaded.emit('ARFF')">ARFF</a>
   </div>

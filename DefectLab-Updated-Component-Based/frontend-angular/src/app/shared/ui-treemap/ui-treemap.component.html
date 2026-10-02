@@ -5,6 +5,9 @@
       <div class="dl-treemap-heading-row">
         <h4 class="dl-treemap-title">{{ title }}</h4>
         <span class="dl-treemap-badge">{{ items.length }} Classes</span>
+        <span class="dl-treemap-ref-tag" title="Methodology: Squarified Treemap (Bruls et al. 2000) &amp; BugMaps (Hora &amp; Ducasse et al. 2012)">
+          BugMaps Standard (Bruls 2000 · Hora 2012)
+        </span>
       </div>
       <p class="dl-treemap-subtitle">{{ subtitle }}</p>
     </div>
@@ -86,17 +89,76 @@
     <!-- Package Selector Dropdown -->
     <div class="dl-package-selector" *ngIf="availablePackages.length > 1">
       <span class="dl-pkg-label">Package:</span>
-      <select
-        class="dl-pkg-select"
-        [ngModel]="selectedPackage || 'ALL'"
-        (ngModelChange)="selectPackage($event === 'ALL' ? null : $event)"
-        title="Focus on a specific architectural package"
-      >
-        <option value="ALL">📁 All Packages ({{ availablePackages.length }})</option>
-        <option *ngFor="let pkg of availablePackages" [value]="pkg.name">
-          {{ pkg.name }} ({{ pkg.count }} classes · {{ pkg.loc | number }} LOC{{ pkg.hotspots ? ' · ⚠️' + pkg.hotspots : '' }})
-        </option>
-      </select>
+      <div class="dl-pkg-dropdown-wrap">
+        <button
+          type="button"
+          class="dl-pkg-select-btn"
+          [class.open]="isPackageDropdownOpen"
+          (click)="togglePackageDropdown($event)"
+          title="Focus on a specific architectural package"
+        >
+          <span class="dl-pkg-selected-text">
+            {{ selectedPackage ? selectedPackage : '📁 All Packages (' + availablePackages.length + ')' }}
+          </span>
+          <ui-icon [name]="isPackageDropdownOpen ? 'expand-less' : 'expand-more'" class="dl-pkg-caret"></ui-icon>
+        </button>
+
+        <div class="dl-pkg-dropdown-menu" *ngIf="isPackageDropdownOpen" (click)="$event.stopPropagation()">
+          <div class="dl-pkg-dropdown-search">
+            <ui-icon name="search" class="dl-pkg-search-icon"></ui-icon>
+            <input
+              type="text"
+              placeholder="Search package name..."
+              [(ngModel)]="packageSearchQuery"
+              class="dl-pkg-search-input"
+            />
+            <button
+              *ngIf="packageSearchQuery"
+              type="button"
+              class="dl-btn-clear"
+              (click)="packageSearchQuery = ''"
+            >
+              <ui-icon name="close"></ui-icon>
+            </button>
+          </div>
+
+          <div class="dl-pkg-dropdown-list">
+            <button
+              type="button"
+              class="dl-pkg-dropdown-item"
+              [class.active]="!selectedPackage"
+              (click)="selectPackage(null)"
+            >
+              <div class="dl-pkg-item-left">
+                <span class="dl-pkg-item-name">📁 All Packages</span>
+                <span class="dl-pkg-item-meta">{{ availablePackages.length }} packages · {{ items.length }} classes</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              *ngFor="let pkg of filteredPackages"
+              class="dl-pkg-dropdown-item"
+              [class.active]="selectedPackage === pkg.name"
+              (click)="selectPackage(pkg.name)"
+            >
+              <div class="dl-pkg-item-left">
+                <span class="dl-pkg-item-name" [title]="pkg.name">{{ pkg.name }}</span>
+                <span class="dl-pkg-item-meta">
+                  {{ pkg.count }} classes · {{ pkg.loc | number }} LOC
+                </span>
+              </div>
+              <span *ngIf="pkg.hotspots" class="dl-pkg-item-warning" title="Hotspots in this package">
+                ⚠️ {{ pkg.hotspots }}
+              </span>
+            </button>
+
+            <div *ngIf="filteredPackages.length === 0" class="dl-pkg-no-results">
+              No packages match "{{ packageSearchQuery }}"
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Understand Mode Toggle -->
@@ -300,10 +362,11 @@
           <strong class="dl-tt-name" [title]="hoveredCell.name">{{ hoveredCell.simpleName }}</strong>
           <span
             class="dl-badge-risk"
-            [class.badge-critical]="hoveredCell.riskScore >= 0.5 || hoveredCell.predictedLabel === 1 || hoveredCell.smells.length > 0"
-            [class.badge-clean]="hoveredCell.riskScore < 0.4 && hoveredCell.smells.length === 0"
+            [class.badge-critical]="hoveredCell.color === '#be123c'"
+            [class.badge-warning]="hoveredCell.color === '#b45309'"
+            [class.badge-clean]="hoveredCell.color === '#047857'"
           >
-            {{ hoveredCell.riskScore >= 0.5 || hoveredCell.predictedLabel === 1 ? 'High Risk Hotspot' : 'Clean / Low Risk' }}
+            {{ hoveredCell.color === '#be123c' ? 'Critical Hotspot' : (hoveredCell.color === '#b45309' ? 'Warning / Elevated' : 'Clean / Low Risk') }}
           </span>
         </div>
         <div class="dl-tt-sub">{{ hoveredCell.packageName || hoveredCell.name }}</div>

@@ -1,0 +1,21 @@
+<div class="dl-table-search-box">
+  <span class="dl-search-icon">
+    <ui-icon name="search" [size]="14"></ui-icon>
+  </span>
+  <input
+    type="text"
+    [placeholder]="placeholder"
+    [value]="query"
+    (input)="onInput($any($event.target).value)"
+  />
+  <button
+    type="button"
+    *ngIf="query"
+    class="dl-search-clear"
+    (click)="clear()"
+    title="Clear search"
+    aria-label="Clear search"
+  >
+    <ui-icon name="close" [size]="12"></ui-icon>
+  </button>
+</div>

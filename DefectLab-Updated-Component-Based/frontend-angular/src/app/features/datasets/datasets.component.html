@@ -1,17 +1,10 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header">
-    <div class="dl-detail-title-row">
-      <div class="dl-heading-search">
-        <h2>Dataset catalog</h2>
-        <ui-search-toggle label="Search datasets" placeholder="Project or version"
-            [query]="search" (queryChange)="search = $event">
-        </ui-search-toggle>
-      </div>
-      <div class="dl-actions">
-        <ui-button icon="plus" link="/datasets/new">Add Dataset</ui-button>
-      </div>
-    </div>
-  </div>
+  <ui-page-header title="Dataset catalog">
+    <ui-search-toggle header-search label="Search datasets" placeholder="Project or version"
+        [query]="search" (queryChange)="search = $event">
+    </ui-search-toggle>
+    <ui-button header-actions icon="plus" link="/metric-storage/new">Add Dataset</ui-button>
+  </ui-page-header>
 
   <div class="dl-form-row dl-form-row-3">
     <ui-select label="Metric family" [options]="familyFilterOptions"
@@ -52,7 +45,7 @@
         <ng-template uiTableCell="totalFiles" let-row>{{ row.totalFiles | number }}</ng-template>
         <ng-template uiTableCell="createdAt" let-row>{{ row.createdAt | date:'mediumDate' }}</ng-template>
         <ng-template uiTableCell="actions" let-row>
-          <ui-button variant="ghost" size="sm" icon="view" [link]="['/datasets', row.id]"
+          <ui-button variant="ghost" size="sm" icon="view" [link]="['/metric-storage', row.id]"
                      title="Preview dataset" ariaLabel="Preview dataset"></ui-button>
         </ng-template>
       </ui-table>
@@ -61,27 +54,15 @@
       </ui-pagination>
     </div>
     <ng-template #empty>
-      <div *ngIf="!loading" class="dl-empty-state-card">
-        <div class="dl-empty-card-icon">
-          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-          </svg>
-        </div>
-        <h3 class="dl-empty-card-title">
-          {{ rows.length ? 'No matching datasets found' : 'No Datasets in Storage' }}
-        </h3>
-        <p class="dl-empty-card-desc">
-          {{ rows.length
-             ? 'Try adjusting your search query, metric family, or data source filter.'
-             : 'Upload a CSV/ARFF dataset or calculate software metrics directly from Java source code.' }}
-        </p>
-        <div class="dl-empty-card-actions">
-          <ui-button icon="plus" link="/datasets/new">Add Dataset</ui-button>
-          <ui-button variant="ghost" icon="chart" link="/analyze">Analyze Source</ui-button>
-        </div>
-      </div>
+      <ui-empty-state *ngIf="!loading"
+        icon="database"
+        [title]="rows.length ? 'No matching datasets found' : 'No Datasets in Storage'"
+        [description]="rows.length
+           ? 'Try adjusting your search query, metric family, or data source filter.'
+           : 'Upload a CSV/ARFF dataset or calculate software metrics directly from Java source code.'">
+        <ui-button icon="plus" link="/metric-storage/new">Add Dataset</ui-button>
+        <ui-button variant="ghost" icon="chart" link="/source-analysis">Analyze Source</ui-button>
+      </ui-empty-state>
     </ng-template>
   </div>
 </ui-card>

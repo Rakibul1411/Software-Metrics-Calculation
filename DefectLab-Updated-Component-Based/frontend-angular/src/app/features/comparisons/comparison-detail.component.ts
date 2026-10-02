@@ -111,9 +111,13 @@ export class ComparisonDetailComponent extends BaseDetailComponent<MetricCompari
 
   deleteComparison = (): Observable<unknown> => this.facade.delete(this.item!.id);
 
-  protected fetch(id: number): Observable<MetricComparisonDetail> {
+  override load(id: number): void {
     this.metricPage = 1;
     this.filePage = 1;
+    super.load(id);
+  }
+
+  protected fetch(id: number): Observable<MetricComparisonDetail> {
     return this.facade.get(id);
   }
 }

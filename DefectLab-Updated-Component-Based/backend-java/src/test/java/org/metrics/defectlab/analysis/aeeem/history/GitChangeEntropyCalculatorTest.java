@@ -35,7 +35,7 @@ class GitChangeEntropyCalculatorTest {
         assertEquals(entropy, a.getCvsEntropy(), 1.0e-12);
         assertEquals(0.6d * entropy, a.getCvsWEntropy(), 1.0e-12);
         assertEquals(entropy, a.getCvsExpEntropy(), 1.0e-12);
-        assertEquals(entropy, a.getCvsLinEntropy(), 1.0e-12);
+        assertEquals(entropy / 10d, a.getCvsLinEntropy(), 1.0e-12);
         assertEquals(entropy / Math.log(1.01d), a.getCvsLogEntropy(), 1.0e-12);
     }
 

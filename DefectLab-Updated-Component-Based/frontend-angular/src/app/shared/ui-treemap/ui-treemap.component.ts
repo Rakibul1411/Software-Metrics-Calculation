@@ -1,8 +1,10 @@
 import {
   AfterViewInit,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   EventEmitter,
+  HostListener,
   Input,
   OnChanges,
   OnDestroy,
@@ -13,6 +15,17 @@ import {
 import { ClassAnalysisResult } from '../../core/models/code-smell.model';
 import { TreemapCell, TreemapGroup } from './ui-treemap.model';
 
+/**
+ * Codebase Defect Hotspot Treemap visualizer.
+ *
+ * Implements standard academic methodologies:
+ * 1. Layout Algorithm: Squarified Treemaps (Mark Bruls, Kees Huizing, Jarke J. van Wijk, 2000).
+ *    Optimizes rectangle aspect ratios close to 1:1, preventing thin slivers.
+ * 2. Visual Defect Topology: BugMaps (Andre Hora, Stéphane Ducasse et al., CSMR 2012).
+ *    Maps Lines of Code (LOC) to spatial rectangle weight and defect probability/hotspots
+ *    to color spectrum (Crimson Hotspots, Warning Amber, Clean Emerald).
+ * 3. Empirical Defect Evaluation: D'Ambros, Lanza, & Robbes (TSE 2012 / MSR 2010).
+ */
 @Component({
   selector: 'ui-treemap',
   standalone: false,
@@ -49,6 +62,43 @@ export class UiTreemapComponent implements OnChanges, AfterViewInit, OnDestroy {
   inspectorTab: 'metrics' | 'butterfly' = 'metrics';
 
   selectedPackage: string | null = null;
+  isPackageDropdownOpen = false;
+  packageSearchQuery = '';
+
+  togglePackageDropdown(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.isPackageDropdownOpen = !this.isPackageDropdownOpen;
+    if (this.isPackageDropdownOpen) {
+      this.packageSearchQuery = '';
+    }
+  }
+
+  closePackageDropdown(): void {
+    this.isPackageDropdownOpen = false;
+  }
+
+  get filteredPackages(): Array<{ name: string; count: number; loc: number; hotspots: number }> {
+    const query = (this.packageSearchQuery || '').trim().toLowerCase();
+    if (!query) {
+      return this.availablePackages;
+    }
+    return this.availablePackages.filter(p => p.name.toLowerCase().includes(query));
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (this.isPackageDropdownOpen && !target.closest('.dl-package-selector')) {
+      this.isPackageDropdownOpen = false;
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.isPackageDropdownOpen = false;
+  }
 
   get availablePackages(): Array<{ name: string; count: number; loc: number; hotspots: number }> {
     const map = new Map<string, { count: number; loc: number; hotspots: number }>();
@@ -69,6 +119,8 @@ export class UiTreemapComponent implements OnChanges, AfterViewInit, OnDestroy {
 
   selectPackage(pkgName: string | null): void {
     this.selectedPackage = pkgName;
+    this.isPackageDropdownOpen = false;
+    this.packageSearchQuery = '';
     this.recompute();
   }
 
@@ -136,6 +188,8 @@ export class UiTreemapComponent implements OnChanges, AfterViewInit, OnDestroy {
 
   private resizeObserver?: ResizeObserver;
 
+  constructor(private readonly cdr: ChangeDetectorRef) {}
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['items'] || changes['height']) {
       this.viewHeight = this.height || 520;
@@ -152,6 +206,7 @@ export class UiTreemapComponent implements OnChanges, AfterViewInit, OnDestroy {
       }
       this.isReady = true;
       this.recompute();
+      this.cdr.detectChanges();
 
       this.resizeObserver = new ResizeObserver(entries => {
         for (const entry of entries) {
@@ -160,12 +215,14 @@ export class UiTreemapComponent implements OnChanges, AfterViewInit, OnDestroy {
           if (newW > 200 && Math.abs(this.viewWidth - newW) > 4) {
             this.viewWidth = newW;
             this.recompute();
+            this.cdr.detectChanges();
           }
         }
       });
       this.resizeObserver.observe(container);
     } else {
       this.isReady = true;
+      this.cdr.detectChanges();
     }
   }
 
@@ -433,9 +490,9 @@ export class UiTreemapComponent implements OnChanges, AfterViewInit, OnDestroy {
     const hasCriticalSmell = data.smells.some(s => s.severity === 'CRITICAL');
     const isBuggy = data.predictedLabel === 1 || data.riskScore >= 0.5;
 
-    if (hasCriticalSmell || data.riskScore >= 0.7) {
+    if (isBuggy || data.riskScore >= 0.6 || hasCriticalSmell) {
       color = '#be123c'; // SciTools Understand Crimson Hotspot
-    } else if (isBuggy || data.riskScore >= 0.4 || data.smells.length > 0) {
+    } else if (data.riskScore >= 0.35 || data.smells.length > 0) {
       color = '#b45309'; // Warning Amber
     } else {
       color = '#047857'; // Deep Clean Emerald

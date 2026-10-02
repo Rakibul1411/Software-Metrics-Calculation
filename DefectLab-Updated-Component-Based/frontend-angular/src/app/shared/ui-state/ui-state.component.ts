@@ -4,17 +4,7 @@ import { Component, Input } from '@angular/core';
 @Component({
   selector: 'ui-state',
   standalone: false,
-  template: `
-    <div *ngIf="kind === 'loading'; else messageState"
-         class="dl-loading" role="status" aria-live="polite">
-      <span class="dl-spinner" aria-hidden="true"></span>{{ message }}
-    </div>
-    <ng-template #messageState>
-      <div [class]="classes" [attr.role]="kind === 'error' ? 'alert' : 'status'">
-        {{ message }}
-      </div>
-    </ng-template>
-  `
+  templateUrl: './ui-state.component.html'
 })
 export class UiStateComponent {
   @Input() kind: 'loading' | 'empty' | 'error' | 'success' | 'info' = 'info';

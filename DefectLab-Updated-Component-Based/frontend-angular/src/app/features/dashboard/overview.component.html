@@ -1,12 +1,11 @@
 <ui-card cardClass="dl-dashboard dl-page-card">
   <header class="dl-dash-heading">
-    <div>
-      <span>Defect intelligence</span>
-      <h2>Research workspace</h2>
+    <div class="dl-dash-heading-title">
+      <h2>Workspace Overview</h2>
     </div>
     <div class="dl-dash-actions">
-      <ui-button icon="plus" link="/analyze">Analyze Source</ui-button>
-      <ui-button variant="ghost" icon="chart" link="/predictions/new">New Prediction</ui-button>
+      <ui-button icon="plus" link="/source-analysis">Analyze Source</ui-button>
+      <ui-button variant="ghost" icon="chart" link="/defect-predictions/new">New Prediction</ui-button>
     </div>
   </header>
 
@@ -17,7 +16,7 @@
       <article class="dl-dash-panel">
         <div class="dl-dash-card-head">
           <div>
-            <span class="dl-dash-eyebrow">Dataset portfolio</span>
+            <span class="dl-dash-eyebrow">Dataset Portfolio</span>
             <strong>{{ view.data.totalDatasets | number }}</strong>
             <small>{{ view.volumeTotal | number }} classes across assets</small>
           </div>
@@ -36,64 +35,71 @@
         </div>
 
         <footer>
-          <span>Prediction ready</span>
+          <span>Prediction Ready</span>
           <strong>{{ percent(view.data.labeledDatasets, view.data.totalDatasets) | number:'1.0-0' }}%</strong>
         </footer>
       </article>
 
       <article class="dl-dash-metric">
-        <div class="dl-dash-metric-icon danger">!</div>
-        <span>Defects detected</span>
+        <div class="dl-dash-metric-icon danger">
+          <ui-icon name="warning" [size]="18"></ui-icon>
+        </div>
+        <span>Defects Detected</span>
         <strong>{{ view.defectStats.totalPredictedBuggy | number }}</strong>
-        <small>{{ view.defectStats.defectRate | number:'1.1-1' }}% defect rate ({{ view.defectStats.totalRuns }} runs)</small>
-        <a routerLink="/reports">Review reports <b>→</b></a>
+        <small>{{ view.defectStats.defectRate | number:'1.1-1' }}% rate · {{ view.defectStats.totalRuns }} runs</small>
+        <a routerLink="/prediction-reports">Review reports <b>→</b></a>
       </article>
 
       <article class="dl-dash-metric">
-        <div class="dl-dash-metric-icon success">Q</div>
-        <span>Model reliability</span>
+        <div class="dl-dash-metric-icon success">
+          <ui-icon name="chart" [size]="18"></ui-icon>
+        </div>
+        <span>Model Reliability</span>
         <strong>{{ view.defectStats.avgF1 !== null ? (view.defectStats.avgF1 | number:'1.2-2') : '—' }}</strong>
         <small>Avg F1 · ROC-AUC {{ view.defectStats.avgRocAuc !== null ? (view.defectStats.avgRocAuc | number:'1.2-2') : '—' }}</small>
         <span class="dl-dash-submetric" *ngIf="view.defectStats.avgPrecision !== null">
           Prec {{ view.defectStats.avgPrecision | number:'1.2-2' }} · Rec {{ view.defectStats.avgRecall | number:'1.2-2' }}
         </span>
-        <a routerLink="/predictions">Model workspace <b>→</b></a>
+        <a routerLink="/defect-predictions">Model workspace <b>→</b></a>
       </article>
 
       <article class="dl-dash-metric">
-        <div class="dl-dash-metric-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">A</div>
-        <span>Codebase Architecture</span>
+        <div class="dl-dash-metric-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+          <ui-icon name="shield" [size]="18"></ui-icon>
+        </div>
+        <span>Code Architecture</span>
         <strong>Grade {{ view.architecturalStats.maintainabilityRating }}</strong>
         <small>MI: {{ view.architecturalStats.overallMaintainabilityIndex }}/100 · {{ view.architecturalStats.totalGodClasses }} God Classes</small>
         <span class="dl-dash-submetric">
           {{ view.architecturalStats.totalSpaghettiCoupling }} Spaghetti Couplings
         </span>
-        <a [routerLink]="['/reports', (view.topHotspots && view.topHotspots.length ? view.topHotspots[0].reportKey : '')]">Inspect Treemap <b>→</b></a>
+        <a [routerLink]="['/prediction-reports', (view.topHotspots && view.topHotspots.length ? view.topHotspots[0].reportKey : '')]">Inspect Treemap <b>→</b></a>
       </article>
 
       <article class="dl-dash-metric">
-        <div class="dl-dash-metric-icon warn">H</div>
-        <span>Top defect hotspot</span>
+        <div class="dl-dash-metric-icon warn">
+          <ui-icon name="target" [size]="18"></ui-icon>
+        </div>
+        <span>Top Defect Hotspot</span>
         <strong [title]="view.defectStats.highestRiskDataset || 'No hotspots'">{{ view.defectStats.highestRiskDataset || 'None' }}</strong>
         <small>{{ view.defectStats.highestRiskCount > 0 ? (view.defectStats.highestRiskCount + ' buggy classes') : 'No defect alerts' }}</small>
-        <a routerLink="/reports">Inspect target <b>→</b></a>
+        <a routerLink="/prediction-reports">Inspect target <b>→</b></a>
       </article>
     </section>
 
-    <!-- SciTools Understand™ Architectural Health Pulse -->
+    <!-- Architectural Health Pulse -->
     <section class="dl-dash-arch-health-section" *ngIf="view.architecturalStats && view.architecturalStats.totalAnalyzedClasses > 0">
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
-            <span class="dl-dash-eyebrow">SciTools Understand™ Architectural Pulse</span>
-            <h3>Codebase Health & Anti-Pattern Distribution</h3>
+            <h3>Architectural Health &amp; Anti-Pattern Distribution</h3>
           </div>
           <span class="dl-dash-period">Target: {{ (view.topHotspots && view.topHotspots.length ? view.topHotspots[0].targetDatasetName : 'Analyzed Project') }}</span>
         </div>
 
         <div class="dl-arch-health-grid">
           <div class="dl-arch-health-card">
-            <span class="dl-arch-card-label">Clean / Low Risk</span>
+            <span class="dl-arch-card-label">Clean Modules</span>
             <strong class="dl-arch-card-val text-success">{{ view.architecturalStats.cleanClassesCount }} Classes</strong>
             <small>High cohesion (LCOM &lt; 0.8), low coupling</small>
             <div class="dl-prob-track">
@@ -111,7 +117,7 @@
           </div>
 
           <div class="dl-arch-health-card">
-            <span class="dl-arch-card-label">Critical Hotspots / God Classes</span>
+            <span class="dl-arch-card-label">Critical Hotspots</span>
             <strong class="dl-arch-card-val text-danger">{{ view.architecturalStats.criticalHotspotsCount }} Classes</strong>
             <small>{{ view.architecturalStats.totalGodClasses }} God Classes · {{ view.architecturalStats.totalSpaghettiCoupling }} Spaghetti</small>
             <div class="dl-prob-track">
@@ -136,15 +142,10 @@
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
-            <span class="dl-dash-eyebrow">Defect triage</span>
-            <h3>Critical defect hotspots · Top flagged classes</h3>
+            <h3>Critical Defect Hotspots</h3>
           </div>
           <span class="dl-dash-period">Highest defect probability</span>
         </div>
-        <span class="dl-dash-run-label">
-          Classes predicted with the highest defect risk in latest evaluation ({{ view.topHotspots[0].targetDatasetName }}).
-          Prioritize these components for unit testing, refactoring, and code review.
-        </span>
 
         <div class="dl-hotspots-list">
           <div class="dl-hotspot-item" *ngFor="let item of view.topHotspots">
@@ -153,8 +154,8 @@
               <div class="dl-hotspot-title-row">
                 <strong class="dl-hotspot-name" [title]="item.classIdentifier">{{ item.simpleName }}</strong>
                 <span class="dl-hotspot-package">{{ item.packageName }}</span>
-                <span class="dl-hotspot-smell-badge" *ngIf="item.primarySmell">
-                  ⚠️ {{ item.primarySmell }}
+                <span class="dl-hotspot-smell-badge" *ngIf="item.primarySmell && item.primarySmell !== 'High Defect Susceptibility Hotspot'">
+                  {{ item.primarySmell }}
                 </span>
               </div>
               <div class="dl-hotspot-meta-row">
@@ -174,8 +175,8 @@
               </div>
             </div>
             <div class="dl-hotspot-action">
-              <ui-badge tone="amber">Buggy (1)</ui-badge>
-              <a [routerLink]="['/reports', item.reportKey]" class="dl-btn-inspect-link" title="Open SciTools Understand Treemap & Butterfly Graph">
+              <ui-badge tone="amber">Buggy</ui-badge>
+              <a [routerLink]="['/prediction-reports', item.reportKey]" class="dl-btn-inspect-link" title="Open Hotspot Treemap">
                 Inspect ↗
               </a>
             </div>
@@ -188,8 +189,7 @@
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
-            <span class="dl-dash-eyebrow">Metric volume</span>
-            <h3>Classes per dataset</h3>
+            <h3>Classes per Dataset</h3>
           </div>
           <span class="dl-dash-period">Top {{ view.volume.categories.length }}</span>
         </div>
@@ -212,53 +212,47 @@
         <article class="dl-dash-panel">
           <div class="dl-dash-section-head">
             <div>
-              <span class="dl-dash-eyebrow">Portfolio</span>
-            <h3>Datasets by family</h3>
+              <h3>Datasets by Family</h3>
+            </div>
           </div>
-        </div>
-        <span class="dl-dash-run-label">Manual extractions against the predefined benchmarks
-          they are compared with.</span>
 
-        <ui-bar-chart [data]="view.composition" orientation="horizontal" mode="stacked"
-                      [categoryWidth]="90"
-                      caption="Datasets in each metric family, split by data source">
-        </ui-bar-chart>
-      </article>
-      <article class="dl-dash-panel">
-        <div class="dl-dash-section-head">
-          <div>
-            <span class="dl-dash-eyebrow">Prediction workspace</span>
-            <h3>Model activity</h3>
+          <ui-bar-chart [data]="view.composition" orientation="horizontal" mode="stacked"
+                        [categoryWidth]="90"
+                        caption="Datasets in each metric family, split by data source">
+          </ui-bar-chart>
+        </article>
+        <article class="dl-dash-panel">
+          <div class="dl-dash-section-head">
+            <div>
+              <h3>Model Activity</h3>
+            </div>
+            <span class="dl-dash-status-dot"></span>
           </div>
-          <span class="dl-dash-status-dot"></span>
-        </div>
-        <strong class="dl-dash-run-count">{{ view.data.comparisonRuns | number }}</strong>
-        <span class="dl-dash-run-label">comparison reports</span>
+          <strong class="dl-dash-run-count">{{ view.data.comparisonRuns | number }}</strong>
+          <span class="dl-dash-run-label">comparison reports</span>
 
-        <div class="dl-dash-readiness">
-          <div>
-            <span>Labeled coverage</span>
-            <strong>{{ view.data.labeledDatasets }} / {{ view.data.totalDatasets }}</strong>
+          <div class="dl-dash-readiness">
+            <div>
+              <span>Labeled coverage</span>
+              <strong>{{ view.data.labeledDatasets }} / {{ view.data.totalDatasets }}</strong>
+            </div>
+            <div class="dl-dash-progress-track">
+              <span [style.width.%]="percent(view.data.labeledDatasets, view.data.totalDatasets)"></span>
+            </div>
           </div>
-          <div class="dl-dash-progress-track">
-            <span [style.width.%]="percent(view.data.labeledDatasets, view.data.totalDatasets)"></span>
-          </div>
-        </div>
 
-        <div class="dl-dash-prediction-actions">
-          <ui-button icon="chart" link="/predictions">Run model</ui-button>
-          <ui-button variant="ghost" icon="view" link="/reports">Reports</ui-button>
-        </div>
-      </article>
+          <div class="dl-dash-prediction-actions">
+            <ui-button icon="chart" link="/defect-predictions">Run model</ui-button>
+            <ui-button variant="ghost" icon="view" link="/prediction-reports">Reports</ui-button>
+          </div>
+        </article>
       </div>
 
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
-            <span class="dl-dash-eyebrow">Model quality</span>
-            <h3>Evaluation by run</h3>
+            <h3>Model Quality (0–1 Scale)</h3>
           </div>
-          <span class="dl-dash-period">0–1 scale</span>
         </div>
 
         <ui-bar-chart *ngIf="view.quality.series.length; else noQuality"
@@ -275,11 +269,9 @@
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
-            <span class="dl-dash-eyebrow">Class balance</span>
-            <h3>Predicted outcome per run</h3>
+            <h3>Class Balance per Run</h3>
           </div>
         </div>
-        <span class="dl-dash-run-label">Share of each run's classes predicted buggy.</span>
 
         <ui-bar-chart *ngIf="view.balance.categories.length; else noBalance"
                       [data]="view.balance" orientation="horizontal" mode="stacked"
@@ -296,14 +288,13 @@
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
-            <span class="dl-dash-eyebrow">Metric storage</span>
-            <h3>Recent datasets</h3>
+            <h3>Recent Datasets</h3>
           </div>
-          <a routerLink="/datasets">View all</a>
+          <a routerLink="/metric-storage">View all</a>
         </div>
 
         <div class="dl-dash-assets" *ngIf="view.data.recentDatasets.length; else emptyData">
-          <a *ngFor="let item of view.data.recentDatasets" routerLink="/datasets"
+          <a *ngFor="let item of view.data.recentDatasets" routerLink="/metric-storage"
              class="dl-dash-asset">
             <span class="dl-dash-asset-mark">{{ item.datasetFamily === 'PROMISE' ? 'P' : 'A' }}</span>
             <span class="dl-dash-asset-copy">
@@ -324,14 +315,13 @@
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
-            <span class="dl-dash-eyebrow">Latest results</span>
-            <h3>Prediction runs</h3>
+            <h3>Recent Prediction Runs</h3>
           </div>
-          <a routerLink="/reports">View reports</a>
+          <a routerLink="/prediction-reports">View reports</a>
         </div>
 
         <div class="dl-dash-assets" *ngIf="view.data.recentRuns.length; else emptyRuns">
-          <a *ngFor="let run of view.data.recentRuns" routerLink="/reports"
+          <a *ngFor="let run of view.data.recentRuns" routerLink="/prediction-reports"
              class="dl-dash-asset">
             <span class="dl-dash-asset-mark run">{{ run.modelConfig.modelName.charAt(0) }}</span>
             <span class="dl-dash-asset-copy">
@@ -348,7 +338,7 @@
           <div class="dl-dash-list-empty">
             <strong>No prediction runs yet</strong>
             <span>Select compatible datasets and run a model.</span>
-            <a routerLink="/predictions">Create prediction</a>
+            <a routerLink="/defect-predictions">Create prediction</a>
           </div>
         </ng-template>
       </article>

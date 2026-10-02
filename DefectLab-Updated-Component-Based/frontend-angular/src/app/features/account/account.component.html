@@ -1,13 +1,10 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header">
-    <nav class="dl-breadcrumb">
-      <a routerLink="/overview">Workspace</a>
-      <ui-icon name="chevron-right" [size]="14"></ui-icon>
-      <span class="dl-breadcrumb-current">Account Settings</span>
-    </nav>
-    <h2>User Profile &amp; Security</h2>
-    <p>Manage your account credentials, workspace preferences, and security settings.</p>
-  </div>
+  <ui-page-header
+    parentLabel="Workspace"
+    [parentLink]="['/dashboard']"
+    title="User Profile & Security"
+    currentLabel="Account Settings">
+  </ui-page-header>
 
   <div class="dl-detail-section dl-fill">
     <div class="dl-grid dl-grid-2 dl-grid-fill">

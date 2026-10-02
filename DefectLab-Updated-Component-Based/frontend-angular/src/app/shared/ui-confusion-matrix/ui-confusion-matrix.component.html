@@ -1,0 +1,69 @@
+<div class="dl-eval-group dl-cm-group" *ngIf="matrix">
+  <div class="dl-eval-group-title">Confusion matrix (Actual vs Predicted)</div>
+  <div class="dl-confusion-matrix-wrapper">
+    <table class="dl-confusion-table">
+      <thead>
+        <tr>
+          <th class="dl-cm-corner">Actual \ Predicted</th>
+          <th class="dl-cm-head-col">Predicted Buggy</th>
+          <th class="dl-cm-head-col">Predicted Clean</th>
+          <th class="dl-cm-head-total">Actual Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th class="dl-cm-head-row">
+            <span class="dl-cm-tag danger">Actual Buggy</span>
+          </th>
+          <td class="dl-cm-cell dl-cm-tp">
+            <div class="dl-cm-metric">
+              <span class="dl-cm-name">True Positive (TP)</span>
+              <strong class="dl-cm-val">{{ matrix.truePositive | number }}</strong>
+            </div>
+          </td>
+          <td class="dl-cm-cell dl-cm-fn">
+            <div class="dl-cm-metric">
+              <span class="dl-cm-name">False Negative (FN)</span>
+              <strong class="dl-cm-val">{{ matrix.falseNegative | number }}</strong>
+            </div>
+          </td>
+          <td class="dl-cm-total-cell">
+            <strong>{{ (matrix.truePositive + matrix.falseNegative) | number }}</strong>
+          </td>
+        </tr>
+        <tr>
+          <th class="dl-cm-head-row">
+            <span class="dl-cm-tag success">Actual Clean</span>
+          </th>
+          <td class="dl-cm-cell dl-cm-fp">
+            <div class="dl-cm-metric">
+              <span class="dl-cm-name">False Positive (FP)</span>
+              <strong class="dl-cm-val">{{ matrix.falsePositive | number }}</strong>
+            </div>
+          </td>
+          <td class="dl-cm-cell dl-cm-tn">
+            <div class="dl-cm-metric">
+              <span class="dl-cm-name">True Negative (TN)</span>
+              <strong class="dl-cm-val">{{ matrix.trueNegative | number }}</strong>
+            </div>
+          </td>
+          <td class="dl-cm-total-cell">
+            <strong>{{ (matrix.falsePositive + matrix.trueNegative) | number }}</strong>
+          </td>
+        </tr>
+        <tr class="dl-cm-total-row">
+          <th class="dl-cm-head-row">Predicted Total</th>
+          <td class="dl-cm-total-cell">
+            <strong>{{ (matrix.truePositive + matrix.falsePositive) | number }}</strong>
+          </td>
+          <td class="dl-cm-total-cell">
+            <strong>{{ (matrix.falseNegative + matrix.trueNegative) | number }}</strong>
+          </td>
+          <td class="dl-cm-total-cell dl-cm-grand-total">
+            <strong>{{ (matrix.truePositive + matrix.falseNegative + matrix.falsePositive + matrix.trueNegative) | number }}</strong>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

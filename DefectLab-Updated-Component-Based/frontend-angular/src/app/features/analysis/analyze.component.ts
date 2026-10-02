@@ -167,7 +167,7 @@ export class AnalyzeComponent extends BaseFormComponent {
     this.pendingExtraction.start(this.family, this.projectName, this.projectVersion);
     this.submitWith(this.facade.analyze(this.request), {
       success: () => `Dataset analyzed and saved successfully in ${this.formattedDuration}.`,
-      redirect: ['/datasets'],
+      redirect: ['/metric-storage'],
       onSuccess: () => {
         this.stopTimer('success');
       },
