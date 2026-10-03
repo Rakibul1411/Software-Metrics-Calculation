@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.apache.commons.csv.CSVFormat;
@@ -78,7 +79,7 @@ public class PredefinedDatasetSeeder implements ApplicationRunner {
         Optional<MetricDataset> existing = datasetRepository.findSystemPredefined(
                 projectName, projectVersion, MetricDataset.Type.PREDEFINED);
         if (existing.isPresent()) {
-            restoreMissingFile(existing.get(), source);
+            syncPredefinedDataset(existing.get(), source);
             return;
         }
         try {
@@ -90,19 +91,36 @@ public class PredefinedDatasetSeeder implements ApplicationRunner {
         }
     }
 
-    private void restoreMissingFile(MetricDataset dataset, Path source) {
+    private void syncPredefinedDataset(MetricDataset dataset, Path source) {
         Path stored = Paths.get(dataset.getMetricsFilePath()).toAbsolutePath().normalize();
-        if (Files.isRegularFile(stored)) {
-            return;
+        String sourceExt = suffixOf(source.getFileName().toString());
+        String storedExt = suffixOf(stored.getFileName().toString());
+        boolean needsUpdate = !Files.isRegularFile(stored)
+                || !sourceExt.equalsIgnoreCase(storedExt)
+                || isSourceModified(source, stored);
+
+        if (needsUpdate) {
+            try {
+                registerPredefinedDatasetUseCase.updatePredefined(dataset, source);
+                LOGGER.info("Synchronized predefined dataset {} {} from {}",
+                        dataset.getProjectName(), dataset.getProjectVersion(), source.getFileName());
+            } catch (IOException | RuntimeException exception) {
+                LOGGER.warn("Could not synchronize predefined dataset {} {}",
+                        dataset.getProjectName(), dataset.getProjectVersion(), exception);
+            }
         }
+    }
+
+    private static boolean isSourceModified(Path source, Path stored) {
         try {
-            Files.createDirectories(stored.getParent());
-            Files.copy(source, stored, StandardCopyOption.REPLACE_EXISTING);
-            LOGGER.info("Restored predefined dataset file for {}",
-                    dataset.getDisplayName());
-        } catch (IOException exception) {
-            LOGGER.warn("Could not restore predefined dataset file for {}",
-                    dataset.getDisplayName(), exception);
+            return Files.size(source) != Files.size(stored);
+        } catch (IOException e) {
+            return true;
         }
+    }
+
+    private static String suffixOf(String filename) {
+        int dot = filename.lastIndexOf('.');
+        return dot >= 0 ? filename.substring(dot).toLowerCase(Locale.ROOT) : "";
     }
 }

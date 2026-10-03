@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.metrics.defectlab.analysis.promise.analyzer.PromiseProjectAnalyzer;
 import org.metrics.defectlab.analysis.promise.model.PromiseMetricResult;
@@ -25,6 +26,7 @@ class DebugValidationTest {
         "loc","dam","moa","mfa","cam","ic","cbm","amc","max_cc","avg_cc" };
 
     @Test
+    @Disabled("Manual scratch validation test requiring temporary external scratchpad directory")
     void validate() throws Exception {
         String project = System.getProperty("valProject", "ant15");
         String gtFile = System.getProperty("valGt", "ant/ant-1.5.csv");

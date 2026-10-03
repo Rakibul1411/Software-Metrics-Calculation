@@ -13,4 +13,6 @@ public interface RegisterPredefinedDatasetUseCase {
 
     MetricDataset registerPredefined(String projectName, String projectVersion, Path source)
             throws IOException;
+
+    MetricDataset updatePredefined(MetricDataset existing, Path source) throws IOException;
 }

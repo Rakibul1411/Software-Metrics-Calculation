@@ -42,24 +42,47 @@ src/app/
 ├── app-routing.module.ts
 ├── app.module.ts
 ├── core/
-│   ├── guards/
-│   │   └── auth.guard.ts
-│   ├── models/
-│   │   └── defectlab.model.ts
-│   └── services/
-│       ├── defectlab-api.service.ts
-│       └── session.service.ts
+│   ├── base/                  BaseListComponent, BaseDetailComponent, BaseFormComponent
+│   ├── guards/                auth.guard.ts, guest.guard.ts
+│   ├── interceptors/          error.interceptor.ts
+│   ├── models/                defectlab.model.ts
+│   └── services/              defectlab-api.service.ts, session.service.ts
 ├── features/
-│   ├── account/
-│   ├── analysis/
-│   ├── auth/
-│   ├── comparisons/
-│   ├── dashboard/
-│   ├── datasets/
-│   ├── predictions/
-│   ├── reports/
-│   └── shell/
-└── defectlab.css
+│   ├── account/               Profile and password management
+│   ├── analysis/              Source analysis, AST extraction, and treemap views
+│   ├── auth/                  Login, register, and password reset
+│   ├── comparisons/           Metric comparison workspace & tolerance checks
+│   ├── dashboard/             Overview dashboard and recent activity
+│   ├── datasets/              Dataset storage, upload, preview, and ARFF/CSV downloads
+│   ├── predictions/           Prediction run execution, detail views, and confusion matrices
+│   ├── reports/               Grouped prediction reports and PDF downloads
+│   └── shell/                 Application shell, persistent sidebar, and header navigation
+├── shared/                    25+ Reusable Design System Components
+│   ├── ui-badge/              Risk badges and metric family tags
+│   ├── ui-bar-chart/          Distribution and comparison bar charts
+│   ├── ui-butterfly-graph/    Coupling and dependency butterfly visualizations
+│   ├── ui-button/             Primary, secondary, and ghost action buttons
+│   ├── ui-card/               Containers with consistent border and dark theme
+│   ├── ui-confirm-dialog/     Destructive action confirmation dialogs
+│   ├── ui-confusion-matrix/   TP/FP/TN/FN evaluation matrix with metrics
+│   ├── ui-delete-action/      Reusable delete trigger with confirmation
+│   ├── ui-detail-fields/      Key-value inspection metadata layouts
+│   ├── ui-download-menu/      Dropdown for CSV, ARFF, and PDF downloads
+│   ├── ui-empty-state/        Informative empty screens with actions
+│   ├── ui-file-picker/        Drag-and-drop file uploaders
+│   ├── ui-icon/               SVG icons
+│   ├── ui-input/              Form input elements
+│   ├── ui-metric-card/        KPI summary cards (AUC-ROC, Recall, Buggy Count)
+│   ├── ui-page-header/        Consistent page headers, breadcrumbs, and actions
+│   ├── ui-pagination/         Accessible table pagination and page-size selector
+│   ├── ui-radio-group/        Styled radio buttons
+│   ├── ui-search-bar/         Debounced search input
+│   ├── ui-select/             Accessible dropdown selects
+│   ├── ui-state/              Standard 4-state handler (loading, empty, error, data)
+│   ├── ui-table/              Sortable, paginated data table
+│   ├── ui-toast/              Floating glassmorphic notifications
+│   └── ui-treemap/            Squarified treemap for package defect hotspots
+└── defectlab.css              Core design system tokens, themes, and utility classes
 ```
 
 ## Session flow

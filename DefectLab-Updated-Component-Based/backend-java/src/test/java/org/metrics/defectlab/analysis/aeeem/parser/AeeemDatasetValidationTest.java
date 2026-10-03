@@ -22,8 +22,17 @@ class AeeemDatasetValidationTest {
 
     private static final Path WORKSPACE = Path.of(
             "/Users/md.rakibulislam/IIT/SPL-3/promise-dataset-source-code/DefectLab-Updated-Component-Based");
-    private static final Path LUCENE_TAR = WORKSPACE.resolve(
-            "Final dataset list/PROMISE-backup-copy/source code/lucene/lucene-solr-releases-lucene-2.4.0.tar.gz");
+    private static final Path LUCENE_TAR = resolveLuceneTar();
+
+    private static Path resolveLuceneTar() {
+        Path consolidated = WORKSPACE.resolve(
+                "research-and-docs/Final dataset list/PROMISE-backup-copy/source code/lucene/lucene-solr-releases-lucene-2.4.0.tar.gz");
+        if (Files.exists(consolidated)) {
+            return consolidated;
+        }
+        return WORKSPACE.resolve(
+                "Final dataset list/PROMISE-backup-copy/source code/lucene/lucene-solr-releases-lucene-2.4.0.tar.gz");
+    }
 
     @TempDir
     Path tempDir;
