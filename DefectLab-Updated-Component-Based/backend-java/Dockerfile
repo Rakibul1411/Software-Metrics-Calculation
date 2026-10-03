@@ -7,7 +7,7 @@ RUN mvn -q -DskipTests package
 
 FROM eclipse-temurin:17-jre
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
+    && apt-get install -y --no-install-recommends git curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app/backend-java
 COPY --from=build /build/target/metrics-calculator-1.0.0.jar app.jar

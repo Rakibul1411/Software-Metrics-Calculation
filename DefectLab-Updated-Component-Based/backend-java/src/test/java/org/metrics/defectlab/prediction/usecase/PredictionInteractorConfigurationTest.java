@@ -166,6 +166,76 @@ class PredictionInteractorConfigurationTest {
         assertEquals("row_108", sorted.get(4).get("classIdentifier"));
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void sortsPredictionsRowWiseWithDatasetOrderAndUnorderedItemsWithoutContractViolation() throws Exception {
+        LoadDatasetTableUseCase loadDatasetTableUseCase =
+                (LoadDatasetTableUseCase) ReflectionTestUtils.getField(interactor, "loadDatasetTableUseCase");
+        MetricDataset target = mock(MetricDataset.class);
+
+        // Dataset rows in non-alphabetical order
+        org.metrics.defectlab.dataset.domain.DatasetTable table =
+                new org.metrics.defectlab.dataset.domain.DatasetTable(
+                        java.util.List.of("name", "loc"),
+                        java.util.List.of(
+                                java.util.List.of("ZooClass", "100"),
+                                java.util.List.of("AlphaClass", "50"),
+                                java.util.List.of("MidClass", "75")
+                        )
+                );
+        when(loadDatasetTableUseCase.load(target)).thenReturn(table);
+
+        java.util.List<Map<String, Object>> unsorted = java.util.List.of(
+                Map.of("classIdentifier", "UnorderedBeta"),
+                Map.of("classIdentifier", "AlphaClass"),
+                Map.of("classIdentifier", "ZooClass"),
+                Map.of("classIdentifier", "UnorderedAlpha"),
+                Map.of("classIdentifier", "MidClass")
+        );
+
+        java.util.List<Map<String, Object>> sorted = (java.util.List<Map<String, Object>>)
+                ReflectionTestUtils.invokeMethod(interactor, "sortPredictionsRowWise", unsorted, target);
+
+        // Ordered items should appear first in target dataset row order:
+        // row 0: ZooClass, row 1: AlphaClass, row 2: MidClass
+        assertEquals("ZooClass", sorted.get(0).get("classIdentifier"));
+        assertEquals("AlphaClass", sorted.get(1).get("classIdentifier"));
+        assertEquals("MidClass", sorted.get(2).get("classIdentifier"));
+        // Unordered items should appear after, sorted naturally:
+        assertEquals("UnorderedAlpha", sorted.get(3).get("classIdentifier"));
+        assertEquals("UnorderedBeta", sorted.get(4).get("classIdentifier"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void sortsLargeListOfMixedPredictionsWithoutViolatingComparatorContract() throws Exception {
+        LoadDatasetTableUseCase loadDatasetTableUseCase =
+                (LoadDatasetTableUseCase) ReflectionTestUtils.getField(interactor, "loadDatasetTableUseCase");
+        MetricDataset target = mock(MetricDataset.class);
+
+        java.util.List<java.util.List<String>> rows = new java.util.ArrayList<>();
+        for (int i = 0; i < 300; i++) {
+            rows.add(java.util.List.of("Class_" + (299 - i), String.valueOf(i * 10)));
+        }
+        org.metrics.defectlab.dataset.domain.DatasetTable table =
+                new org.metrics.defectlab.dataset.domain.DatasetTable(java.util.List.of("name", "loc"), rows);
+        when(loadDatasetTableUseCase.load(target)).thenReturn(table);
+
+        java.util.List<Map<String, Object>> mixed = new java.util.ArrayList<>();
+        for (int i = 0; i < 500; i++) {
+            String id = (i % 2 == 0)
+                    ? "Class_" + (i % 300)
+                    : "Unmatched_" + ((i * 37) % 500) + (i % 3 == 0 ? "_01" : "_1");
+            mixed.add(Map.of("classIdentifier", id, "index", i));
+        }
+
+        assertDoesNotThrow(() -> {
+            java.util.List<Map<String, Object>> sorted = (java.util.List<Map<String, Object>>)
+                    ReflectionTestUtils.invokeMethod(interactor, "sortPredictionsRowWise", mixed, target);
+            assertEquals(500, sorted.size());
+        });
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> modelConfig(Map<String, Object> body) {
         return (Map<String, Object>) ReflectionTestUtils.invokeMethod(

@@ -1,14 +1,12 @@
 import { Directive, OnInit } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, timer } from 'rxjs';
 import { PAGE_SIZE_OPTIONS } from '../../shared/ui-pagination/ui-pagination.component';
 import { BaseComponent } from './base.component';
 
 /**
- * A screen that loads a collection once and filters it client-side.
- *
- * Subclasses supply the request ({@link fetch}) and, when the page has a
- * search box or dropdown filters, the row predicate ({@link matches}).
- * Loading state, reload-on-demand and the `filtered` view are shared.
+ * A screen that loads a collection once and filters it client-side, with
+ * silent automatic background refresh to keep the UI in sync without
+ * disrupting user interactions, active pagination, search input or scrolling.
  */
 @Directive()
 export abstract class BaseListComponent<T> extends BaseComponent implements OnInit {
@@ -16,6 +14,9 @@ export abstract class BaseListComponent<T> extends BaseComponent implements OnIn
   loading = true;
   page = 1;
   pageSize = PAGE_SIZE_OPTIONS[0];
+
+  protected autoRefreshEnabled = true;
+  protected autoRefreshIntervalMs = 5000;
 
   private query = '';
 
@@ -31,6 +32,7 @@ export abstract class BaseListComponent<T> extends BaseComponent implements OnIn
 
   ngOnInit(): void {
     this.load();
+    this.initAutoRefresh();
   }
 
   load(): void {
@@ -46,6 +48,47 @@ export abstract class BaseListComponent<T> extends BaseComponent implements OnIn
         this.reportLocalError(error);
       }
     });
+  }
+
+  /**
+   * Background silent auto-refresh: polls internally to sync records
+   * without triggering loading spinners, without resetting the user's active page,
+   * without disturbing search query / dropdown state, and without toast interruptions.
+   */
+  protected initAutoRefresh(intervalMs = this.autoRefreshIntervalMs): void {
+    if (!this.autoRefreshEnabled) {
+      return;
+    }
+    this.watch(timer(intervalMs, intervalMs)).subscribe(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      if (this.loading) {
+        return;
+      }
+      this.watch(this.fetch()).subscribe({
+        next: freshRows => {
+          if (!this.areRowsEqual(this.rows, freshRows)) {
+            this.rows = freshRows;
+            this.clampPage();
+          }
+        },
+        error: () => {
+          // Silently ignore background polling errors to protect usability
+        }
+      });
+    });
+  }
+
+  protected areRowsEqual(current: T[], incoming: T[]): boolean {
+    if (current === incoming) return true;
+    if (!current || !incoming) return false;
+    if (current.length !== incoming.length) return false;
+    try {
+      return JSON.stringify(current) === JSON.stringify(incoming);
+    } catch {
+      return false;
+    }
   }
 
   /** Rows surviving the search box and any subclass filters. */
@@ -83,6 +126,14 @@ export abstract class BaseListComponent<T> extends BaseComponent implements OnIn
       this.page = pages;
     }
     return this.page;
+  }
+
+  private clampPage(): void {
+    const total = this.filtered.length;
+    const maxPage = Math.max(1, Math.ceil(total / this.pageSize));
+    if (this.page > maxPage) {
+      this.page = maxPage;
+    }
   }
 
   /** The list request this screen (re)loads from. */

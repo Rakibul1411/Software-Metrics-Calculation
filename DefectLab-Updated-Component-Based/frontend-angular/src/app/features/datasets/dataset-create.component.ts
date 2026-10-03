@@ -26,7 +26,7 @@ export class DatasetCreateComponent extends BaseFormComponent {
     { value: 'MANUAL', label: 'Manually extracted' }
   ];
 
-  protected override readonly listRoute = ['/datasets'];
+  protected override readonly listRoute = ['/metric-storage'];
 
   constructor(private readonly facade: DatasetsFacade) {
     super();

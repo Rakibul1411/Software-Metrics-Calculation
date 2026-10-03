@@ -9,11 +9,10 @@ For the full product workflow, see the [project README](../README.md).
 
 ## Technology
 
-- Java 17
-- Spring Boot 2.7.18
+- Java 17 / 21 / 23 compatible (built with Spring Boot 2.7.18)
 - Spring MVC
 - Spring Data JPA
-- PostgreSQL/Neon
+- PostgreSQL / Neon (HikariCP connection pool)
 - Eclipse JDT 3.37
 - Apache Commons CSV/IO/Compress
 - Apache PDFBox
@@ -120,7 +119,7 @@ mapping, and storage-path code every component depends on.
 | `/api/metric-comparisons` | Independent dataset comparison, delete |
 | `/api/reports` | Authenticated prediction PDF download |
 
-See [docs/API.md](../docs/API.md) for fields and examples.
+See [SE801_FINAL_DESIGN_DOCUMENT.md](../docs/SE801_FINAL_DESIGN_DOCUMENT.md#2-interface-design-rest-api-contracts) for fields and examples.
 
 ## Database contract
 
@@ -249,8 +248,7 @@ export DEFECTLAB_DB_URL='jdbc:postgresql://localhost:5432/defectlab'
 export DEFECTLAB_DB_USER='defectlab'
 export DEFECTLAB_DB_PASSWORD='defectlab'
 export ML_SERVICE_BASE_URL='http://localhost:8000'
-export ML_SERVICE_TOKEN='replace-with-the-shared-value'
-scripts/run-java-dev.sh
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
 ```
 
 The API listens on <http://localhost:8080>. The launcher watches Java, XML,
@@ -275,8 +273,13 @@ mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
 mvn test
 ```
 
-The current suite covers extraction, parsing, history calculations, file
-storage, schema structure, PDF generation, comparison, and application rules.
+The test suite contains **153 automated tests** (152 passing, 1 local manual scratch test skipped), executed cleanly via JUnit 5 and Mockito. It comprehensively covers:
+- Complete AST calculation for all 20 PROMISE and 56 AEEEM software metrics.
+- Unsupervised domain adaptation (CORAL) hyperparameter configuration and validation.
+- Java `Comparator` contract adherence: strict weak ordering verification on 500+ mixed dataset items in `sortPredictionsRowWise()` preventing TimSort violations.
+- In-memory dataset parsing, quality checks, and ARFF/CSV format conversion.
+- PDFBox comparison report rendering and distribution statistics.
+- Clean Architecture port-and-adapter boundary isolation.
 
 Useful checks:
 

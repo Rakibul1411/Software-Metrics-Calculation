@@ -1,0 +1,21 @@
+<div class="dl-detail-header" [class.dl-detail-header-grid]="!!parentLabel">
+  <!-- Detail view breadcrumb -->
+  <nav class="dl-breadcrumb" *ngIf="parentLabel">
+    <a *ngIf="parentLink" [routerLink]="parentLink" (click)="parentClick.emit()">{{ parentLabel }}</a>
+    <a *ngIf="!parentLink" href="javascript:void(0)" (click)="parentClick.emit()">{{ parentLabel }}</a>
+    <ui-icon name="chevron-right" [size]="14"></ui-icon>
+    <span class="dl-breadcrumb-current">{{ currentLabel || title || fallbackTitle }}</span>
+  </nav>
+
+  <!-- Left: Title / Badges / Search -->
+  <div [class.dl-detail-title]="!!parentLabel" [class.dl-heading-search]="!parentLabel">
+    <h2 *ngIf="title || fallbackTitle">{{ title || fallbackTitle }}</h2>
+    <ng-content select="[header-badges]"></ng-content>
+    <ng-content select="[header-search]"></ng-content>
+  </div>
+
+  <!-- Right: Action buttons (single projection slot) -->
+  <div class="dl-actions">
+    <ng-content select="[header-actions]"></ng-content>
+  </div>
+</div>

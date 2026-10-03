@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { timer } from 'rxjs';
 import { BaseComponent } from '../../core/base';
 import { DashboardFacade, DashboardView } from './dashboard.facade';
 
@@ -22,6 +23,24 @@ export class OverviewComponent extends BaseComponent implements OnInit {
         this.loading = false;
       },
       error: () => (this.loading = false)
+    });
+
+    // Silent background auto-refresh for dashboard every 8 seconds
+    this.watch(timer(8000, 8000)).subscribe(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      if (this.loading) {
+        return;
+      }
+      this.watch(this.facade.load()).subscribe({
+        next: freshView => {
+          if (JSON.stringify(this.view) !== JSON.stringify(freshView)) {
+            this.view = freshView;
+          }
+        },
+        error: () => {}
+      });
     });
   }
 

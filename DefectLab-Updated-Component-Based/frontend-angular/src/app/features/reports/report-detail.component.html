@@ -1,11 +1,15 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header">
-    <nav class="dl-breadcrumb">
-      <a (click)="back()">Reports</a>
-      <ui-icon name="chevron-right" [size]="14"></ui-icon>
-    </nav>
-    <h2>{{ groupTitle }}</h2>
-  </div>
+  <ui-page-header
+    parentLabel="Reports"
+    [parentLink]="['/prediction-reports']"
+    [title]="groupTitle"
+    fallbackTitle="Prediction report details"
+    (parentClick)="back()">
+    <ng-container header-badges>
+      <ui-badge *ngIf="predefinedRun?.modelConfig as cfg" [tone]="cfg.datasetFamily">{{ cfg.datasetFamily }}</ui-badge>
+      <ui-badge *ngIf="manualRun && predefinedRun" tone="blue">Dual Target</ui-badge>
+    </ng-container>
+  </ui-page-header>
 
   <ui-state *ngIf="loading" kind="loading"
             message="Loading complete prediction details…"></ui-state>
@@ -27,8 +31,11 @@
             </div>
           </div>
           <div class="dl-actions" *ngIf="manualRun as run">
-            <ui-button variant="ghost" icon="download" [href]="facade.predictionDownloadUrl(run.id)"
-                       (click)="downloadStarted('Labeled CSV')">Labeled CSV</ui-button>
+            <ui-download-menu variant="ghost" label="Download dataset"
+                              [csvUrl]="facade.predictionDownloadUrl(run.id, 'csv')"
+                              [arffUrl]="facade.predictionDownloadUrl(run.id, 'arff')"
+                              (downloaded)="downloadStarted('Labeled ' + $event)">
+            </ui-download-menu>
             <ui-button icon="download" [href]="facade.reportDownloadUrl(run.id)"
                        (click)="downloadStarted('PDF report')">Download report</ui-button>
           </div>
@@ -56,6 +63,11 @@
             </div>
           </div>
           <div class="dl-actions" *ngIf="predefinedRun as run">
+            <ui-download-menu variant="ghost" label="Download dataset"
+                              [csvUrl]="facade.datasetDownloadUrl(run.targetDataset.id, 'csv')"
+                              [arffUrl]="facade.datasetDownloadUrl(run.targetDataset.id, 'arff')"
+                              (downloaded)="downloadStarted('Dataset ' + $event)">
+            </ui-download-menu>
             <ui-button icon="download" [href]="facade.reportDownloadUrl(run.id)"
                        (click)="downloadStarted('PDF report')">Download report</ui-button>
           </div>
@@ -82,79 +94,7 @@
     </div>
 
     <div class="dl-eval-layout">
-      <div class="dl-eval-group dl-cm-group">
-        <div class="dl-eval-group-title">Confusion matrix (Actual vs Predicted)</div>
-        <div class="dl-confusion-matrix-wrapper">
-          <table class="dl-confusion-table">
-            <thead>
-              <tr>
-                <th class="dl-cm-corner">Actual \ Predicted</th>
-                <th class="dl-cm-head-col">Predicted Buggy (1)</th>
-                <th class="dl-cm-head-col">Predicted Clean (0)</th>
-                <th class="dl-cm-head-total">Actual Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th class="dl-cm-head-row">
-                  <span class="dl-cm-tag danger">Actual Buggy (1)</span>
-                </th>
-                <td class="dl-cm-cell dl-cm-tp">
-                  <div class="dl-cm-metric">
-                    <span class="dl-cm-name">True Positive (TP)</span>
-                    <strong class="dl-cm-val">{{ scores.confusionMatrix.truePositive | number }}</strong>
-                    <small class="dl-cm-desc">Caught defects</small>
-                  </div>
-                </td>
-                <td class="dl-cm-cell dl-cm-fn">
-                  <div class="dl-cm-metric">
-                    <span class="dl-cm-name">False Negative (FN)</span>
-                    <strong class="dl-cm-val">{{ scores.confusionMatrix.falseNegative | number }}</strong>
-                    <small class="dl-cm-desc">Missed defects (Risk)</small>
-                  </div>
-                </td>
-                <td class="dl-cm-total-cell">
-                  <strong>{{ (scores.confusionMatrix.truePositive + scores.confusionMatrix.falseNegative) | number }}</strong>
-                </td>
-              </tr>
-              <tr>
-                <th class="dl-cm-head-row">
-                  <span class="dl-cm-tag success">Actual Clean (0)</span>
-                </th>
-                <td class="dl-cm-cell dl-cm-fp">
-                  <div class="dl-cm-metric">
-                    <span class="dl-cm-name">False Positive (FP)</span>
-                    <strong class="dl-cm-val">{{ scores.confusionMatrix.falsePositive | number }}</strong>
-                    <small class="dl-cm-desc">False alarms</small>
-                  </div>
-                </td>
-                <td class="dl-cm-cell dl-cm-tn">
-                  <div class="dl-cm-metric">
-                    <span class="dl-cm-name">True Negative (TN)</span>
-                    <strong class="dl-cm-val">{{ scores.confusionMatrix.trueNegative | number }}</strong>
-                    <small class="dl-cm-desc">Clean confirmed</small>
-                  </div>
-                </td>
-                <td class="dl-cm-total-cell">
-                  <strong>{{ (scores.confusionMatrix.falsePositive + scores.confusionMatrix.trueNegative) | number }}</strong>
-                </td>
-              </tr>
-              <tr class="dl-cm-total-row">
-                <th class="dl-cm-head-row">Predicted Total</th>
-                <td class="dl-cm-total-cell">
-                  <strong>{{ (scores.confusionMatrix.truePositive + scores.confusionMatrix.falsePositive) | number }}</strong>
-                </td>
-                <td class="dl-cm-total-cell">
-                  <strong>{{ (scores.confusionMatrix.falseNegative + scores.confusionMatrix.trueNegative) | number }}</strong>
-                </td>
-                <td class="dl-cm-total-cell dl-cm-grand-total">
-                  <strong>{{ (scores.confusionMatrix.truePositive + scores.confusionMatrix.falseNegative + scores.confusionMatrix.falsePositive + scores.confusionMatrix.trueNegative) | number }}</strong>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ui-confusion-matrix [matrix]="scores.confusionMatrix"></ui-confusion-matrix>
 
       <div class="dl-eval-group dl-metrics-group">
         <div class="dl-eval-group-title">Performance metrics</div>
@@ -174,27 +114,27 @@
       <button type="button" role="tab" [class.active]="activeTab === 'manual'"
               [attr.aria-selected]="activeTab === 'manual'"
               (click)="activeTab = 'manual'" *ngIf="manualRun">
-        Manual target: {{ manualRun.targetDataset.displayName }}
+        Manual: {{ manualRun.targetDataset.displayName }}
         <span class="dl-tab-badge">{{ manualRows.length | number }}</span>
       </button>
       <button type="button" role="tab" [class.active]="activeTab === 'predefined'"
               [attr.aria-selected]="activeTab === 'predefined'"
               (click)="activeTab = 'predefined'" *ngIf="predefinedRun">
-        Predefined target: {{ predefinedRun.targetDataset.displayName }}
+        Predefined: {{ predefinedRun.targetDataset.displayName }}
         <span class="dl-tab-badge">{{ predefinedRows.length | number }}</span>
       </button>
       <button type="button" role="tab" [class.active]="activeTab === 'matched'"
               [attr.aria-selected]="activeTab === 'matched'"
               (click)="activeTab = 'matched'" *ngIf="showMatchedComparison">
-        Target comparison &amp; agreement
+        Target Agreement
         <span class="dl-tab-badge">{{ matchedRows.length | number }}</span>
       </button>
     </div>
 
     <!-- Manual Target Full-Width Tab -->
     <div class="dl-tab-content" *ngIf="activeTab === 'manual' && manualRun">
-      <div class="dl-table-toolbar">
-        <div class="dl-filter-pills" role="group" aria-label="Filter manual predictions">
+      <div class="dl-view-toggle-bar">
+        <div class="dl-filter-pills" role="group" aria-label="Filter manual predictions" *ngIf="viewMode === 'table'">
           <button type="button" class="dl-filter-pill" [class.active]="manualFilter === 'all'" (click)="setManualFilter('all')">
             All files <span class="dl-pill-count">{{ manualRows.length | number }}</span>
           </button>
@@ -205,51 +145,69 @@
             Clean only <span class="dl-pill-count">{{ manualCleanCount | number }}</span>
           </button>
         </div>
+        <div *ngIf="viewMode === 'treemap'"></div>
 
-        <div class="dl-table-search-box">
-          <span class="dl-search-icon">
-            <ui-icon name="search" [size]="14"></ui-icon>
-          </span>
-          <input type="text" placeholder="Search by file or class identifier…"
-                 [value]="manualSearch" (input)="onManualSearch($any($event.target).value)" />
-          <button type="button" *ngIf="manualSearch" class="dl-search-clear" (click)="onManualSearch('')">
-            <ui-icon name="close" [size]="12"></ui-icon>
-          </button>
+        <div class="dl-actions">
+          <ui-view-toggle *ngIf="manualRows.length > 0"
+                          [mode]="viewMode"
+                          (modeChange)="setViewMode($event)">
+          </ui-view-toggle>
         </div>
       </div>
 
-      <div class="dl-table-box" *ngIf="filteredManualRows.length; else noManualMatches">
-        <ui-table [columns]="manualColumns" [rows]="pagedManualRows" trackByKey="classIdentifier">
-          <ng-template uiTableCell="riskRank" let-row>
-            <span class="dl-rank-badge" [class.high-risk]="row.predictedLabel === 1">#{{ row.riskRank }}</span>
-          </ng-template>
-          <ng-template uiTableCell="defectProbability" let-row>
-            <div class="dl-prob-cell">
-              <span class="dl-prob-val">{{ row.defectProbability | number:'1.4-4' }}</span>
-              <div class="dl-prob-track">
-                <span class="dl-prob-fill" [style.width.%]="row.defectProbability * 100" [class.buggy]="row.predictedLabel === 1"></span>
-              </div>
-            </div>
-          </ng-template>
-          <ng-template uiTableCell="predictedLabel" let-row>
-            <ui-badge [tone]="row.predictedLabel === 1 ? 'amber' : 'neutral'">
-              {{ row.predictedLabel === 1 ? 'Buggy (1)' : 'Clean (0)' }}
-            </ui-badge>
-          </ng-template>
-        </ui-table>
-        <ui-pagination [total]="filteredManualRows.length" [page]="manualPage" [pageSize]="manualPageSize" noun="files"
-                       (pageChange)="onManualPageChange($event)" (pageSizeChange)="onManualPageSizeChange($event)">
-        </ui-pagination>
+      <!-- Treemap View -->
+      <div *ngIf="viewMode === 'treemap'">
+        <ui-treemap
+          [items]="manualTreemapItems"
+          [title]="(manualRun.targetDataset.displayName || 'Manual Target') + ' — Defect Hotspot Treemap'"
+          subtitle="Box Size: LOC & Defect Rank · Color: Defect Probability"
+        ></ui-treemap>
       </div>
-      <ng-template #noManualMatches>
-        <ui-state kind="empty" message="No files match the current filter or search criteria."></ui-state>
-      </ng-template>
+
+      <!-- Table View -->
+      <ng-container *ngIf="viewMode === 'table'">
+        <div class="dl-table-toolbar">
+          <ui-search-bar
+            placeholder="Search by file or class identifier…"
+            [query]="manualSearch"
+            (queryChange)="onManualSearch($event)">
+          </ui-search-bar>
+        </div>
+
+        <div class="dl-table-box" *ngIf="filteredManualRows.length; else noManualMatches">
+          <ui-table [columns]="manualColumns" [rows]="pagedManualRows" trackByKey="classIdentifier">
+            <ng-template uiTableCell="riskRank" let-row>
+              <span class="dl-rank-badge" [class.high-risk]="row.predictedLabel === 1">#{{ row.riskRank }}</span>
+            </ng-template>
+            <ng-template uiTableCell="defectProbability" let-row>
+              <div class="dl-prob-cell">
+                <span class="dl-prob-val">{{ row.defectProbability | number:'1.4-4' }}</span>
+                <div class="dl-prob-track">
+                  <span class="dl-prob-fill" [style.width.%]="row.defectProbability * 100" [class.buggy]="row.predictedLabel === 1"></span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template uiTableCell="predictedLabel" let-row>
+              <span class="dl-status-cell" [class.danger]="row.predictedLabel === 1" [class.muted]="row.predictedLabel !== 1">
+                <span class="dl-status-dot"></span>
+                {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}
+              </span>
+            </ng-template>
+          </ui-table>
+          <ui-pagination [total]="filteredManualRows.length" [page]="manualPage" [pageSize]="manualPageSize" noun="files"
+                         (pageChange)="onManualPageChange($event)" (pageSizeChange)="onManualPageSizeChange($event)">
+          </ui-pagination>
+        </div>
+        <ng-template #noManualMatches>
+          <ui-state kind="empty" message="No files match the current filter or search criteria."></ui-state>
+        </ng-template>
+      </ng-container>
     </div>
 
     <!-- Predefined Target Full-Width Tab -->
     <div class="dl-tab-content" *ngIf="activeTab === 'predefined' && predefinedRun">
-      <div class="dl-table-toolbar">
-        <div class="dl-filter-pills" role="group" aria-label="Filter predefined predictions">
+      <div class="dl-view-toggle-bar">
+        <div class="dl-filter-pills" role="group" aria-label="Filter predefined predictions" *ngIf="viewMode === 'table'">
           <button type="button" class="dl-filter-pill" [class.active]="predefinedFilter === 'all'" (click)="setPredefinedFilter('all')">
             All files <span class="dl-pill-count">{{ predefinedRows.length | number }}</span>
           </button>
@@ -260,52 +218,71 @@
             Predicted Clean <span class="dl-pill-count">{{ predefinedCleanCount | number }}</span>
           </button>
         </div>
+        <div *ngIf="viewMode === 'treemap'"></div>
 
-        <div class="dl-table-search-box">
-          <span class="dl-search-icon">
-            <ui-icon name="search" [size]="14"></ui-icon>
-          </span>
-          <input type="text" placeholder="Search by file or class identifier…"
-                 [value]="predefinedSearch" (input)="onPredefinedSearch($any($event.target).value)" />
-          <button type="button" *ngIf="predefinedSearch" class="dl-search-clear" (click)="onPredefinedSearch('')">
-            <ui-icon name="close" [size]="12"></ui-icon>
-          </button>
+        <div class="dl-actions">
+          <ui-view-toggle *ngIf="predefinedRows.length > 0"
+                          [mode]="viewMode"
+                          (modeChange)="setViewMode($event)">
+          </ui-view-toggle>
         </div>
       </div>
 
-      <div class="dl-table-box" *ngIf="filteredPredefinedRows.length; else noPredefinedMatches">
-        <ui-table [columns]="predefinedColumns" [rows]="pagedPredefinedRows" trackByKey="classIdentifier">
-          <ng-template uiTableCell="riskRank" let-row>
-            <span class="dl-rank-badge" [class.high-risk]="row.predictedLabel === 1">#{{ row.riskRank }}</span>
-          </ng-template>
-          <ng-template uiTableCell="defectProbability" let-row>
-            <div class="dl-prob-cell">
-              <span class="dl-prob-val">{{ row.defectProbability | number:'1.4-4' }}</span>
-              <div class="dl-prob-track">
-                <span class="dl-prob-fill" [style.width.%]="row.defectProbability * 100" [class.buggy]="row.predictedLabel === 1"></span>
-              </div>
-            </div>
-          </ng-template>
-          <ng-template uiTableCell="predictedLabel" let-row>
-            <ui-badge [tone]="row.predictedLabel === 1 ? 'amber' : 'neutral'">
-              {{ row.predictedLabel === 1 ? 'Buggy (1)' : 'Clean (0)' }}
-            </ui-badge>
-          </ng-template>
-          <ng-template uiTableCell="actualLabel" let-row>
-            <ui-badge *ngIf="row.actualLabel !== null; else noActualPredefined"
-                      [tone]="row.actualLabel === 1 ? 'red' : 'green'">
-              {{ row.actualLabel === 1 ? 'Buggy (1)' : 'Clean (0)' }}
-            </ui-badge>
-            <ng-template #noActualPredefined>—</ng-template>
-          </ng-template>
-        </ui-table>
-        <ui-pagination [total]="filteredPredefinedRows.length" [page]="predefinedPage" [pageSize]="predefinedPageSize" noun="files"
-                       (pageChange)="onPredefinedPageChange($event)" (pageSizeChange)="onPredefinedPageSizeChange($event)">
-        </ui-pagination>
+      <!-- Treemap View -->
+      <div *ngIf="viewMode === 'treemap'">
+        <ui-treemap
+          [items]="predefinedTreemapItems"
+          [title]="(predefinedRun.targetDataset.displayName || 'Predefined Target') + ' — Defect Hotspot Treemap'"
+          subtitle="Box Size: LOC & Defect Rank · Color: Defect Probability"
+        ></ui-treemap>
       </div>
-      <ng-template #noPredefinedMatches>
-        <ui-state kind="empty" message="No files match the current filter or search criteria."></ui-state>
-      </ng-template>
+
+      <!-- Table View -->
+      <ng-container *ngIf="viewMode === 'table'">
+        <div class="dl-table-toolbar">
+          <ui-search-bar
+            placeholder="Search by file or class identifier…"
+            [query]="predefinedSearch"
+            (queryChange)="onPredefinedSearch($event)">
+          </ui-search-bar>
+        </div>
+
+        <div class="dl-table-box" *ngIf="filteredPredefinedRows.length; else noPredefinedMatches">
+          <ui-table [columns]="predefinedColumns" [rows]="pagedPredefinedRows" trackByKey="classIdentifier">
+            <ng-template uiTableCell="riskRank" let-row>
+              <span class="dl-rank-badge" [class.high-risk]="row.predictedLabel === 1">#{{ row.riskRank }}</span>
+            </ng-template>
+            <ng-template uiTableCell="defectProbability" let-row>
+              <div class="dl-prob-cell">
+                <span class="dl-prob-val">{{ row.defectProbability | number:'1.4-4' }}</span>
+                <div class="dl-prob-track">
+                  <span class="dl-prob-fill" [style.width.%]="row.defectProbability * 100" [class.buggy]="row.predictedLabel === 1"></span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template uiTableCell="predictedLabel" let-row>
+              <span class="dl-status-cell" [class.danger]="row.predictedLabel === 1" [class.muted]="row.predictedLabel !== 1">
+                <span class="dl-status-dot"></span>
+                {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}
+              </span>
+            </ng-template>
+            <ng-template uiTableCell="actualLabel" let-row>
+              <span *ngIf="row.actualLabel !== null; else noActualPredefined"
+                    class="dl-status-cell" [class.danger]="row.actualLabel === 1" [class.clean]="row.actualLabel === 0">
+                <span class="dl-status-dot"></span>
+                {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
+              </span>
+              <ng-template #noActualPredefined><span style="color: var(--muted);">—</span></ng-template>
+            </ng-template>
+          </ui-table>
+          <ui-pagination [total]="filteredPredefinedRows.length" [page]="predefinedPage" [pageSize]="predefinedPageSize" noun="files"
+                         (pageChange)="onPredefinedPageChange($event)" (pageSizeChange)="onPredefinedPageSizeChange($event)">
+          </ui-pagination>
+        </div>
+        <ng-template #noPredefinedMatches>
+          <ui-state kind="empty" message="No files match the current filter or search criteria."></ui-state>
+        </ng-template>
+      </ng-container>
     </div>
 
     <!-- Matched Target Comparison Tab -->
@@ -323,16 +300,11 @@
           </button>
         </div>
 
-        <div class="dl-table-search-box">
-          <span class="dl-search-icon">
-            <ui-icon name="search" [size]="14"></ui-icon>
-          </span>
-          <input type="text" placeholder="Search by file identifier…"
-                 [value]="matchedSearch" (input)="onMatchedSearch($any($event.target).value)" />
-          <button type="button" *ngIf="matchedSearch" class="dl-search-clear" (click)="onMatchedSearch('')">
-            <ui-icon name="close" [size]="12"></ui-icon>
-          </button>
-        </div>
+        <ui-search-bar
+          placeholder="Search by file identifier…"
+          [query]="matchedSearch"
+          (queryChange)="onMatchedSearch($event)">
+        </ui-search-bar>
       </div>
 
       <div class="dl-grid dl-grid-3 dl-matched-summary-grid">
@@ -347,31 +319,45 @@
       <div class="dl-table-box" *ngIf="filteredMatchedRows.length; else noMatchedMatches">
         <ui-table [columns]="matchedColumns" [rows]="pagedMatchedRows" trackByKey="identifier">
           <ng-template uiTableCell="manualPrediction" let-row>
-            <ui-badge [tone]="row.manualPrediction === 1 ? 'amber' : 'neutral'">{{ row.manualPrediction === 1 ? 'Buggy (1)' : 'Clean (0)' }}</ui-badge>
+            <span class="dl-status-cell" [class.danger]="row.manualPrediction === 1" [class.muted]="row.manualPrediction !== 1">
+              <span class="dl-status-dot"></span>
+              {{ row.manualPrediction === 1 ? 'Buggy' : 'Clean' }}
+            </span>
           </ng-template>
           <ng-template uiTableCell="predefinedPrediction" let-row>
-            <ui-badge [tone]="row.predefinedPrediction === 1 ? 'amber' : 'neutral'">{{ row.predefinedPrediction === 1 ? 'Buggy (1)' : 'Clean (0)' }}</ui-badge>
+            <span class="dl-status-cell" [class.danger]="row.predefinedPrediction === 1" [class.muted]="row.predefinedPrediction !== 1">
+              <span class="dl-status-dot"></span>
+              {{ row.predefinedPrediction === 1 ? 'Buggy' : 'Clean' }}
+            </span>
           </ng-template>
           <ng-template uiTableCell="actualLabel" let-row>
-            <ui-badge *ngIf="row.actualLabel !== null; else noActualMatched" [tone]="row.actualLabel === 1 ? 'red' : 'green'">
-              {{ row.actualLabel === 1 ? 'Buggy (1)' : 'Clean (0)' }}
-            </ui-badge>
-            <ng-template #noActualMatched>—</ng-template>
+            <span *ngIf="row.actualLabel !== null; else noActualMatched"
+                  class="dl-status-cell" [class.danger]="row.actualLabel === 1" [class.clean]="row.actualLabel === 0">
+              <span class="dl-status-dot"></span>
+              {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
+            </span>
+            <ng-template #noActualMatched><span style="color: var(--muted);">—</span></ng-template>
           </ng-template>
           <ng-template uiTableCell="manualResult" let-row>
-            <ui-badge [tone]="row.manualCorrect === null ? 'amber' : (row.manualCorrect ? 'green' : 'red')">
+            <span *ngIf="row.manualCorrect !== null; else noManualResult"
+                  class="dl-status-cell" [class.clean]="row.manualCorrect" [class.danger]="!row.manualCorrect">
+              <span class="dl-status-dot"></span>
               {{ correctness(row.manualCorrect) }}
-            </ui-badge>
+            </span>
+            <ng-template #noManualResult><span style="color: var(--muted);">—</span></ng-template>
           </ng-template>
           <ng-template uiTableCell="predefinedResult" let-row>
-            <ui-badge [tone]="row.predefinedCorrect === null ? 'amber' : (row.predefinedCorrect ? 'green' : 'red')">
+            <span *ngIf="row.predefinedCorrect !== null; else noPredefinedResult"
+                  class="dl-status-cell" [class.clean]="row.predefinedCorrect" [class.danger]="!row.predefinedCorrect">
+              <span class="dl-status-dot"></span>
               {{ correctness(row.predefinedCorrect) }}
-            </ui-badge>
+            </span>
+            <ng-template #noPredefinedResult><span style="color: var(--muted);">—</span></ng-template>
           </ng-template>
           <ng-template uiTableCell="modelsAgree" let-row>
-            <ui-badge [tone]="row.modelsAgree ? 'green' : 'amber'">
+            <span class="dl-tag-mono" [style.color]="row.modelsAgree ? '#10b981' : '#f59e0b'">
               {{ row.modelsAgree ? 'Yes' : 'No' }}
-            </ui-badge>
+            </span>
           </ng-template>
         </ui-table>
         <ui-pagination [total]="filteredMatchedRows.length" [page]="matchedPage" [pageSize]="matchedPageSize" noun="matched files"

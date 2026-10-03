@@ -158,8 +158,10 @@ export class DefectLabApiService {
       { ...this.options, params });
   }
 
-  predictionDownloadUrl(id: number): string {
-    return `${this.api}/predictions/${id}/prediction.csv`;
+  predictionDownloadUrl(id: number, format: 'csv' | 'arff' = 'csv'): string {
+    return format === 'arff'
+      ? `${this.api}/predictions/${id}/prediction.arff`
+      : `${this.api}/predictions/${id}/prediction.csv`;
   }
 
   deletePredictionRun(id: number): Observable<unknown> {

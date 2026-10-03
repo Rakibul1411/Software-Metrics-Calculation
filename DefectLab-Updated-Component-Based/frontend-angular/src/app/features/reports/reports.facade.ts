@@ -47,7 +47,7 @@ export class ReportsFacade {
     { key: 'source', label: 'Source' },
     { key: 'targets', label: 'Targets' },
     { key: 'model', label: 'Model' },
-    { key: 'created', label: 'Created at' },
+    { key: 'created', label: 'Created' },
     { key: 'view', label: 'Actions', sticky: 'end', className: 'dl-col-actions', width: '8%' }
   ];
 
@@ -78,21 +78,27 @@ export class ReportsFacade {
 
   constructor(private readonly api: DefectLabApiService) {}
 
-  /** Only groups holding both a MANUAL and a PREDEFINED run are reportable. */
+  /** Returns reportable groups. Complete dual-target groups are prioritized; all valid groups with runs can be viewed. */
   listReportableGroups(): Observable<PredictionRunGroup[]> {
     return this.api.listPredictionGroups().pipe(
-      switchMap(groups => of(groups.filter(group => this.isComplete(group)))));
+      switchMap(groups => {
+        const complete = groups.filter(group => this.isComplete(group));
+        if (complete.length > 0) {
+          return of(complete);
+        }
+        return of(groups.filter(group => group.runs && group.runs.length > 0));
+      }));
   }
 
-  /** Resolves one report end to end: group lookup, both runs, then matching. */
+  /** Resolves one report end to end: group lookup, runs, then matching. */
   detail(key: string): Observable<ReportDetailView> {
     return this.api.listPredictionGroups().pipe(
       switchMap(groups => {
         const group = groups.find(
-          item => this.groupKey(item) === key && this.isComplete(item));
-        if (!group) {
+          item => this.groupKey(item) === key);
+        if (!group || !group.runs.length) {
           return throwError(() => new Error(
-            'A report requires both MANUAL and PREDEFINED target runs.'));
+            'Prediction report not found or has no executed runs.'));
         }
         const requests = group.runs.map(
           run => this.api.predictions(run.id, false, ReportsFacade.MAX_ROWS));
@@ -154,12 +160,23 @@ export class ReportsFacade {
   }
 
   /**
-   * AEEEM rows are keyed by synthetic row ids rather than class names, so the
-   * two targets share no file identifiers and the side-by-side match is only
-   * meaningful for PROMISE.
+   * Matches apply when paired runs have matching class/file identifiers
+   * (including AEEEM datasets that contain class names), or by default for PROMISE.
    */
   supportsIdentifierMatching(view: ReportDetailView | null): boolean {
-    return view?.group.runs[0]?.modelConfig.datasetFamily === 'PROMISE';
+    if (!view) {
+      return false;
+    }
+    if (view.matchedRows && view.matchedRows.length > 0) {
+      return true;
+    }
+    const family = view.group.runs[0]?.modelConfig.datasetFamily;
+    if (family === 'PROMISE') {
+      return true;
+    }
+    const hasManualIds = view.manualRows?.some(r => r.classIdentifier && !r.classIdentifier.startsWith('row_'));
+    const hasPredefinedIds = view.predefinedRows?.some(r => r.classIdentifier && !r.classIdentifier.startsWith('row_'));
+    return !!hasManualIds && !!hasPredefinedIds;
   }
 
   label(value: number): string {
@@ -178,8 +195,12 @@ export class ReportsFacade {
     return value ? 'Correct' : 'Wrong';
   }
 
-  predictionDownloadUrl(id: number): string {
-    return this.api.predictionDownloadUrl(id);
+  predictionDownloadUrl(id: number, format: 'csv' | 'arff' = 'csv'): string {
+    return this.api.predictionDownloadUrl(id, format);
+  }
+
+  datasetDownloadUrl(id: number, format: 'csv' | 'arff' = 'arff'): string {
+    return this.api.datasetDownloadUrl(id, format);
   }
 
   reportDownloadUrl(id: number): string {
@@ -221,17 +242,28 @@ export class ReportsFacade {
     predefinedRows: PredictionRow[]
   ): MatchedPredictionRow[] {
     const predefinedByIdentifier = new Map<string, PredictionRow>();
+    const predefinedBySimpleName = new Map<string, PredictionRow>();
     for (const row of predefinedRows) {
       const key = this.normalizeIdentifier(row.classIdentifier);
-      if (key && !predefinedByIdentifier.has(key)) {
+      if (key && !key.startsWith('row_') && !predefinedByIdentifier.has(key)) {
         predefinedByIdentifier.set(key, row);
+      }
+      const simple = this.simpleName(row.classIdentifier);
+      if (simple && !simple.startsWith('row_') && !predefinedBySimpleName.has(simple)) {
+        predefinedBySimpleName.set(simple, row);
       }
     }
 
     const result: MatchedPredictionRow[] = [];
     for (const manual of manualRows) {
-      const predefined = predefinedByIdentifier.get(
-        this.normalizeIdentifier(manual.classIdentifier));
+      const normKey = this.normalizeIdentifier(manual.classIdentifier);
+      let predefined = predefinedByIdentifier.get(normKey);
+      if (!predefined) {
+        const simple = this.simpleName(manual.classIdentifier);
+        if (simple && !simple.startsWith('row_')) {
+          predefined = predefinedBySimpleName.get(simple);
+        }
+      }
       if (!predefined) {
         continue;
       }
@@ -249,10 +281,23 @@ export class ReportsFacade {
     return result;
   }
 
+  private simpleName(value: string): string {
+    const cleaned = (value || '').trim()
+      .replace(/\\/g, '/')
+      .replace(/::/g, '/')
+      .replace(/\.java$/, '')
+      .replace(/\./g, '/')
+      .replace(/\s+/g, '');
+    const parts = cleaned.split('/');
+    return parts[parts.length - 1] || '';
+  }
+
   private normalizeIdentifier(value: string): string {
     return (value || '').trim().toLowerCase()
       .replace(/\\/g, '/')
+      .replace(/::/g, '/')
       .replace(/\.java$/, '')
+      .replace(/\./g, '/')
       .replace(/\s+/g, '');
   }
 

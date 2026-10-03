@@ -1,30 +1,39 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header">
-    <div class="dl-detail-title-row">
-      <div class="dl-heading-search">
-        <h2>Prediction reports</h2>
-        <ui-search-toggle label="Search reports" placeholder="Group, source or target"
-            [query]="search" (queryChange)="search = $event">
-        </ui-search-toggle>
-      </div>
+  <ui-page-header title="Prediction Reports">
+    <ui-button header-actions icon="plus" link="/defect-predictions/new">
+      Run Prediction
+    </ui-button>
+  </ui-page-header>
+
+  <div class="dl-table-toolbar">
+    <div class="dl-table-search-box">
+      <span class="dl-search-icon">
+        <ui-icon name="search" [size]="14"></ui-icon>
+      </span>
+      <input type="text" placeholder="Search reports by group, source, or target…"
+             [ngModel]="search" (ngModelChange)="search = $event; resetPage()">
     </div>
   </div>
 
-  <div class="dl-fill">
+  <div class="dl-detail-section dl-fill">
     <ui-state *ngIf="loading" kind="loading" message="Loading reports…"></ui-state>
     <div class="dl-table-box" *ngIf="!loading && filtered.length; else empty">
       <ui-table [columns]="columns" [rows]="pageRows">
         <ng-template uiTableCell="group" let-row>
-          <span [title]="row.comparisonGroupId || ''">{{ groupLabel(row) }}</span>
+          <span [title]="row.comparisonGroupId || ''" class="dl-mono" style="font-weight: 600;">{{ groupLabel(row) }}</span>
+          <span *ngIf="row.runs.length > 1" class="dl-tag-mono" style="margin-left: 6px; font-size: 10px;">
+            Dual Target
+          </span>
         </ng-template>
-        <ng-template uiTableCell="source" let-row>{{ row.runs[0].sourceDataset.displayName }}</ng-template>
+        <ng-template uiTableCell="source" let-row><strong>{{ row.runs[0].sourceDataset.displayName }}</strong></ng-template>
         <ng-template uiTableCell="targets" let-row>{{ targetNames(row) }}</ng-template>
         <ng-template uiTableCell="model" let-row>{{ row.runs[0].modelConfig.modelName }}</ng-template>
-        <ng-template uiTableCell="created" let-row>{{ row.runs[0].createdAt | date:'mediumDate' }}</ng-template>
+        <ng-template uiTableCell="created" let-row><span class="dl-mono" style="color: var(--muted); font-size: 12px;">{{ row.runs[0].createdAt | date:'mediumDate' }}</span></ng-template>
         <ng-template uiTableCell="view" let-row>
           <ui-button variant="ghost" size="sm" icon="view"
-                     title="View report details" ariaLabel="View report details"
-                     (pressed)="view(row)"></ui-button>
+                     [link]="['/prediction-reports', groupKey(row)]"
+                     (pressed)="view(row)"
+                     title="View report details & Hotspot Treemap" ariaLabel="View report details"></ui-button>
         </ng-template>
       </ui-table>
       <ui-pagination [total]="filtered.length" [page]="page" [pageSize]="pageSize" noun="reports"
@@ -32,9 +41,21 @@
       </ui-pagination>
     </div>
     <ng-template #empty>
-      <ui-state *ngIf="!loading" kind="empty"
-                [message]="groups.length ? 'No matching reports.' : 'No complete dual-target prediction reports yet.'">
-      </ui-state>
+      <ui-empty-state *ngIf="!loading"
+        icon="chart"
+        [title]="groups.length ? 'No matching reports found' : 'No Prediction Reports Available'"
+        [description]="groups.length
+           ? 'Try searching with another keyword or clear the search filter.'
+           : 'Run a model prediction to generate cross-project evaluation reports, agreement statistics, and architectural treemaps.'">
+        <div class="dl-empty-card-actions" *ngIf="!groups.length">
+          <ui-button icon="plus" link="/defect-predictions/new">
+            Run Prediction Now
+          </ui-button>
+          <ui-button variant="ghost" icon="chart" link="/metric-storage">
+            View Metric Storage
+          </ui-button>
+        </div>
+      </ui-empty-state>
     </ng-template>
   </div>
 </ui-card>

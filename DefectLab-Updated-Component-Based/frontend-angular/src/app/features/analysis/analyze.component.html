@@ -1,11 +1,12 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header">
-    <h2>{{ mode === 'archive' ? 'Analyze Java archive' : 'Analyze GitHub repository' }}</h2>
-    <p>Extracted metrics are saved to Metric Storage automatically.</p>
-  </div>
+  <ui-page-header
+    parentLabel="Workspace"
+    [parentLink]="['/dashboard']"
+    [title]="mode === 'archive' ? 'Analyze Java Archive' : 'Analyze GitHub Repository'"
+    currentLabel="Analyze Source">
+  </ui-page-header>
 
-  <div class="dl-detail-section dl-form-fill">
-    <form class="dl-form-stack dl-form-fill" (ngSubmit)="submit()">
+  <form class="dl-form-stack dl-form-fill" (ngSubmit)="submit()">
       <div class="dl-form-row dl-form-row-3">
         <ui-radio-group label="Metric family" [options]="familyOptions"
                          [value]="family" (valueChange)="onFamilyChange($event)">
@@ -45,9 +46,8 @@
       <div class="dl-form-actions">
         <ui-button type="button" variant="ghost" icon="undo" [disabled]="busy" (pressed)="cancel()">Cancel</ui-button>
         <ui-button type="submit" [disabled]="busy || !canSubmit()" [loading]="busy">
-          {{ busy ? 'Extracting metrics…' : 'Extract metrics' }}
+          {{ busy ? ('Extracting metrics… (' + formattedTime + ')') : 'Extract metrics' }}
         </ui-button>
       </div>
     </form>
-  </div>
 </ui-card>

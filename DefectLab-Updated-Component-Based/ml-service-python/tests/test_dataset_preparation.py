@@ -69,3 +69,15 @@ def test_public_aeeem_clean_buggy_labels_are_mapped():
     ]
     prepared = prepare(rows, require_labels=True)
     assert prepared.labels.tolist() == [0, 1]
+
+
+def test_classname_and_file_recognized_as_identifiers():
+    columns = {column: 1.0 for column in aeeem_profile().features}
+    rows = [
+        {"classname": "org.eclipse.mylyn.Foo", "class": "clean", **columns},
+        {"classname": "org.eclipse.mylyn.Bar", "class": "buggy", **columns},
+    ]
+    prepared = prepare(rows, require_labels=True)
+    assert prepared.identifiers == ["org.eclipse.mylyn.Foo", "org.eclipse.mylyn.Bar"]
+    assert prepared.labels.tolist() == [0, 1]
+

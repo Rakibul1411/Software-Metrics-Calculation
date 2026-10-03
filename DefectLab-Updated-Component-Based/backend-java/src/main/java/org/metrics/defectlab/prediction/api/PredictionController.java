@@ -16,6 +16,7 @@ import org.metrics.defectlab.prediction.usecase.GetPredictionRowsUseCase;
 import org.metrics.defectlab.prediction.usecase.GetPredictionRunUseCase;
 import org.metrics.defectlab.prediction.usecase.GetPredictionSummaryUseCase;
 import org.metrics.defectlab.prediction.usecase.ListPredictionRunsUseCase;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -119,6 +120,18 @@ public class PredictionController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"prediction-" + id + "-labeled.csv\"")
                 .body(new FileSystemResource(file.toFile()));
+    }
+
+    @GetMapping("/{id}/prediction.arff")
+    public ResponseEntity<Resource> downloadPredictionArff(
+            @PathVariable("id") Long id, HttpServletRequest request) throws IOException {
+        byte[] arff = getPredictionArtifactUseCase.predictionArff(
+                currentUser.requireUserId(request), id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/plain"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"prediction-" + id + "-labeled.arff\"")
+                .body(new ByteArrayResource(arff));
     }
 
     @GetMapping("/{id}/report.pdf")

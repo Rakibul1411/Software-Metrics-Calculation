@@ -28,7 +28,6 @@
               [class.dl-chart-mark-active]="hovered?.key === mark.key"
               (mouseenter)="show(mark)" (mouseleave)="hide()"
               (focus)="show(mark)" (blur)="hide()">
-          <title>{{ mark.category }} · {{ mark.series }}: {{ mark.text }}</title>
         </path>
 
         <text *ngIf="mark.label"

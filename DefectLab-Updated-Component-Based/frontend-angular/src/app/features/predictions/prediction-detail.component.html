@@ -1,14 +1,20 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header dl-detail-header-grid">
-    <nav class="dl-breadcrumb">
-      <a (click)="back()">Predictions</a>
-      <ui-icon name="chevron-right" [size]="14"></ui-icon>
-    </nav>
-    <h2>{{ run ? ('Run #' + run.id) : 'Prediction run' }}</h2>
-    <div class="dl-actions" *ngIf="run as item">
-      <ui-button *ngIf="item.predictionFileAvailable" variant="ghost" icon="download"
-                 [href]="facade.predictionDownloadUrl(item.id)"
-                 (click)="downloadStarted('Labeled CSV')">Download labeled CSV</ui-button>
+  <ui-page-header
+    parentLabel="Predictions"
+    [parentLink]="['/defect-predictions']"
+    [title]="run ? ('Run #' + run.id + ' · ' + run.targetDataset.displayName) : ''"
+    fallbackTitle="Prediction run"
+    (parentClick)="back()">
+    <ng-container header-badges *ngIf="run as item">
+      <ui-badge [tone]="item.modelConfig.datasetFamily">{{ item.modelConfig.datasetFamily }}</ui-badge>
+      <ui-badge tone="blue">{{ item.modelConfig.modelName }} (K={{ item.modelConfig.k }})</ui-badge>
+    </ng-container>
+    <ng-container header-actions *ngIf="run as item">
+      <ui-download-menu *ngIf="item.predictionFileAvailable" variant="ghost" label="Download dataset"
+                        [csvUrl]="facade.predictionDownloadUrl(item.id, 'csv')"
+                        [arffUrl]="facade.predictionDownloadUrl(item.id, 'arff')"
+                        (downloaded)="downloadStarted('Labeled ' + $event)">
+      </ui-download-menu>
       <ui-button icon="download" [href]="facade.reportDownloadUrl(item.id)"
                  (click)="downloadStarted('PDF report')">Download report</ui-button>
       <ui-delete-action label="Delete" dialogTitle="Delete prediction run"
@@ -16,8 +22,8 @@
           successMessage="Prediction run deleted successfully."
           [deleteFn]="deletePredictionRun" (deleted)="onDeleted()">
       </ui-delete-action>
-    </div>
-  </div>
+    </ng-container>
+  </ui-page-header>
 
   <ui-state *ngIf="loading" kind="loading" message="Loading prediction run…"></ui-state>
 

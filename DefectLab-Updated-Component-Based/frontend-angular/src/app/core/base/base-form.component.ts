@@ -4,7 +4,7 @@ import { BaseComponent } from './base.component';
 
 /** Optional hooks around a submit; errors already surface as global toasts. */
 export interface SubmitOptions<T> {
-  success: string;
+  success: string | ((result: T) => string);
   redirect?: unknown[];
   onSuccess?: (result: T) => void;
   /** Runs after success and after failure -- for releasing external state. */
@@ -41,7 +41,12 @@ export abstract class BaseFormComponent extends BaseComponent {
         this.busy = false;
         options.onSettled?.();
         options.onSuccess?.(result);
-        this.toast.success(options.success);
+        const successMessage = typeof options.success === 'function'
+          ? options.success(result)
+          : options.success;
+        if (successMessage) {
+          this.toast.success(successMessage);
+        }
         if (options.redirect) {
           this.navigateTo(options.redirect);
         }

@@ -1,15 +1,21 @@
 import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { BaseDetailComponent } from '../../core/base';
 import {
+  DatasetPreview,
   EvaluationMetrics,
   MetricValue,
   PredictionRow,
   PredictionRunGroup,
   PredictionRunSummary
 } from '../../core/models/defectlab.model';
+import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
 import { MatchedPredictionRow, ReportDetailView, ReportsFacade } from './reports.facade';
+
+import { CodeSmellService } from '../../core/services/code-smell.service';
+import { ClassAnalysisResult } from '../../core/models/code-smell.model';
 
 @Component({
   selector: 'app-report-detail',
@@ -17,12 +23,37 @@ import { MatchedPredictionRow, ReportDetailView, ReportsFacade } from './reports
   templateUrl: './report-detail.component.html'
 })
 export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView, string> {
-  protected readonly listRoute = ['/reports'];
+  protected readonly listRoute = ['/prediction-reports'];
   protected readonly missingMessage = 'The report group was not specified.';
   protected override readonly routeParam = 'groupKey';
 
-  constructor(readonly facade: ReportsFacade) {
+  viewMode: 'table' | 'treemap' = 'table';
+  manualDatasetRows: Array<Record<string, string | number>> = [];
+  predefinedDatasetRows: Array<Record<string, string | number>> = [];
+
+  manualTreemapItems: ClassAnalysisResult[] = [];
+  predefinedTreemapItems: ClassAnalysisResult[] = [];
+
+  constructor(
+    readonly facade: ReportsFacade,
+    readonly codeSmellService: CodeSmellService,
+    private readonly api: DefectLabApiService
+  ) {
     super();
+  }
+
+  setViewMode(mode: 'table' | 'treemap'): void {
+    this.viewMode = mode;
+  }
+
+  updateTreemapItems(view?: ReportDetailView): void {
+    const v = view || this.item;
+    const mRows = v?.manualRows ?? [];
+    const pRows = v?.predefinedRows ?? [];
+    this.manualTreemapItems = this.codeSmellService.parsePredictionWithDatasetRows(
+      mRows, this.manualDatasetRows);
+    this.predefinedTreemapItems = this.codeSmellService.parsePredictionWithDatasetRows(
+      pRows, this.predefinedDatasetRows);
   }
 
   get manualColumns() {
@@ -229,10 +260,10 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     return this.predefinedRun?.evaluation ?? null;
   }
 
-  /** The identifier-joined panel only applies to PROMISE report groups. */
+  /** The identifier-joined panel applies when both runs share matching class/file identifiers. */
   get showMatchedComparison(): boolean {
     return !!this.manualRun && !!this.predefinedRun
-      && this.facade.supportsIdentifierMatching(this.item);
+      && (this.matchedRows.length > 0 || this.facade.supportsIdentifierMatching(this.item));
   }
 
   get manualCorrectCount(): number {
@@ -267,11 +298,73 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     return this.facade.correctness(value);
   }
 
-  protected fetch(key: string): Observable<ReportDetailView> {
+  override load(key: string): void {
     this.manualPage = 1;
     this.predefinedPage = 1;
     this.matchedPage = 1;
-    return this.facade.detail(key);
+    this.manualDatasetRows = [];
+    this.predefinedDatasetRows = [];
+    super.load(key);
+  }
+
+  private clampPages(): void {
+    const maxManual = Math.max(1, Math.ceil(this.filteredManualRows.length / this.manualPageSize));
+    if (this.manualPage > maxManual) this.manualPage = maxManual;
+
+    const maxPredefined = Math.max(1, Math.ceil(this.filteredPredefinedRows.length / this.predefinedPageSize));
+    if (this.predefinedPage > maxPredefined) this.predefinedPage = maxPredefined;
+
+    const maxMatched = Math.max(1, Math.ceil(this.filteredMatchedRows.length / this.matchedPageSize));
+    if (this.matchedPage > maxMatched) this.matchedPage = maxMatched;
+  }
+
+  protected override fetch(key: string): Observable<ReportDetailView> {
+    return this.facade.detail(key).pipe(
+      tap(view => {
+        if (!this.item) {
+          if (!view.manualRun && view.predefinedRun) {
+            this.activeTab = 'predefined';
+          } else if (view.manualRun && !view.predefinedRun) {
+            this.activeTab = 'manual';
+          }
+        }
+        this.updateTreemapItems(view);
+        this.clampPages();
+        if (view.manualRun?.targetDataset?.id && !this.manualDatasetRows.length) {
+          this.api.previewDataset(view.manualRun.targetDataset.id, 0, 5000).subscribe({
+            next: preview => {
+              this.manualDatasetRows = this.toDictRows(preview);
+              this.updateTreemapItems(view);
+            },
+            error: () => {}
+          });
+        }
+        if (view.predefinedRun?.targetDataset?.id && !this.predefinedDatasetRows.length) {
+          this.api.previewDataset(view.predefinedRun.targetDataset.id, 0, 5000).subscribe({
+            next: preview => {
+              this.predefinedDatasetRows = this.toDictRows(preview);
+              this.updateTreemapItems(view);
+            },
+            error: () => {}
+          });
+        }
+      })
+    );
+  }
+
+  private toDictRows(preview: DatasetPreview): Array<Record<string, string | number>> {
+    if (!preview?.headers || !preview?.rows) return [];
+    return preview.rows.map(rowVals => {
+      const obj: Record<string, string | number> = {};
+      preview.headers.forEach((h, i) => {
+        const val = rowVals[i];
+        const num = Number(val);
+        const parsed = !isNaN(num) && val !== '' && val !== null && val !== undefined ? num : val;
+        obj[h] = parsed;
+        obj[h.toLowerCase()] = parsed;
+      });
+      return obj;
+    });
   }
 
   /** Report groups are addressed by a string key rather than a numeric id. */

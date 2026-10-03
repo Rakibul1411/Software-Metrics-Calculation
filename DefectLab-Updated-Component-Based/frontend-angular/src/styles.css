@@ -1,25 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 /* ---------------------------------------------------------------------------
    Design tokens.
 
-   One typeface everywhere — labels, titles, metric values, identifiers,
-   everything. --font-mono keeps its own token (tables still ask for
-   tabular-nums so digits line up in a column) but now resolves to the same
-   stack rather than a separate monospace family.
-
-   Roboto is primary; the fallback chain is deliberately just Inter, SF Pro
-   (via its -apple-system/BlinkMacSystemFont aliases), Poppins, and Source
-   Sans 3 — the other modern UI sans-serifs it's paired with — rather than
-   generic OS keywords.
+   One standard typeface everywhere — labels, titles, metric values,
+   identifiers, everything. Inter is primary for all UI, headings, and body;
+   JetBrains Mono is primary for metrics, tables, and code identifiers.
 --------------------------------------------------------------------------- */
 
 :root {
   color-scheme: light;
 
-  --font-body: Roboto, Inter, -apple-system, BlinkMacSystemFont, Poppins, "Source Sans 3", sans-serif;
-  --font-heading: var(--font-body);
-  --font-mono: var(--font-body);
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-body: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* 4px base scale — every margin, padding and gap resolves to one of these. */
+  /* 4px base scale */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -30,62 +27,58 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --radius-pill: 999px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
 
-  --ink: #1b2630;
-  --ink-heading: #101a22;
-  /* Secondary greys are stepped to the contrast their dark-mode counterparts
-     already have. The previous light values sat around 4.7:1 against white
-     where dark mode's read 5.6–9.2:1, which is why labels, axis text and the
-     sidebar looked washed out in light mode and solid in dark. */
-  --muted: #556270;
-  --text-secondary: #44505b;
+  /* GitHub & Linear Standard Light Palette */
+  --ink: #1f2328;            /* neutral high-contrast reading text */
+  --ink-heading: #1f2328;    /* crisp authoritative titles */
+  --muted: #656d76;          /* balanced secondary labels */
+  --text-secondary: #656d76;
 
-  --line: #e1e7eb;
-  --line-strong: #cad3da;
-  --surface: #ffffff;
-  --surface-alt: #f8fafb;
-  --surface-alt-2: #f3f6f8;
-  --surface-muted: #eef2f5;
+  --line: #d0d7de;           /* crisp, visible hairline borders */
+  --line-strong: #afb8c1;
+  --surface: #ffffff;        /* pure white cards */
+  --surface-alt: #f6f8fa;    /* subtle light gray for tiles & table headers */
+  --surface-alt-2: #eaeef2;  /* elevated dropdowns, tags, pills */
+  --surface-muted: #d0d7de;
   --input-bg: #ffffff;
-  --canvas: #f5f7f9;
+  --canvas: #f6f8fa;         /* soft, calm developer workbench canvas */
 
-  --accent: #2563eb;
-  --accent-dark: #1d4ed8;
-  /* Fill colour for large solid surfaces (primary button, brand mark). Kept
-     separate from --accent because the two have opposite needs on dark: accent
-     must stay bright to read as text/icon, a fill must stay calm to not glare. */
-  --accent-solid: #2563eb;
-  --accent-solid-hover: #1d4ed8;
-  --accent-soft: #edf3ff;
-  --accent-soft-strong: #bfd0fb;
-  --accent-soft-bg-2: #f4f7ff;
-  --accent-ink: #1d4fbf;
-  --accent-muted: #5f6f91;
-  --accent-border: rgba(37, 99, 235, .18);
+  /* Unified Brand Identity: Calibrated Developer Sapphire Blue */
+  --accent: #0969da;
+  --accent-dark: #085cc1;
+  --accent-solid: #0969da;
+  --accent-solid-hover: #085cc1;
+  --accent-soft: rgba(9, 105, 218, 0.08);
+  --accent-soft-strong: rgba(9, 105, 218, 0.16);
+  --accent-soft-bg-2: #f6f8fa;
+  --accent-ink: #0969da;
+  --accent-muted: #54aeff;
+  --accent-border: rgba(9, 105, 218, 0.25);
 
-  --danger-bg: #fdf4f3;
-  --danger-border: #eec9c5;
-  --danger-text: #9a453f;
-  --danger-soft-bg: #fceeec;
-  --danger-strong: #ad4d45;
+  /* Semantic Quality Status Tokens */
+  --danger-bg: rgba(207, 34, 46, 0.08);
+  --danger-border: rgba(207, 34, 46, 0.25);
+  --danger-text: #cf222e;
+  --danger-soft-bg: rgba(207, 34, 46, 0.12);
+  --danger-strong: #cf222e;
 
-  --warning-bg: #fdf9f0;
-  --warning-border: #e6d6ad;
-  --warning-text: #77601f;
+  --warning-bg: rgba(154, 103, 0, 0.08);
+  --warning-border: rgba(154, 103, 0, 0.25);
+  --warning-text: #9a6700;
 
-  --header-bg: rgba(250, 251, 252, .85);
-  --header-border: rgba(220, 227, 232, .9);
-  --disabled-bg: #d3dade;
-  --disabled-text: #6e7a85;
-  --shadow-sm: 0 1px 2px rgba(20, 30, 40, .04);
-  --shadow-card: 0 1px 2px rgba(20, 30, 40, .04), 0 12px 32px rgba(20, 30, 40, .05);
-  --focus-ring: rgba(37, 99, 235, .18);
-  --accent-shadow: rgba(37, 99, 235, .22);
+  --header-bg: rgba(255, 255, 255, 0.88);
+  --header-border: #d0d7de;
+  --disabled-bg: #f6f8fa;
+  --disabled-text: #8c959f;
+  --shadow-sm: 0 1px 2px 0 rgba(31, 35, 40, 0.04);
+  --shadow-card: 0 1px 3px 0 rgba(31, 35, 40, 0.05);
+  --focus-ring: rgba(9, 105, 218, 0.2);
+  --accent-shadow: rgba(9, 105, 218, 0.15);
 
   font-family: var(--font-body);
 }
@@ -93,55 +86,51 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  /* Headings sit dimmer than pure white on purpose: a near-white bold headline
-     against a near-black surface reads as glare, not as emphasis. */
-  --ink: #ccd5dc;
-  --ink-heading: #dbe2e8;
-  --muted: #8794a0;
-  --text-secondary: #b3bec7;
+  /* GitHub & Linear Standard Dark Palette */
+  --ink: #c9d1d9;            /* standard high-contrast, comfortable neutral reading text */
+  --ink-heading: #f0f6fc;    /* crisp clean neutral white */
+  --muted: #8b949e;          /* standard neutral secondary / metadata */
+  --text-secondary: #8b949e;
 
-  --line: #222b33;
-  --line-strong: #2f3a44;
-  --surface: #151b22;
-  --surface-alt: #191f27;
-  --surface-alt-2: #1c242c;
-  --surface-muted: #1f2831;
-  --input-bg: #10161c;
-  --canvas: #0d1217;
+  --line: #30363d;           /* standard crisp neutral hairline border */
+  --line-strong: #484f58;
+  --surface: #161b22;        /* standard neutral card surface */
+  --surface-alt: #0d1117;    /* subtle inset for tiles inside cards */
+  --surface-alt-2: #21262d;  /* elevated dropdowns, tags, pills */
+  --surface-muted: #21262d;
+  --input-bg: #0d1117;       /* neutral inset input */
+  --canvas: #0d1117;         /* single unified dark canvas */
 
-  --accent: #7ea2ff;
-  --accent-dark: #6b91ed;
-  /* Deeper and less chromatic than --accent: as a full-width fill the bright
-     mint reads as neon. 4.6:1 against white label text. */
-  --accent-solid: #315fc2;
-  --accent-solid-hover: #3a69d1;
-  --accent-soft: rgba(126, 162, 255, .11);
-  --accent-soft-strong: rgba(126, 162, 255, .32);
-  --accent-soft-bg-2: rgba(126, 162, 255, .07);
-  --accent-ink: #9ab5ff;
-  --accent-muted: #9aa9c6;
-  --accent-border: rgba(126, 162, 255, .26);
+  /* Cohesive Brand in Dark Theme (Grounded Developer Blue - GitHub standard) */
+  --accent: #2f81f7;         /* developer blue */
+  --accent-dark: #58a6ff;
+  --accent-solid: #1f6feb;
+  --accent-solid-hover: #388bfd;
+  --accent-soft: rgba(56, 139, 253, 0.12);
+  --accent-soft-strong: rgba(56, 139, 253, 0.22);
+  --accent-soft-bg-2: rgba(56, 139, 253, 0.06);
+  --accent-ink: #79c0ff;
+  --accent-muted: #58a6ff;
+  --accent-border: rgba(56, 139, 253, 0.3);
 
-  --danger-bg: rgba(220, 100, 88, .09);
-  --danger-border: rgba(220, 100, 88, .3);
-  --danger-text: #dd8378;
-  --danger-soft-bg: rgba(220, 100, 88, .13);
-  --danger-strong: #dd8378;
+  --danger-bg: rgba(248, 81, 73, 0.1);
+  --danger-border: rgba(248, 81, 73, 0.28);
+  --danger-text: #f85149;
+  --danger-soft-bg: rgba(248, 81, 73, 0.16);
+  --danger-strong: #f85149;
 
-  --warning-bg: rgba(208, 165, 78, .09);
-  --warning-border: rgba(208, 165, 78, .3);
-  --warning-text: #d3b476;
+  --warning-bg: rgba(210, 153, 34, 0.1);
+  --warning-border: rgba(210, 153, 34, 0.28);
+  --warning-text: #e3b341;
 
-  --header-bg: rgba(14, 19, 25, .8);
-  --header-border: rgba(34, 43, 51, .9);
-  --disabled-bg: #232c35;
-  --disabled-text: #78848f;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35);
-  --focus-ring: rgba(126, 162, 255, .26);
-  /* Neutral, not a coloured halo — a glow around a saturated fill is what makes
-     it read as neon on a near-black surface. */
-  --accent-shadow: rgba(0, 0, 0, .38);
+  --header-bg: #0d1117;
+  --header-border: #30363d;
+  --disabled-bg: #161b22;
+  --disabled-text: #484f58;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --focus-ring: rgba(56, 139, 253, 0.25);
+  --accent-shadow: rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -179,6 +168,10 @@ html {
   min-width: 320px;
   scroll-behavior: smooth;
   background: var(--canvas);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
@@ -186,16 +179,20 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background: var(--canvas);
+  font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
+  font-family: inherit;
 }
 
 button,

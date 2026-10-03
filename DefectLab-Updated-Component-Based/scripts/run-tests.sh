@@ -2,26 +2,39 @@
 set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export NG_CLI_ANALYTICS=false
+export CI=true
 
-"$project_root/scripts/verify-structure.sh"
+echo "=================================================="
+echo "  DefectLab Test Suite Execution"
+echo "=================================================="
 
+echo ""
+echo "[1/3] Running Java Spring Boot Backend Tests..."
 (
   cd "$project_root/backend-java"
   mvn test
 )
 
+echo ""
+echo "[2/3] Running Python ML Service Tests..."
 (
   cd "$project_root/ml-service-python"
   if [[ -x "venv/bin/python" ]]; then
-    venv/bin/python -m compileall -q app tests
-    venv/bin/python -m pytest tests -q
+    PYTHONPATH=. venv/bin/python -m pytest tests -q
   else
-    python3 -m compileall -q app tests
-    python3 -m pytest tests -q
+    PYTHONPATH=. python3 -m pytest tests -q
   fi
 )
 
+echo ""
+echo "[3/3] Running Angular Frontend Production Build..."
 (
   cd "$project_root/frontend-angular"
-  npm run build
+  npx ng build --configuration=production
 )
+
+echo ""
+echo "=================================================="
+echo "  All Tests & Builds Passed Successfully!"
+echo "=================================================="

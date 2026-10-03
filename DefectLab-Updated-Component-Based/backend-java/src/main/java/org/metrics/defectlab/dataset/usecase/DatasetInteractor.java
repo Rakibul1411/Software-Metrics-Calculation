@@ -112,6 +112,55 @@ public class DatasetInteractor implements UploadDatasetUseCase, RegisterExtracte
                 MetricDataset.Type.PREDEFINED, null);
     }
 
+    @Override
+    @Transactional
+    public MetricDataset updatePredefined(MetricDataset existing, Path source) throws IOException {
+        Path directory = metricsStorage(null, MetricDataset.Type.PREDEFINED);
+        String extension = suffixOf(source.getFileName().toString());
+        Path stored = directory.resolve(storedFileName(MetricDataset.Type.PREDEFINED,
+                existing.getProjectName(), existing.getProjectVersion(), extension));
+        Files.copy(source, stored, StandardCopyOption.REPLACE_EXISTING);
+
+        if (existing.getMetricsFilePath() != null) {
+            Path oldPath = Paths.get(existing.getMetricsFilePath()).toAbsolutePath().normalize();
+            if (!oldPath.equals(stored)) {
+                Files.deleteIfExists(oldPath);
+            }
+        }
+
+        DatasetTable table = datasetFileReader.parse(stored);
+        FeatureProfile profile = FeatureProfile.detect(table.getHeaders()).orElseThrow(
+                () -> new IllegalArgumentException(
+                        "The columns match neither PROMISE (20 predictors) nor "
+                        + "AEEEM (56 predictors). Check the header names."));
+
+        DatasetQuality quality = DatasetQuality.inspect(table, profile);
+        if (!quality.isUsable()) {
+            throw new IllegalArgumentException(
+                    "The dataset failed validation: "
+                    + String.join("; ", quality.getBlockingIssues()));
+        }
+
+        boolean labeled = profile.findLabelColumn(table.getHeaders())
+                .map(column -> hasCompleteUsableLabels(table, column))
+                .orElse(false);
+
+        MetricDataset updated = new MetricDataset(
+                existing.getId(),
+                existing.getUserId(),
+                profile.getFamily(),
+                existing.getProjectName(),
+                existing.getProjectVersion(),
+                existing.getDatasetType(),
+                labeled,
+                table.getRowCount(),
+                profile.getFeatures().size(),
+                stored.toAbsolutePath().normalize().toString(),
+                existing.getCreatedAt());
+
+        return datasetRepository.save(updated);
+    }
+
     private MetricDataset register(
             Long userId,
             String projectName,

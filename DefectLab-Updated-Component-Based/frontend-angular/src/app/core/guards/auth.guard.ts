@@ -1,8 +1,36 @@
-import { Injectable } from '@angular/core';
-import { ActivatedRouteSnapshot, CanActivate, Router } from '@angular/router';
+import { inject, Injectable } from '@angular/core';
+import { ActivatedRouteSnapshot, CanActivate, CanActivateFn, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { SessionService } from '../services/session.service';
+
+/** Modern functional guard for authenticated routes. */
+export const authGuard: CanActivateFn = () => {
+  const session = inject(SessionService);
+  const router = inject(Router);
+  return session.restore().pipe(
+    map(signedIn => {
+      if (!signedIn) {
+        router.navigate(['/login']);
+      }
+      return signedIn;
+    })
+  );
+};
+
+/** Modern functional guard preventing signed-in users from accessing the login screen. */
+export const guestGuard: CanActivateFn = () => {
+  const session = inject(SessionService);
+  const router = inject(Router);
+  return session.restore().pipe(
+    map(signedIn => {
+      if (signedIn) {
+        router.navigate(['/dashboard']);
+      }
+      return !signedIn;
+    })
+  );
+};
 
 @Injectable({ providedIn: 'root' })
 export class AuthGuard implements CanActivate {
@@ -29,7 +57,7 @@ export class GuestGuard implements CanActivate {
     return this.session.restore().pipe(
       map(signedIn => {
         if (signedIn) {
-          this.router.navigate(['/overview']);
+          this.router.navigate(['/dashboard']);
         }
         return !signedIn;
       })

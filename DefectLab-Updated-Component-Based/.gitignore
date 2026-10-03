@@ -1,5 +1,10 @@
 .idea/
 .DS_Store
+**/.DS_Store
+*.log
+
+# Backend build and storage
+backend-java/target/
 backend-java/output/
 backend-java/storage/uploads/
 backend-java/storage/uploaded-folders/
@@ -10,19 +15,32 @@ backend-java/storage/predictions/
 backend-java/storage/comparisons/
 backend-java/storage/*.db
 backend-java/storage/*.mv.db
+
+# Frontend
 frontend-angular/node_modules/
 frontend-angular/dist/
 frontend-angular/.angular/
+frontend-angular/.npm/
+
+# Python ML service
 ml-service-python/.venv/
 ml-service-python/venv/
+ml-service-python/.pytest_cache/
+**/__pycache__/
+*.pyc
 
 # Local secrets: database URLs, credentials, JWT keys. Never commit these.
 backend-java/src/main/resources/application-local.properties
 ml-service-python/.env
 .env
 .env.local
-**/__pycache__/
-*.pyc
+
+# Large local datasets and backups
 sample-data/
 tmp/
 PROMISE-backup-copy/frontend-angular.zip
+Final dataset list/
+Aeeem/
+research-and-docs/Final dataset list/
+research-and-docs/Aeeem/
+

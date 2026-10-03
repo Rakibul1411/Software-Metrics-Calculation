@@ -1,28 +1,209 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header">
-    <nav class="dl-breadcrumb">
-      <a (click)="back()">Compare Metrics</a>
-      <ui-icon name="chevron-right" [size]="14"></ui-icon>
-    </nav>
-    <h2>New comparison</h2>
-    <p>Pick a dataset pair that hasn't been compared yet.</p>
-  </div>
+  <ui-page-header
+    parentLabel="Compare Metrics"
+    [parentLink]="['/metric-comparisons']"
+    title="New Comparison"
+    currentLabel="New Comparison"
+    (parentClick)="back()">
+  </ui-page-header>
 
   <form class="dl-form-stack dl-form-fill" (ngSubmit)="run()">
-    <div class="dl-form-row">
-      <ui-select label="Metric family" [options]="familyFilterOptions"
-                 [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
+    <!-- Row 1: Setup, Family, Mode (3 Radio groups consecutively) -->
+    <div class="dl-form-row dl-form-row-3">
+      <ui-radio-group
+        label="Setup method"
+        [options]="modeOptions"
+        [value]="creationMode"
+        (valueChange)="onModeChange($event)">
+      </ui-radio-group>
+
+      <ui-radio-group
+        *ngIf="creationMode === 'upload'"
+        label="Metric family"
+        [options]="familyOptions"
+        [value]="family"
+        (valueChange)="onFamilyChange($event)">
+      </ui-radio-group>
+
+      <ui-select
+        *ngIf="creationMode === 'pair'"
+        label="Metric family"
+        [options]="familyFilterOptions"
+        [value]="familyFilter"
+        (valueChange)="onFamilyFilterChange($event)">
       </ui-select>
 
-      <ui-select label="Comparison" [required]="true" [disabled]="!pairOptions.length"
-                 [placeholder]="pairOptions.length ? 'Choose dataset pair' : 'No pairs available to compare'"
-                 [options]="pairOptions" [value]="selectedKey" (valueChange)="onSelectedKeyChange($event)">
-      </ui-select>
+      <ui-radio-group
+        label="Comparison mode"
+        [options]="comparisonModeOptions"
+        [value]="comparisonMode"
+        (valueChange)="onComparisonModeChange($event)">
+      </ui-radio-group>
     </div>
+
+    <!-- DIRECT UPLOAD MODE -->
+    <ng-container *ngIf="creationMode === 'upload'">
+      <!-- Row 2: Remaining radio group first, followed by project inputs -->
+      <div class="dl-form-row dl-form-row-3">
+        <ui-radio-group
+          label="Baseline source"
+          [options]="predefinedSourceOptions"
+          [value]="predefinedSourceType"
+          (valueChange)="onPredefinedSourceTypeChange($event)">
+        </ui-radio-group>
+
+        <ui-input
+          label="Project name"
+          placeholder="Example: Mylyn"
+          [value]="projectName"
+          (valueChange)="projectName = $event">
+        </ui-input>
+
+        <ui-input
+          label="Project version"
+          placeholder="Example: 3.1"
+          [value]="projectVersion"
+          (valueChange)="projectVersion = $event">
+        </ui-input>
+      </div>
+
+      <!-- Row 3: Stored Benchmark Selector + Tolerances -->
+      <div class="dl-form-row dl-form-row-3" *ngIf="predefinedSourceType === 'existing'">
+        <ui-select
+          label="Predefined benchmark"
+          [required]="true"
+          [disabled]="!predefinedSelectOptions.length"
+          [placeholder]="predefinedSelectOptions.length ? 'Choose benchmark' : 'No stored benchmarks'"
+          [options]="predefinedSelectOptions"
+          [value]="selectedPredefinedId"
+          (valueChange)="onSelectedPredefinedChange($event)">
+        </ui-select>
+
+        <ui-input
+          *ngIf="comparisonMode === 'INSTANCE_WISE'"
+          label="Absolute tolerance"
+          type="number"
+          placeholder="0.0001"
+          [step]="0.0001"
+          [min]="0"
+          [value]="absoluteTolerance + ''"
+          (valueChange)="absoluteTolerance = +$event">
+        </ui-input>
+
+        <ui-input
+          *ngIf="comparisonMode === 'INSTANCE_WISE'"
+          label="Relative tolerance"
+          type="number"
+          placeholder="0.01"
+          [step]="0.001"
+          [min]="0"
+          [value]="relativeTolerance + ''"
+          (valueChange)="relativeTolerance = +$event">
+        </ui-input>
+      </div>
+
+      <!-- Tolerances when uploading predefined file directly -->
+      <div class="dl-form-row dl-form-row-3" *ngIf="predefinedSourceType === 'upload' && comparisonMode === 'INSTANCE_WISE'">
+        <ui-input
+          label="Absolute tolerance"
+          type="number"
+          placeholder="0.0001"
+          [step]="0.0001"
+          [min]="0"
+          [value]="absoluteTolerance + ''"
+          (valueChange)="absoluteTolerance = +$event">
+        </ui-input>
+
+        <ui-input
+          label="Relative tolerance"
+          type="number"
+          placeholder="0.01"
+          [step]="0.001"
+          [min]="0"
+          [value]="relativeTolerance + ''"
+          (valueChange)="relativeTolerance = +$event">
+        </ui-input>
+      </div>
+
+      <!-- File Pickers Area -->
+      <!-- Case 1: Stored Baseline -> Only candidate file picker needed -->
+      <div *ngIf="predefinedSourceType === 'existing'">
+        <ui-file-picker
+          fieldLabel="Candidate metrics file"
+          [required]="true"
+          accept=".csv,.arff"
+          [label]="manualFile ? manualFile.name : 'Drop candidate CSV or ARFF file here'"
+          helper="Accepted formats: CSV and ARFF"
+          (fileChange)="selectManualFile($event)">
+        </ui-file-picker>
+      </div>
+
+      <!-- Case 2: Custom Baseline Upload -> Side-by-side balanced file pickers -->
+      <div class="dl-form-row dl-form-row-2" *ngIf="predefinedSourceType === 'upload'">
+        <ui-file-picker
+          fieldLabel="1. Candidate metrics file"
+          [required]="true"
+          accept=".csv,.arff"
+          [label]="manualFile ? manualFile.name : 'Drop candidate metrics file here'"
+          helper="Accepted formats: CSV and ARFF"
+          (fileChange)="selectManualFile($event)">
+        </ui-file-picker>
+
+        <ui-file-picker
+          fieldLabel="2. Benchmark file"
+          [required]="true"
+          accept=".csv,.arff"
+          [label]="predefinedFile ? predefinedFile.name : 'Drop benchmark file here'"
+          helper="Accepted formats: CSV and ARFF"
+          (fileChange)="selectPredefinedFile($event)">
+        </ui-file-picker>
+      </div>
+    </ng-container>
+
+    <!-- STORED PAIRS MODE -->
+    <ng-container *ngIf="creationMode === 'pair'">
+      <div class="dl-form-row dl-form-row-3">
+        <ui-select
+          label="Comparison pair"
+          [required]="true"
+          [disabled]="!pairOptions.length"
+          [placeholder]="pairOptions.length ? 'Choose dataset pair' : 'No pairs available to compare'"
+          [options]="pairOptions"
+          [value]="selectedKey"
+          (valueChange)="onSelectedKeyChange($event)">
+        </ui-select>
+
+        <ui-input
+          *ngIf="comparisonMode === 'INSTANCE_WISE'"
+          label="Absolute tolerance"
+          type="number"
+          placeholder="0.0001"
+          [step]="0.0001"
+          [min]="0"
+          [value]="absoluteTolerance + ''"
+          (valueChange)="absoluteTolerance = +$event">
+        </ui-input>
+
+        <ui-input
+          *ngIf="comparisonMode === 'INSTANCE_WISE'"
+          label="Relative tolerance"
+          type="number"
+          placeholder="0.01"
+          [step]="0.001"
+          [min]="0"
+          [value]="relativeTolerance + ''"
+          (valueChange)="relativeTolerance = +$event">
+        </ui-input>
+      </div>
+    </ng-container>
 
     <div class="dl-form-actions">
       <ui-button type="button" variant="ghost" icon="undo" (pressed)="back()">Cancel</ui-button>
-      <ui-button type="submit" icon="chart" [disabled]="busy || !selectedPair" [loading]="busy">
+      <ui-button
+        type="submit"
+        icon="chart"
+        [disabled]="busy || !canSubmit"
+        [loading]="busy">
         {{ busy ? 'Comparing…' : 'Run comparison' }}
       </ui-button>
     </div>

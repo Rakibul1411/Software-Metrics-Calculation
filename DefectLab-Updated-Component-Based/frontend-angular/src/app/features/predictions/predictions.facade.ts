@@ -66,8 +66,8 @@ export class PredictionsFacade {
     });
   }
 
-  predictionDownloadUrl(id: number): string {
-    return this.api.predictionDownloadUrl(id);
+  predictionDownloadUrl(id: number, format: 'csv' | 'arff' = 'csv'): string {
+    return this.api.predictionDownloadUrl(id, format);
   }
 
   reportDownloadUrl(id: number): string {

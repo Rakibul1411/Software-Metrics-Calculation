@@ -569,25 +569,23 @@ processes when the script exits. Development mode watches all three services:
 - Python files under `ml-service-python/app` restart FastAPI through Uvicorn;
 - Angular uses its normal Vite watch mode.
 
-### 4. Start services separately
+### 4. Start services separately (optional)
+
+If you prefer separate terminal tabs rather than `scripts/run-dev.sh`:
 
 FastAPI:
 
 ```bash
-ML_SERVICE_TOKEN='replace-with-the-same-value' scripts/run-python-dev.sh
+cd ml-service-python
+venv/bin/python -m uvicorn app.main:app --port 8000 --reload
 ```
 
 Spring Boot:
 
 ```bash
-export ML_SERVICE_BASE_URL='http://localhost:8000'
-export ML_SERVICE_TOKEN='replace-with-the-same-value'
-scripts/run-java-dev.sh
+cd backend-java
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
 ```
-
-Both commands stay running and restart their service after relevant file
-changes. Java uses the native Spring Boot DevTools restart mechanism; no Node.js
-watcher is involved.
 
 Angular:
 
@@ -767,14 +765,19 @@ DefectLab-Updated-Component-Based/
 ├── sample-data/
 │   ├── predefined/           bundled labeled benchmarks and manifest
 │   └── manual-examples/      optional manual workflow examples
-├── docs/                     focused architecture/API/design references
+├── research-and-docs/        consolidated academic research, datasets, and design specs
+│   ├── papers/               15 seminal research papers and academic guide
+│   ├── docs/                 focused architecture, design, and SE801 defense specs
+│   ├── Final dataset list/   benchmarks and dataset archives
+│   └── Aeeem/                AEEEM benchmark archives and reference datasets
+├── docs                      convenience symlink -> research-and-docs/docs
 ├── scripts/
 │   ├── setup.sh              install dependencies
-│   ├── run-dev.sh            run all local services
-│   ├── run-tests.sh          verify structure and all layers
-│   └── verify-structure.sh   enforce project/package/schema rules
+│   ├── run-dev.sh            run all local services concurrently
+│   └── run-tests.sh          verify backend, ML, and frontend
 ├── .env.example              Docker configuration template
-├── docker-compose.yml        complete four-service stack
+├── .dockerignore             optimized build context exclusions
+├── docker-compose.yml        production-ready four-service stack
 └── README.md                 this canonical A-to-Z guide
 ```
 
@@ -790,7 +793,7 @@ inward on `usecase`, `usecase` depends only on `domain` and its own
 | `analysis` | ZIP/GitHub acquisition and PROMISE/AEEEM extraction |
 | `auth` | Accounts, BCrypt, session authorization |
 | `dataset` | Dataset validation, storage, preview, download, deletion |
-| `prediction` | Selection rules, ML orchestration, immutable runs |
+| `prediction` | Selection rules, ML orchestration, immutable runs, and contract-compliant row sorting |
 | `comparison` | Independent MANUAL/PREDEFINED metric comparison |
 | `shared` | Configuration, database/error contracts, plus the read-only Dashboard and Report presenters, which have no domain or use case of their own |
 
@@ -811,19 +814,13 @@ controller with no domain or use case of its own, so both now live under
 
 ## Implementation documentation
 
-Use the root README for the complete product workflow, then the relevant
-component guide for layer-specific development:
+The canonical guides for architecture, research, and component development are:
 
-- [Backend implementation](backend-java/README.md)
-- [Frontend implementation](frontend-angular/README.md)
-- [ML service implementation](ml-service-python/README.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Component design](docs/COMPONENT_DESIGN.md)
-- [API reference](docs/API.md)
-- [Database contract](docs/DATABASE.md)
-- [Metrics and ML behavior](docs/METRICS_AND_ML.md)
-- [User guide](docs/USER_GUIDE.md)
-- [Implementation log](docs/IMPLEMENTATION_LOG.md)
+- [SE801 Final Project Design Document](docs/SE801_FINAL_DESIGN_DOCUMENT.md) — Master comprehensive specification containing Component-level design, Clean Architecture boundaries, sequence diagrams, statecharts, UI actions, API/DB contracts, and testing.
+- [Academic Papers Guide](research-and-docs/papers/PAPERS_GUIDE.md) — 15 seminal defect prediction papers, mathematical definitions, citations, and publication roadmap.
+- [Backend implementation](backend-java/README.md) — Spring Boot clean architecture and service guide.
+- [Frontend implementation](frontend-angular/README.md) — Angular components and state management.
+- [ML service implementation](ml-service-python/README.md) — FastAPI and CORAL domain adaptation pipeline.
 
 ## Testing and verification
 
@@ -836,7 +833,7 @@ scripts/run-tests.sh
 The script:
 
 1. verifies package, route, table, and project-structure rules;
-2. runs Maven tests;
+2. runs 152 automated Maven backend tests (covering AST extraction, CORAL domain adaptation, comparator contracts, and REST APIs);
 3. compiles and tests the Python service; and
 4. creates an Angular build.
 

@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-defectlab}
       POSTGRES_USER: ${POSTGRES_USER:-defectlab}
@@ -12,11 +13,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    networks:
+      - defectlab-net
 
   ml:
     build:
       context: .
       dockerfile: ml-service-python/Dockerfile
+    restart: unless-stopped
     environment:
       ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:-local-development-token}
     healthcheck:
@@ -24,12 +28,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
+    networks:
+      - defectlab-net
 
   backend:
     build:
       context: .
       dockerfile: backend-java/Dockerfile
+    restart: unless-stopped
     environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       DEFECTLAB_DB_URL: ${DEFECTLAB_DB_URL:-jdbc:postgresql://postgres:5432/defectlab}
       DEFECTLAB_DB_USER: ${DEFECTLAB_DB_USER:-defectlab}
       DEFECTLAB_DB_PASSWORD: ${DEFECTLAB_DB_PASSWORD:-defectlab}
@@ -46,16 +54,37 @@ services:
         condition: service_healthy
       ml:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/datasets || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - defectlab-net
 
   frontend:
     build:
       context: .
       dockerfile: frontend-angular/Dockerfile
+    restart: unless-stopped
     ports:
       - "4200:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - defectlab-net
 
 volumes:
   postgres_data:
   metric_storage:
+
+networks:
+  defectlab-net:
+    driver: bridge

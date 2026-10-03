@@ -1,0 +1,17 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.dl-detail-header:not(.dl-detail-header-grid) {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--dl-h-control);
+}
+
+.dl-actions:empty {
+  display: none;
+}
+

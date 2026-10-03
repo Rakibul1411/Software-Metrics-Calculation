@@ -55,11 +55,18 @@ export class ComparisonsFacade {
     return this.api.metricComparison(id);
   }
 
-  run(pair: MetricComparisonPair): Observable<MetricComparisonDetail> {
-    return this.api.runMetricComparison({
-      manualDatasetId: pair.manualDatasetId,
-      predefinedDatasetId: pair.predefinedDatasetId
-    });
+  run(target: MetricComparisonPair | {
+    manualDatasetId: number;
+    predefinedDatasetId: number;
+    comparisonMode?: string;
+    absoluteTolerance?: number;
+    relativeTolerance?: number;
+  }): Observable<MetricComparisonDetail> {
+    const payload = 'key' in target ? {
+      manualDatasetId: target.manualDatasetId,
+      predefinedDatasetId: target.predefinedDatasetId
+    } : target;
+    return this.api.runMetricComparison(payload);
   }
 
   delete(id: number): Observable<unknown> {

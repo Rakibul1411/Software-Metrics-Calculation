@@ -1,22 +1,25 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header">
-    <div class="dl-detail-title-row">
-      <div class="dl-heading-search">
-        <h2>Compare calculated metrics</h2>
-        <ui-search-toggle label="Search comparisons" placeholder="Project name"
-            [query]="search" (queryChange)="search = $event">
-        </ui-search-toggle>
-      </div>
-      <div class="dl-actions">
-        <ui-button icon="plus" link="/metric-comparisons/new">New comparison</ui-button>
+  <ui-page-header title="Metric Comparisons">
+    <ui-button header-actions icon="plus" link="/metric-comparisons/new">New Comparison</ui-button>
+  </ui-page-header>
+
+  <div class="dl-table-toolbar">
+    <div class="dl-table-search-box">
+      <span class="dl-search-icon">
+        <ui-icon name="search" [size]="14"></ui-icon>
+      </span>
+      <input type="text" placeholder="Search comparison project…"
+             [ngModel]="search" (ngModelChange)="search = $event; resetPage()">
+    </div>
+
+    <div class="dl-catalog-filter-group">
+      <div class="dl-catalog-filter">
+        <span class="dl-filter-label">Family:</span>
+        <ui-select [options]="familyFilterOptions"
+                   [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
+        </ui-select>
       </div>
     </div>
-  </div>
-
-  <div class="dl-form-row dl-form-row-3">
-    <ui-select label="Metric family" [options]="familyFilterOptions"
-               [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
-    </ui-select>
   </div>
 
   <div class="dl-detail-section dl-fill">
@@ -27,12 +30,13 @@
           <strong>{{ row.displayName }}</strong>
         </ng-template>
         <ng-template uiTableCell="family" let-row>
-          <ui-badge [tone]="row.datasetFamily">{{ row.datasetFamily }}</ui-badge>
+          <span class="dl-tag-mono">{{ row.datasetFamily }}</span>
         </ng-template>
         <ng-template uiTableCell="actions" let-row>
           <ui-button variant="ghost" size="sm" icon="view"
-                     title="View comparison" ariaLabel="View comparison"
-                     (pressed)="view(row)"></ui-button>
+                     [link]="['/metric-comparisons', row.comparisonId]"
+                     (pressed)="view(row)"
+                     title="View comparison" ariaLabel="View comparison"></ui-button>
         </ng-template>
       </ui-table>
       <ui-pagination [total]="filtered.length" [page]="page" [pageSize]="pageSize" noun="comparisons"
@@ -40,9 +44,15 @@
       </ui-pagination>
     </div>
     <ng-template #empty>
-      <ui-state *ngIf="!loading" kind="empty"
-                [message]="pairs.length ? 'No matching comparisons.' : 'No comparisons yet. Start one from New Comparison.'">
-      </ui-state>
+      <ui-empty-state *ngIf="!loading"
+        icon="chart"
+        [title]="pairs.length ? 'No matching comparisons found' : 'No Metric Comparisons Yet'"
+        [description]="pairs.length
+           ? 'Try searching with another project name or clearing the family filter.'
+           : 'Compare manual metrics against predefined PROMISE or AEEEM baselines to verify calculation consistency.'">
+        <ui-button icon="plus" link="/metric-comparisons/new">Start New Comparison</ui-button>
+        <ui-button variant="ghost" icon="chart" link="/metric-storage">View Metric Storage</ui-button>
+      </ui-empty-state>
     </ng-template>
   </div>
 </ui-card>

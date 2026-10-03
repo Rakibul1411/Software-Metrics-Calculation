@@ -1,0 +1,43 @@
+# Git and VCS
+.git/
+.gitignore
+.github/
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+**/.DS_Store
+*.log
+*.tmp
+*.swp
+
+# Build artifacts and dependencies
+backend-java/target/
+backend-java/output/
+backend-java/storage/
+frontend-angular/node_modules/
+frontend-angular/dist/
+frontend-angular/.angular/
+frontend-angular/.npm/
+ml-service-python/venv/
+ml-service-python/.venv/
+ml-service-python/.pytest_cache/
+**/__pycache__/
+*.pyc
+
+# Local secrets and env files
+backend-java/src/main/resources/application-local.properties
+ml-service-python/.env
+.env
+.env.local
+
+# Research, benchmark datasets, and documentation (not needed inside runtime containers)
+research-and-docs/
+papers/
+Final dataset list/
+Aeeem/
+docs/
+tmp/
+scratch/
+PROMISE-backup-copy/

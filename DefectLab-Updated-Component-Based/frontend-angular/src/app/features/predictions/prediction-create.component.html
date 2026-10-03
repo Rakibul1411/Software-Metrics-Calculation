@@ -1,12 +1,11 @@
 <ui-card cardClass="dl-page-card">
-  <div class="dl-detail-header">
-    <nav class="dl-breadcrumb">
-      <a (click)="back()">Predictions</a>
-      <ui-icon name="chevron-right" [size]="14"></ui-icon>
-    </nav>
-    <h2>Run prediction</h2>
-    <p>Train a KNN model and score a target dataset.</p>
-  </div>
+  <ui-page-header
+    parentLabel="Predictions"
+    [parentLink]="['/defect-predictions']"
+    title="Run Prediction"
+    currentLabel="Run Prediction"
+    (parentClick)="back()">
+  </ui-page-header>
 
   <form class="dl-form-stack dl-prediction-form dl-form-fill" (ngSubmit)="run()">
     <div class="dl-form-row dl-form-row-3">

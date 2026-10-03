@@ -9,18 +9,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 @Component({
   selector: 'ui-metric-card',
   standalone: false,
-  template: `
-    <article
-        [class.dl-card]="variant === 'stat'"
-        [class.dl-stat]="variant === 'stat'"
-        [class.dl-action-card]="clickable"
-        [class.dl-data-card]="variant === 'metric' || selected"
-        [class.dl-disabled]="disabled"
-        (click)="onPress()">
-      <span [class.dl-stat-label]="variant === 'stat'">{{ label }}</span>
-      <strong [class.dl-stat-value]="variant === 'stat'" [class.dl-stat-value-sm]="compact">{{ value ?? '—' }}</strong>
-    </article>
-  `
+  templateUrl: './ui-metric-card.component.html'
 })
 export class UiMetricCardComponent {
   @Input() label = '';

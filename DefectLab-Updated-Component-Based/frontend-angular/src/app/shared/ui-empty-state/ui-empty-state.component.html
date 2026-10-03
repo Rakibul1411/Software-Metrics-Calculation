@@ -1,0 +1,10 @@
+<div class="dl-empty-state-card">
+  <div class="dl-empty-card-icon" *ngIf="icon">
+    <ui-icon [name]="icon" [size]="38"></ui-icon>
+  </div>
+  <h3 class="dl-empty-card-title">{{ title }}</h3>
+  <p class="dl-empty-card-desc" *ngIf="description">{{ description }}</p>
+  <div class="dl-empty-card-actions">
+    <ng-content></ng-content>
+  </div>
+</div>

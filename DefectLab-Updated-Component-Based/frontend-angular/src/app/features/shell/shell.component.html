@@ -8,7 +8,7 @@
     <button type="button" class="dl-sidebar-close"
             aria-label="Close navigation"
             (click)="closeMobileNav()">×</button>
-    <a class="dl-brand" routerLink="/overview" (click)="closeMobileNav()">
+    <a class="dl-brand" routerLink="/dashboard" (click)="closeMobileNav()">
       <span class="dl-brand-mark" aria-hidden="true">DL</span>
       <span>
         <strong>DefectLab</strong>
@@ -45,7 +45,7 @@
         <span class="dl-avatar" aria-hidden="true">{{ initials(user.name) }}</span>
         <span class="dl-footer-user">{{ user.name }}</span>
       </span>
-      <a class="dl-footer-link" routerLink="/account" routerLinkActive="active"
+      <a class="dl-footer-link" routerLink="/account-settings" routerLinkActive="active"
          (click)="closeMobileNav()">
         <ui-icon name="user"></ui-icon>
         Account

@@ -36,13 +36,15 @@ export interface MetricValue {
   reason: string | null;
 }
 
+export interface ConfusionMatrix {
+  truePositive: number;
+  falsePositive: number;
+  trueNegative: number;
+  falseNegative: number;
+}
+
 export interface EvaluationMetrics {
-  confusionMatrix: {
-    truePositive: number;
-    falsePositive: number;
-    trueNegative: number;
-    falseNegative: number;
-  };
+  confusionMatrix: ConfusionMatrix;
   accuracy: MetricValue;
   precision: MetricValue;
   recall: MetricValue;
