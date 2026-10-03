@@ -2,7 +2,9 @@ package org.metrics.defectlab.comparison.usecase;
 
 import java.nio.file.Path;
 
-/** Input boundary: locates the stored downloadable report for a comparison. */
+/**
+ * Locates the generated PDF report file for a metric comparison.
+ */
 public interface GetComparisonReportFileUseCase {
 
     Path reportFile(Long userId, Long comparisonId);

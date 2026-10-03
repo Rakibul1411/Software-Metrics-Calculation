@@ -8,7 +8,9 @@ import org.metrics.defectlab.prediction.usecase.port.PredictionReportRenderer;
 import org.metrics.defectlab.shared.report.PdfReportWriter;
 import org.springframework.stereotype.Component;
 
-/** Gateway: fulfils the {@link PredictionReportRenderer} port using {@link PdfReportWriter}. */
+/**
+ * PDF report rendering implementation for prediction workflows.
+ */
 @Component
 public class PdfPredictionReportRenderer implements PredictionReportRenderer {
 

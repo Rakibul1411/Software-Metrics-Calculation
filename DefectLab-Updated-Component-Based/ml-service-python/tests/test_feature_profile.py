@@ -1,5 +1,3 @@
-"""Covers app.domain.feature_profile: family registries and header aliases."""
-
 from __future__ import annotations
 
 from app.domain.feature_profile import (

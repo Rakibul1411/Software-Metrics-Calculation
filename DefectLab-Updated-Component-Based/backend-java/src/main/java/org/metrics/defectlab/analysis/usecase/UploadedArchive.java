@@ -2,7 +2,7 @@ package org.metrics.defectlab.analysis.usecase;
 
 import java.io.InputStream;
 
-/** Input boundary value: a framework-free view of an uploaded project archive. */
+/** Encapsulates an uploaded project archive stream and file metadata. */
 public record UploadedArchive(InputStream content, String originalFilename, long size) {
 
     public boolean hasContent() {

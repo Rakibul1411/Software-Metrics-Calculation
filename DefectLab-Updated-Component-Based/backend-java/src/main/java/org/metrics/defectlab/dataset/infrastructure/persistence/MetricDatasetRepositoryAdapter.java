@@ -8,7 +8,9 @@ import org.metrics.defectlab.dataset.usecase.port.MetricDatasetRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
-/** Gateway: fulfils the {@link MetricDatasetRepository} port on top of Spring Data JPA. */
+/**
+ * JPA implementation of {@link MetricDatasetRepository}.
+ */
 @Repository
 public class MetricDatasetRepositoryAdapter implements MetricDatasetRepository {
 

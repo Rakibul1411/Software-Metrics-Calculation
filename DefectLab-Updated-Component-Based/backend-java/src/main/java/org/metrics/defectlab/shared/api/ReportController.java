@@ -17,11 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Interface Adapter: a compatibility download route for clients that use
- * /api/reports. It has no domain or use cases of its own -- it only
- * re-exposes the prediction component's report artifact under a legacy
- * path -- so it lives here as a cross-component presenter rather than as
- * a standalone component.
+ * REST controller providing download endpoints for prediction and comparison reports.
  */
 @RestController
 @RequestMapping("/api/reports")

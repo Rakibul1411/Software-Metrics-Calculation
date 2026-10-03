@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Interface Adapter: translates HTTP requests into use-case calls and back. */
+/** REST controller for comparing extracted metrics against benchmark datasets. */
 @RestController
 @RequestMapping("/api/metric-comparisons")
 public class MetricComparisonController {

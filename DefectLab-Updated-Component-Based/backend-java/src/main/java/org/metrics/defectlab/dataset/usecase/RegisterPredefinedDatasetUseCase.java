@@ -6,8 +6,7 @@ import java.nio.file.Path;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 
 /**
- * Input boundary: registers bundled/public predefined data without creating
- * another table. The nullable owner makes these rows visible to every user.
+ * Registers bundled benchmark datasets into the system for global access.
  */
 public interface RegisterPredefinedDatasetUseCase {
 

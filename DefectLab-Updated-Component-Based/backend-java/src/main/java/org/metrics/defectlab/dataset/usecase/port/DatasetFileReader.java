@@ -5,7 +5,7 @@ import java.nio.file.Path;
 
 import org.metrics.defectlab.dataset.domain.DatasetTable;
 
-/** Output port: how use cases read a stored CSV/ARFF dataset file from disk. */
+/** Reads and parses stored CSV and ARFF dataset files from the filesystem. */
 public interface DatasetFileReader {
 
     DatasetTable parse(Path file) throws IOException;

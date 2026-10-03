@@ -1,5 +1,3 @@
-"""Covers app.domain.prediction_pipeline: the SRS rules the pipeline must not break."""
-
 from __future__ import annotations
 
 import pytest

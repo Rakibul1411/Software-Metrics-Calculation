@@ -20,29 +20,18 @@ import org.metrics.defectlab.analysis.promise.compile.PromiseCompilationExceptio
 import org.metrics.defectlab.analysis.promise.compile.PromiseCompilationOutcome;
 import org.metrics.defectlab.analysis.promise.compile.PromiseCompilationService;
 import org.metrics.defectlab.analysis.promise.model.PromiseMetricResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Extracts the 20 PROMISE features from a Java release.
  *
- * <p>The pipeline is source in, bytecode out:
- *
- * <pre>
- *   production sources -> ECJ compilation -> .class files
- *                      -> BytecodeProjectModel -> metric calculators -> rows
- * </pre>
- *
- * <p>PROMISE metrics such as LOC, AMC and the cyclomatic complexities are
- * defined on compiled binary code, so bytecode is the authoritative source for
- * every emitted value. The user still uploads source only; compilation is an
- * internal step.
- *
- * <p>When a source file does not compile the compiler leaves a class behind
- * whose method bodies just throw, which would read as real but meaningless
- * metrics. Those classes are therefore dropped from the output and reported,
- * rather than being measured.
+ * <p>The pipeline compiles production sources to bytecode and computes
+ * authoritative binary metrics alongside AST metrics.
  */
 public final class PromiseProjectAnalyzer {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(PromiseProjectAnalyzer.class);
     private final List<String> diagnostics = new ArrayList<>();
 
     public static List<PromiseMetricResult> analyzeDirectories(
@@ -144,7 +133,7 @@ public final class PromiseProjectAnalyzer {
 
     private void reportDiagnostics() {
         diagnostics.forEach(message ->
-                System.err.println("PROMISE metric warning: " + message));
+                LOGGER.warn("PROMISE metric warning: {}", message));
     }
 
     private void deleteRecursively(Path root) {

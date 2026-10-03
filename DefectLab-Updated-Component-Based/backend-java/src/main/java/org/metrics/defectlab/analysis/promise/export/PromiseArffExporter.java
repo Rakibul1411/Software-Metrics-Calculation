@@ -14,10 +14,7 @@ public final class PromiseArffExporter {
     }
 
     /**
-     * Sorts a copy rather than the caller's list in place: an archive with no
-     * Java classes hands back an immutable empty list, and sorting it directly
-     * throws UnsupportedOperationException before the "no classes found"
-     * validation in MetricsExtractionService ever gets a chance to run.
+     * Exports PROMISE metric results to an ARFF file sorted by class name.
      */
     public static void exportPromiseToArff(List<PromiseMetricResult> metrics, Path outputPath) throws IOException {
         List<PromiseMetricResult> sorted = new ArrayList<>(metrics);

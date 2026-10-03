@@ -2,7 +2,7 @@ package org.metrics.defectlab.prediction.usecase.port;
 
 import java.util.Map;
 
-/** Output port: how use cases talk to the internal ML prediction service. */
+/** HTTP client interface communicating with the Python ML inference service. */
 public interface MlServiceClient {
 
     Map<String, Object> predict(Map<String, Object> request);

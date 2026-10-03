@@ -4,9 +4,7 @@ import java.time.Instant;
 import java.util.Locale;
 
 /**
- * Enterprise Business Rule: a registered account and the invariants that hold
- * for it regardless of how it is persisted or delivered. Carries no
- * persistence or framework annotations.
+ * Represents an authenticated system user account.
  */
 public class User {
 

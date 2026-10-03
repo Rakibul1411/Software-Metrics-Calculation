@@ -10,14 +10,15 @@ import java.util.List;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.metrics.defectlab.analysis.promise.model.PromiseMetricResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PromiseCsvExporter {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(PromiseCsvExporter.class);
+
     /**
-     * Sorts a copy rather than the caller's list in place: an archive with no
-     * Java classes hands back an immutable empty list, and sorting it directly
-     * throws UnsupportedOperationException before the "no classes found"
-     * validation in MetricsExtractionService ever gets a chance to run.
+     * Exports PROMISE metric results to a CSV file sorted by class name.
      */
     public static void exportPromiseToCSV(List<PromiseMetricResult> metricsList, Path outputPath) throws IOException {
         List<PromiseMetricResult> sorted = new ArrayList<>(metricsList);
@@ -32,7 +33,6 @@ public class PromiseCsvExporter {
                 csvPrinter.printRecord(PromiseFeatureSchema.row(metrics));
             }
         }
-        System.out.println("Exported " + sorted.size() + " PROMISE class metrics to: " + outputPath);
+        LOGGER.info("Exported {} PROMISE class metrics to: {}", sorted.size(), outputPath);
     }
-
 }

@@ -6,12 +6,8 @@ import org.metrics.defectlab.prediction.usecase.port.PredictionRunRepository;
 import org.springframework.stereotype.Component;
 
 /**
- * Composition Root: the one place allowed to depend on more than one
- * component's ports purely to wire a cross-cutting concern. {@code dataset}
- * defines {@link DatasetUsageGuard} but never implements it itself, so it
- * has no outgoing dependency on {@code prediction} or {@code comparison} —
- * this adapter is what keeps the component dependency graph acyclic while
- * still answering "is this dataset still in use elsewhere".
+ * Verifies whether a dataset is referenced by existing prediction runs or comparisons
+ * before allowing deletion.
  */
 @Component
 public class DatasetUsageGuardAdapter implements DatasetUsageGuard {

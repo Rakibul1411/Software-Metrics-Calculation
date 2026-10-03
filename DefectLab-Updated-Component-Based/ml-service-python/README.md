@@ -188,16 +188,18 @@ venv/bin/python -m pip install -r requirements.txt pytest
 
 ## Run
 
-From the repository root, start FastAPI with change detection:
+From the repository root to start all services (FastAPI, Spring Boot, Angular):
 
 ```bash
-export ML_SERVICE_TOKEN='replace-with-the-shared-value'
-scripts/run-python-dev.sh
+scripts/run-dev.sh
 ```
 
-Uvicorn watches `ml-service-python/app` and restarts the worker after Python
-changes. The launcher uses `ml-service-python/venv/bin/python` when available
-and otherwise falls back to `python3`.
+Or run the ML service independently:
+
+```bash
+cd ml-service-python
+PYTHONPATH=. ./venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
 Health:
 

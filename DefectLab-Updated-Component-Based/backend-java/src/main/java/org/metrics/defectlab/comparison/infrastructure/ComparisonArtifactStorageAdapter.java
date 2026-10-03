@@ -8,7 +8,9 @@ import org.metrics.defectlab.comparison.usecase.port.ArtifactStorage;
 import org.metrics.defectlab.shared.storage.StorageRoot;
 import org.springframework.stereotype.Component;
 
-/** Gateway: fulfils the {@link ArtifactStorage} port on top of the shared {@link StorageRoot}. */
+/**
+ * File system storage adapter for metric comparison artifacts.
+ */
 @Component
 public class ComparisonArtifactStorageAdapter implements ArtifactStorage {
 

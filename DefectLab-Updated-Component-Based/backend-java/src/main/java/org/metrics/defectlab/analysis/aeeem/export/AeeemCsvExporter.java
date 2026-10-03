@@ -9,8 +9,12 @@ import java.util.List;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.metrics.defectlab.analysis.aeeem.model.AeeemMetricResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AeeemCsvExporter {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AeeemCsvExporter.class);
 
     public static void exportAeeemToCSV(List<AeeemMetricResult> metricsList, Path outputPath) throws IOException {
         metricsList.sort((m1, m2) -> m1.getFullyQualifiedName().compareTo(m2.getFullyQualifiedName()));
@@ -25,6 +29,6 @@ public class AeeemCsvExporter {
             }
         }
 
-        System.out.println("Exported " + metricsList.size() + " AEEEM class metrics to: " + outputPath);
+        LOGGER.info("Exported {} AEEEM class metrics to: {}", metricsList.size(), outputPath);
     }
 }

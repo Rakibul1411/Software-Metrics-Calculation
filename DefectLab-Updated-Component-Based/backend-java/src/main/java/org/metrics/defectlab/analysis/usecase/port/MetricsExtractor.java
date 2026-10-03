@@ -8,7 +8,7 @@ import org.metrics.defectlab.analysis.aeeem.history.AeeemAnalysisOptions;
 import org.metrics.defectlab.analysis.aeeem.history.AeeemAnalysisSummary;
 import org.metrics.defectlab.shared.model.DatasetFileFormat;
 
-/** Output port: how use cases turn Java source directories into PROMISE/AEEEM metrics. */
+/** Extracts software metrics from Java source projects according to dataset specifications. */
 public interface MetricsExtractor {
 
     ExtractionResult extractMetrics(

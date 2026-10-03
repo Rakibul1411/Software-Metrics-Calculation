@@ -1,5 +1,3 @@
-"""Covers app.domain.dataset_preparation: schema validation and label parsing."""
-
 from __future__ import annotations
 
 import numpy as np

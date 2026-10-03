@@ -6,7 +6,9 @@ import org.metrics.defectlab.dataset.domain.DatasetTable;
 import org.metrics.defectlab.dataset.domain.FeatureProfile;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 
-/** Input boundary: reads the stored contents and feature profile of a dataset. */
+/**
+ * Reads the tabular contents and feature profile of a metric dataset.
+ */
 public interface LoadDatasetTableUseCase {
 
     DatasetTable load(MetricDataset dataset) throws IOException;

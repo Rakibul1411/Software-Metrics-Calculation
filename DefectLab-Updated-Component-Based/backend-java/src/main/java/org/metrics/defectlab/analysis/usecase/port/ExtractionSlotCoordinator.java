@@ -1,6 +1,6 @@
 package org.metrics.defectlab.analysis.usecase.port;
 
-/** Output port: how use cases limit concurrent source-code extractions. */
+/** Coordinates and limits concurrent source-code metric extraction tasks. */
 public interface ExtractionSlotCoordinator {
 
     boolean acquire(Long userId, String datasetFormat);

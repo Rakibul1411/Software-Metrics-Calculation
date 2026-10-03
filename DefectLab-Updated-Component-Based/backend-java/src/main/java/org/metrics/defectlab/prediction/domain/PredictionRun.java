@@ -4,8 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Enterprise Business Rule: a completed prediction run, free of any
- * persistence or framework annotations.
+ * Represents a completed machine learning defect prediction run.
  */
 public class PredictionRun {
 

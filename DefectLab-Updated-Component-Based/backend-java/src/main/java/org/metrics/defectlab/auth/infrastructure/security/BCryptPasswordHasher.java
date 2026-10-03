@@ -4,7 +4,9 @@ import org.metrics.defectlab.auth.usecase.port.PasswordHasher;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/** Gateway: fulfils the {@link PasswordHasher} port with Spring Security's BCrypt encoder. */
+/**
+ * Password hashing implementation using Spring Security's BCryptPasswordEncoder.
+ */
 @Component
 public class BCryptPasswordHasher implements PasswordHasher {
 

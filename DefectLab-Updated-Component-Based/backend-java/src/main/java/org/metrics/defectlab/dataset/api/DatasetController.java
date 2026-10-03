@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-/** Interface Adapter: translates HTTP requests into use-case calls and back. */
+/** REST controller for dataset uploads, retrieval, and metadata management. */
 @RestController
 @RequestMapping("/api/datasets")
 public class DatasetController {

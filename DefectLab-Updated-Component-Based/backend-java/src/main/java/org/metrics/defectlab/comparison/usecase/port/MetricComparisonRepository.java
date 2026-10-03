@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import org.metrics.defectlab.comparison.domain.MetricComparison;
 
-/** Output port: how use cases persist and look up metric comparisons, free of any framework detail. */
+/** Repository interface for persisting and querying metric comparison records. */
 public interface MetricComparisonRepository {
 
     MetricComparison save(MetricComparison comparison);
@@ -23,7 +23,7 @@ public interface MetricComparisonRepository {
 
     boolean existsByDatasetId(Long datasetId);
 
-    /** Raised when a concurrent save conflicts with an existing row, free of any persistence-framework type. */
+    /** Thrown when a concurrent save operation violates uniqueness constraints. */
     class SaveConflictException extends RuntimeException {
         public SaveConflictException(Throwable cause) {
             super(cause);
