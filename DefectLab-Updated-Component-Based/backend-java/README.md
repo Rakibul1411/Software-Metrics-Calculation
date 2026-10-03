@@ -1,300 +1,189 @@
 # DefectLab Spring Boot Backend
 
-This module is the authenticated system boundary and workflow orchestrator. It
-owns accounts, source acquisition, metric extraction, dataset persistence,
-prediction coordination, metric comparison, artifact generation, and access
-control.
+This module is the authenticated API server and workflow orchestrator for the DefectLab platform. It manages user accounts, source-code repository cloning and archive ingestion, static and historical metric extraction, dataset storage, prediction coordination, metric benchmark comparison, and artifact generation.
 
-For the full product workflow, see the [project README](../README.md).
+For the full product overview and end-to-end workflow, see the [project README](../README.md).
 
-## Technology
+## Technology Stack
 
-- Java 17 / 21 / 23 compatible (built with Spring Boot 2.7.18)
-- Spring MVC
-- Spring Data JPA
-- PostgreSQL / Neon (HikariCP connection pool)
-- Eclipse JDT 3.37
-- Apache Commons CSV/IO/Compress
-- Apache PDFBox
-- BCrypt through Spring Security Crypto
+- **Runtime**: Java 17 (tested and compatible with Java 17, 21, and 23)
+- **Framework**: Spring Boot 2.7.18 (Spring MVC, Spring Data JPA, Spring Security Crypto)
+- **Database & Pooling**: PostgreSQL 14+ / Neon with HikariCP connection pooling
+- **Static Analysis & AST Parsing**: Eclipse JDT 3.37
+- **Data & Archive Processing**: Apache Commons CSV, Commons IO, Commons Compress
+- **Report Generation**: Apache PDFBox
+- **Logging**: SLF4J with Logback
 
-## Runtime responsibilities
+## Runtime Responsibilities
 
-The backend:
+The backend server is responsible for:
 
-1. authenticates the user through an HTTP session;
-2. safely receives Java ZIPs, public GitHub URLs, CSV, and ARFF uploads;
-3. extracts PROMISE or AEEEM metrics;
-4. validates and stores datasets;
-5. enforces dataset ownership and prediction compatibility;
-6. calls the internal FastAPI service with a shared token;
-7. generates prediction CSV, PDF, and JSON artifacts;
-8. saves immutable run/comparison metadata; and
-9. exposes authenticated download routes.
+1. **Authentication & Session Security**: Manages user registration, login, logout, and session lifecycle via HTTP-only secure cookies (`DEFECTLAB_SESSION`).
+2. **Source Ingestion & Extraction**: Ingests Java ZIP archives or clones public GitHub repositories, extracts 20 PROMISE object-oriented metrics or 56 AEEEM static/historical metrics using Eclipse JDT and Git history analysis.
+3. **Dataset Storage & Validation**: Validates schema consistency, header naming, and data quality for uploaded CSV and ARFF files, persisting metadata in PostgreSQL.
+4. **Prediction Orchestration**: Enforces dataset ownership and compatibility, invokes the Python ML service via an authenticated internal HTTP client, and formats prediction results.
+5. **Artifact Generation**: Renders reproducible PDF evaluation reports, labeled target CSVs, and JSON summary sidecars.
+6. **Benchmark Comparison**: Computes metric-by-metric distribution deltas and tolerance checks between extracted metrics and predefined benchmark datasets.
+7. **Secure Downloads**: Exposes authenticated streaming endpoints for datasets and generated report artifacts without exposing underlying filesystem paths.
 
-The browser never calls FastAPI directly.
+The browser communicates exclusively with Spring Boot on port 8080 and never contacts the internal ML service directly.
 
-## Component structure
+## Package Architecture
 
-All code is under `org.metrics.defectlab`. Every business component follows
-Clean Architecture layering: `api` and `infrastructure` may depend inward on
-`usecase`, and `usecase` may depend on `domain`, but never the reverse — a
-use case never imports a concrete infrastructure class, only the
-`usecase/port` interface that class implements.
+The codebase follows a modular, domain-driven package organization under `org.metrics.defectlab`:
 
 ```text
 src/main/java/org/metrics/defectlab/
-├── DefectLabApplication.java
-├── analysis/
-│   ├── api/                  POST /api/analysis
-│   ├── usecase/               AnalyzeSourceUseCase + SourceAnalysisInteractor
-│   │   └── port/               storage/extractor/GitHub/metrics/slot ports
-│   ├── infrastructure/       GitHub, ZIP, and temporary-file adapters
-│   ├── javaparser/           Eclipse JDT configuration
-│   ├── promise/              20-feature PROMISE extraction
-│   └── aeeem/                static/history AEEEM extraction
-├── auth/
-│   ├── api/
-│   ├── domain/
-│   ├── usecase/
-│   │   └── port/               UserRepository, PasswordHasher
-│   ├── infrastructure/       persistence/, security/
-│   └── security/              CurrentUser (used by every component's api/)
-├── dataset/
-│   ├── api/
-│   ├── domain/
-│   ├── usecase/
-│   │   └── port/               MetricDatasetRepository, DatasetFileReader
-│   └── infrastructure/       persistence/, DatasetFileParser, seeder
-├── prediction/
-│   ├── api/
-│   ├── domain/
-│   ├── usecase/
-│   │   └── port/               PredictionRunRepository, MlServiceClient
-│   └── infrastructure/       persistence/, RestMlServiceClient
-├── comparison/
-│   ├── api/
-│   ├── domain/
-│   ├── usecase/
-│   │   └── port/               MetricComparisonRepository
-│   └── infrastructure/       persistence/
-└── shared/                   cross-cutting only — no domain, no use cases
-    ├── api/                   DashboardController, ReportController
-    ├── config/
-    ├── csv/
-    ├── database/
-    ├── exception/
-    ├── export/
-    ├── model/
-    ├── report/
-    └── storage/
+├── DefectLabApplication.java          Application entry point and Spring Boot configuration
+├── analysis/                          Source code ingestion and metric extraction engine
+│   ├── api/                           REST controller (POST /api/analysis)
+│   ├── usecase/                       Extraction orchestration and command models
+│   │   └── port/                      Interfaces for extractors, Git client, and storage
+│   ├── infrastructure/                GitHub clone service, archive extractors, temp files
+│   ├── javaparser/                    Eclipse JDT configuration resolver and environment
+│   ├── promise/                       20-feature PROMISE AST and bytecode extraction
+│   └── aeeem/                         56-feature AEEEM static, change, and entropy miner
+├── auth/                              Authentication and user profile management
+│   ├── api/                           AuthController (login, register, session, password)
+│   ├── domain/                        User entity and password validation policy
+│   ├── usecase/                       Registration, authentication, and password use cases
+│   │   └── port/                      UserRepository and PasswordHasher interfaces
+│   ├── infrastructure/                Spring Data JPA persistence and BCrypt hasher
+│   └── security/                      CurrentUser session resolver helper
+├── dataset/                           Metric dataset catalog and file storage
+│   ├── api/                           DatasetController (upload, list, preview, delete)
+│   ├── domain/                        MetricDataset entity and DatasetQuality validator
+│   ├── usecase/                       Upload, retrieval, seeding, and deletion use cases
+│   │   └── port/                      MetricDatasetRepository and DatasetFileReader interfaces
+│   └── infrastructure/                JPA persistence, ARFF/CSV parser, and manifest seeder
+├── prediction/                        Cross-project defect prediction orchestration
+│   ├── api/                           PredictionController (run, list, inspect, download)
+│   ├── domain/                        PredictionRun entity and model configurations
+│   ├── usecase/                       Prediction execution and artifact management
+│   │   └── port/                      PredictionRunRepository, MlServiceClient, PDF renderer
+│   └── infrastructure/                JPA persistence, REST ML client, and PDFBox renderer
+├── comparison/                        Extracted vs. benchmark metric comparison
+│   ├── api/                           MetricComparisonController
+│   ├── domain/                        MetricComparison entity
+│   ├── usecase/                       Comparison calculation and report export
+│   │   └── port/                      MetricComparisonRepository and report renderer
+│   └── infrastructure/                JPA persistence and PDFBox comparison renderer
+├── composition/                       Cross-module guards and dependency composition adapters
+└── shared/                            Cross-cutting infrastructure and utilities
+    ├── api/                           DashboardController and ReportController
+    ├── config/                        Web MVC, CORS, and Jackson configuration
+    ├── database/                      Schema initializer and contract enforcement
+    ├── exception/                     Global exception handling and error responses
+    └── storage/                       StorageRoot resolver for on-disk file management
 ```
 
-Within a component:
+### Architectural Principles
 
-- `api` — controllers translate HTTP requests into use-case calls and back;
-- `usecase` — one interactor per component implements every use-case
-  interface and orchestrates the workflow, depending only on `domain` and its
-  own `usecase/port` interfaces;
-- `usecase/port` — output-port interfaces: the abstractions a use case needs
-  for anything outside the process (a repository, a hasher, an HTTP client);
-- `domain` — entities and business rules, free of any framework import;
-- `infrastructure` — adapters that fulfil a port: JPA repositories, the ML
-  REST client, filesystem/Git/ZIP handling.
+- **Controller Layer (`api`)**: Maps incoming HTTP requests to application commands and translates domain outputs to HTTP response entities.
+- **Application Services (`usecase`)**: Implements application workflows and business operations, orchestrating interactions between repositories, external clients, and analyzers.
+- **Domain Layer (`domain`)**: Encapsulates core business models, invariants, and quality rules.
+- **Infrastructure Layer (`infrastructure`)**: Implements data persistence (Spring Data JPA), external service integrations (HTTP REST client), file storage, and PDF rendering.
+- **Separation of Concerns**: Cross-component references (such as checking whether a dataset is in use before deletion) are decoupled via interfaces and composition adapters.
 
-`dashboard` and `report` are not components in their own right — each is a
-single controller with no domain or use case of its own, so both live under
-`shared/api` as cross-component presenters, next to the config, error
-mapping, and storage-path code every component depends on.
+## Public API Endpoints
 
-## Public API groups
-
-| Base route | Component |
+| Base Path | Responsibility |
 |---|---|
-| `/api/auth` | Registration, session, logout, password |
-| `/api/dashboard` | Workspace summary |
-| `/api/analysis` | Java ZIP/GitHub metric extraction |
-| `/api/datasets` | Dataset upload, list, preview, download, delete |
-| `/api/predictions` | Execute, list, group, inspect, delete, and download runs |
-| `/api/metric-comparisons` | Independent dataset comparison, delete |
-| `/api/reports` | Authenticated prediction PDF download |
+| `/api/auth` | User registration, login, logout, password change, current session |
+| `/api/dashboard` | Aggregated dashboard KPI metrics, recent activity, and summaries |
+| `/api/analysis` | Source code metric extraction from Java ZIP or public GitHub URL |
+| `/api/datasets` | Dataset upload, catalog query, data preview, raw download, and deletion |
+| `/api/predictions` | Prediction execution, run history, detailed inspections, and artifact retrieval |
+| `/api/metric-comparisons` | Baseline comparison execution, tolerance reporting, and PDF download |
+| `/api/reports` | Download endpoints for prediction PDF reports |
 
-See [SE801_FINAL_DESIGN_DOCUMENT.md](../docs/SE801_FINAL_DESIGN_DOCUMENT.md#2-interface-design-rest-api-contracts) for fields and examples.
+Detailed request/response contracts and schema examples are documented in [SE801_FINAL_DESIGN_DOCUMENT.md](../research-and-docs/docs/SE801_FINAL_DESIGN_DOCUMENT.md#2-interface-design-rest-api-contracts).
 
-## Database contract
+## Database Schema and Initializer
 
-`src/main/resources/schema.sql` creates or validates exactly:
+On application startup, `DatabaseSchemaContract` executes `src/main/resources/schema.sql` to initialize or validate the following relational tables:
 
-1. `users`
-2. `metric_datasets`
-3. `metric_comparisons`
-4. `prediction_runs`
+1. `users`: Account credentials (email, name, BCrypt password hash, timestamps).
+2. `metric_datasets`: Dataset catalog records (project name, version, family, type, row/column counts, label presence, and storage file path).
+3. `metric_comparisons`: Comparison run records between manual and benchmark datasets, storing tolerance configurations and report paths.
+4. `prediction_runs`: Defect prediction execution records with hyperparameters, source/target dataset references, evaluation metrics, and artifact paths.
 
-The initializer removes known obsolete prototype tables and
-`flyway_schema_history`. Hibernate uses `ddl-auto=validate`, so the JPA model
-must match this schema.
+Hibernate runs with `hibernate.ddl-auto=validate`, ensuring strict alignment between JPA entities and database tables.
 
-### Table ownership
+Bundled predefined datasets are automatically registered on startup via `DatasetPredefinedSeeder` using entries defined in `sample-data/predefined/manifest.csv` with `user_id = NULL` (globally visible to all users).
 
-- `users`: account and BCrypt password hash.
-- `metric_datasets`: dataset identity, ownership, type, label state, counts, and
-  stored metric path.
-- `metric_comparisons`: user-owned manual/predefined pair, JSONB configuration,
-  and PDF path.
-- `prediction_runs`: user-owned source/target result, JSONB model configuration,
-  optional manual CSV path, and PDF path.
+## Storage Layout
 
-Bundled predefined datasets use `metric_datasets.user_id = NULL` and are visible
-to all signed-in users.
-
-## Dataset flow
-
-### Source analysis
-
-`POST /api/analysis` accepts either:
-
-- `projectArchive` for PROMISE; or
-- `githubUrl` for PROMISE/AEEEM.
-
-AEEEM rejects archive input because history predictors require Git. Successful
-analysis creates a validated, unlabeled `MANUAL` dataset.
-
-### Metric upload
-
-`POST /api/datasets` accepts CSV/ARFF files up to 50 MB. The backend detects the
-feature family from headers, validates quality, detects actual labels, copies
-the source file into durable storage, and saves metadata.
-
-The source metric file is never modified by prediction.
-
-## Prediction orchestration
-
-`PredictionInteractor` requires:
-
-- a labeled source;
-- at least one target;
-- a MANUAL target and/or a labeled PREDEFINED target;
-- the same metric family across source/targets; and
-- a different source record for MANUAL targets. A labeled PREDEFINED target may
-  reference the source record for training-set evaluation.
-
-The prediction contract uses:
-
-- `KNN` with user-selected K from 1 through 5;
-- optional shallow CORAL dataset alignment;
-- threshold strictly between 0 and 1;
-- optional seed, default 42.
-
-The backend always records that standardization ran (there is no log
-transform in the current pipeline) and stores whether CORAL alignment was
-selected for the run.
-
-For each target:
-
-1. load source/target rows;
-2. call FastAPI `/ml/predict`;
-3. attach predefined actual labels only after prediction;
-4. call `/ml/evaluate` for a predefined target;
-5. generate a labeled CSV only for a manual target;
-6. generate PDF and JSON report artifacts; and
-7. insert `prediction_runs` only after all artifacts succeed.
-
-A dual-target request creates two rows with one `comparison_group_id`.
-Partially generated artifacts are deleted when execution fails.
-
-## Runtime storage
-
-Paths are created relative to the backend working directory:
+All persistent files are managed under `StorageRoot` (defaulting to the `storage/` directory relative to the process working directory):
 
 ```text
 storage/
 ├── metrics/
-│   ├── predefined/
-│   └── {userId}/
-└── predictions/
-    └── {userId}/
-        ├── {uuid}-labeled.csv
-        ├── {uuid}-report.pdf
-        └── {uuid}-report.json
+│   ├── predefined/             Bundled benchmark datasets (Ant, Lucene, JDT, PDE, EQ, LC, ML)
+│   └── {userId}/               User-uploaded or extracted CSV/ARFF metric files
+├── predictions/
+│   └── {userId}/               Generated prediction artifacts:
+│       ├── {uuid}-labeled.csv  Target dataset augmented with predicted defect labels
+│       ├── {uuid}-report.pdf   Formatted PDF evaluation report
+│       └── {uuid}-report.json  Machine-readable execution summary sidecar
+├── comparisons/
+│   └── {userId}/               Generated comparison artifacts:
+│       └── comparison-{id}.pdf PDF tolerance and distribution comparison report
+└── uploads/
+    └── {userId}/               Temporary staging directory for uploaded ZIP archives
 ```
 
-Internal paths never appear as public download URLs.
+Files are never referenced directly by raw disk paths in client APIs; instead, they are streamed through authenticated endpoints after verifying user ownership.
 
 ## Configuration
 
-Use environment variables:
+The application is configured through `application.yml` and overridable via environment variables:
 
-| Variable | Purpose | Local example |
+| Environment Variable | Description | Default / Local Value |
 |---|---|---|
-| `DEFECTLAB_DB_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/defectlab` |
-| `DEFECTLAB_DB_USER` | Database user | `defectlab` |
-| `DEFECTLAB_DB_PASSWORD` | Database password | local password |
-| `ML_SERVICE_BASE_URL` | FastAPI URL | `http://localhost:8000` |
-| `ML_SERVICE_TOKEN` | Shared internal token | same value as FastAPI |
-| `PREDEFINED_DATA_DIR` | Benchmark manifest directory | `../sample-data/predefined` |
-| `STORAGE_ROOT` | Root for uploads, extracted projects, metrics, and predictions | `storage` locally; an absolute path in production |
-| `DEFECTLAB_SESSION_SECURE` | HTTPS-only session cookie | `false` locally |
-| `SPRING_PROFILES_ACTIVE` | Spring profile | `local` |
+| `DEFECTLAB_DB_URL` | PostgreSQL JDBC connection URL | `jdbc:postgresql://localhost:5432/defectlab` |
+| `DEFECTLAB_DB_USER` | Database username | `defectlab` |
+| `DEFECTLAB_DB_PASSWORD` | Database password | `defectlab` |
+| `ML_SERVICE_BASE_URL` | Base URL of the internal Python ML service | `http://localhost:8000` |
+| `ML_SERVICE_TOKEN` | Shared secret token for authenticating with ML service | `local-dev-service-token-32-chars-ok` |
+| `PREDEFINED_DATA_DIR` | Path to benchmark datasets and manifest | `../sample-data/predefined` |
+| `STORAGE_ROOT` | Base directory for file storage | `storage` |
+| `DEFECTLAB_SESSION_SECURE` | Set `true` in production to enforce HTTPS-only cookies | `false` |
+| `SPRING_PROFILES_ACTIVE` | Active Spring profile | `local` |
 
-Never commit real database credentials or service tokens.
+## Running Locally
 
-## Run locally
-
-Start PostgreSQL and FastAPI first, then run the auto-reloading Java launcher
-from the repository root:
+Ensure PostgreSQL (port 5432) and the Python ML Service (port 8000) are running.
 
 ```bash
+cd backend-java
 export DEFECTLAB_DB_URL='jdbc:postgresql://localhost:5432/defectlab'
 export DEFECTLAB_DB_USER='defectlab'
 export DEFECTLAB_DB_PASSWORD='defectlab'
 export ML_SERVICE_BASE_URL='http://localhost:8000'
+export ML_SERVICE_TOKEN='local-dev-service-token-32-chars-ok'
+
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
 ```
 
-The API listens on <http://localhost:8080>. The launcher watches Java, XML,
-properties, JSON, and YAML files under `backend-java/src/main`, plus `pom.xml`.
-For source/resource changes it runs an incremental Maven compile; Spring Boot
-DevTools detects the updated classpath and restarts the application context.
-Changing `pom.xml` restarts Maven so dependency changes are also loaded.
-
-The DevTools dependency is runtime-only and optional, so it supports local
-development without being included in the production application archive.
-
-For a one-time run without watching:
-
-```bash
-cd backend-java
-mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
-```
-
-## Test
-
-```bash
-mvn test
-```
-
-The test suite contains **153 automated tests** (152 passing, 1 local manual scratch test skipped), executed cleanly via JUnit 5 and Mockito. It comprehensively covers:
-- Complete AST calculation for all 20 PROMISE and 56 AEEEM software metrics.
-- Unsupervised domain adaptation (CORAL) hyperparameter configuration and validation.
-- Java `Comparator` contract adherence: strict weak ordering verification on 500+ mixed dataset items in `sortPredictionsRowWise()` preventing TimSort violations.
-- In-memory dataset parsing, quality checks, and ARFF/CSV format conversion.
-- PDFBox comparison report rendering and distribution statistics.
-- Clean Architecture port-and-adapter boundary isolation.
-
-Useful checks:
+The server starts on port `8080`. Health can be checked via:
 
 ```bash
 curl -i http://localhost:8080/api/auth/me
+# Returns 401 Unauthorized when unauthenticated
 ```
 
-An unauthenticated request should return `401`.
+## Automated Testing
 
-## Security notes
+```bash
+mvn clean test
+```
 
-- Password hashes are never returned.
-- Session cookies are HTTP-only and SameSite Lax.
-- Ownership is checked before every dataset/run/comparison file access.
-- ZIP paths and upload sizes are validated.
-- Only public GitHub repositories are supported.
-- FastAPI protected routes use `X-DefectLab-Service-Token`.
-- Enable secure cookies behind production HTTPS.
+The test suite consists of **154 automated tests** (153 passing, 1 network-dependent live GitHub clone test skipped by default):
+- Complete AST calculation and feature extraction for all 20 PROMISE and 56 AEEEM metrics.
+- Unsupervised domain adaptation (CORAL) configuration and hyperparameter validation.
+- Row-wise natural sorting stability across multi-part package hierarchies and class names.
+- In-memory CSV and ARFF parsing, dialect detection, and schema quality validation.
+- PDFBox rendering for prediction and comparison report documents.
+- Authentication, session security, and authorization guard tests.
+- Global exception mapping and REST error response formatting.
