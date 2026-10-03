@@ -5,8 +5,8 @@
       <div class="dl-treemap-heading-row">
         <h4 class="dl-treemap-title">{{ title }}</h4>
         <span class="dl-treemap-badge">{{ items.length }} Classes</span>
-        <span class="dl-treemap-ref-tag" title="Methodology: Squarified Treemap (Bruls et al. 2000) &amp; BugMaps (Hora &amp; Ducasse et al. 2012)">
-          BugMaps Standard (Bruls 2000 · Hora 2012)
+        <span class="dl-treemap-ref-tag" title="Methodology: SciTools Understand™ Metric Treemap Hierarchy &amp; BugMaps (Hora et al. 2012)">
+          SciTools Understand™ Standard · BugMaps
         </span>
       </div>
       <p class="dl-treemap-subtitle">{{ subtitle }}</p>
@@ -21,9 +21,8 @@
         (click)="setFilter('all')"
         title="Show all codebase classes"
       >
-        <span class="dl-stat-dot dot-all"></span>
         <span>All</span>
-        <strong>{{ items.length }}</strong>
+        <span class="dl-stat-count">{{ items.length }}</span>
       </button>
 
       <button
@@ -33,9 +32,8 @@
         (click)="setFilter('hotspots')"
         title="Show high-risk defect hotspots and critical classes"
       >
-        <span class="dl-stat-dot dot-hotspot"></span>
         <span>Hotspots</span>
-        <strong>{{ hotspotCount }}</strong>
+        <span class="dl-stat-count">{{ hotspotCount }}</span>
       </button>
 
       <button
@@ -45,9 +43,8 @@
         (click)="setFilter('god_class')"
         title="Classes violating WMC > 40 and LOC > 500"
       >
-        <span class="dl-stat-dot dot-god"></span>
         <span>God Classes</span>
-        <strong>{{ godClassCount }}</strong>
+        <span class="dl-stat-count">{{ godClassCount }}</span>
       </button>
 
       <button
@@ -57,9 +54,8 @@
         (click)="setFilter('coupling')"
         title="Classes violating CBO > 20 or RFC > 15"
       >
-        <span class="dl-stat-dot dot-coupling"></span>
         <span>Spaghetti Coupling</span>
-        <strong>{{ couplingRiskCount }}</strong>
+        <span class="dl-stat-count">{{ couplingRiskCount }}</span>
       </button>
     </div>
   </div>
@@ -97,8 +93,9 @@
           (click)="togglePackageDropdown($event)"
           title="Focus on a specific architectural package"
         >
+          <ui-icon name="folder" [size]="13" class="dl-pkg-btn-icon"></ui-icon>
           <span class="dl-pkg-selected-text">
-            {{ selectedPackage ? selectedPackage : '📁 All Packages (' + availablePackages.length + ')' }}
+            {{ selectedPackage ? selectedPackage : 'All Packages (' + availablePackages.length + ')' }}
           </span>
           <ui-icon [name]="isPackageDropdownOpen ? 'expand-less' : 'expand-more'" class="dl-pkg-caret"></ui-icon>
         </button>
@@ -130,7 +127,7 @@
               (click)="selectPackage(null)"
             >
               <div class="dl-pkg-item-left">
-                <span class="dl-pkg-item-name">📁 All Packages</span>
+                <span class="dl-pkg-item-name">All Packages</span>
                 <span class="dl-pkg-item-meta">{{ availablePackages.length }} packages · {{ items.length }} classes</span>
               </div>
             </button>
@@ -149,7 +146,7 @@
                 </span>
               </div>
               <span *ngIf="pkg.hotspots" class="dl-pkg-item-warning" title="Hotspots in this package">
-                ⚠️ {{ pkg.hotspots }}
+                {{ pkg.hotspots }} Hotspots
               </span>
             </button>
 
@@ -168,9 +165,10 @@
         class="dl-toggle-btn"
         [class.active]="layoutMode === 'package' && !selectedPackage"
         (click)="setLayoutMode('package'); selectedPackage = null; recompute()"
-        title="Group classes by Architectural Package (SciTools Understand)"
+        title="Group classes by Architectural Package (SciTools Understand™)"
       >
-        📁 By Package
+        <ui-icon name="folder" [size]="13"></ui-icon>
+        <span>Package Clusters</span>
       </button>
       <button
         type="button"
@@ -179,15 +177,16 @@
         (click)="setLayoutMode('flat'); selectedPackage = null; recompute()"
         title="Global Aerial View without package boundaries"
       >
-        🌐 Global Aerial
+        <ui-icon name="view" [size]="13"></ui-icon>
+        <span>Flat Overview</span>
       </button>
     </div>
 
     <div class="dl-treemap-legend">
-      <span class="dl-legend-label">Risk Key:</span>
-      <span class="dl-legend-item"><span class="dl-legend-box box-clean"></span> Clean / Low Risk</span>
-      <span class="dl-legend-item"><span class="dl-legend-box box-warning"></span> Warning / Elevated</span>
-      <span class="dl-legend-item"><span class="dl-legend-box box-critical"></span> Critical Hotspot</span>
+      <span class="dl-legend-label">Risk Scale:</span>
+      <span class="dl-legend-item"><span class="dl-legend-box box-clean"></span> Low Risk (&lt;35%)</span>
+      <span class="dl-legend-item"><span class="dl-legend-box box-warning"></span> Elevated (35–59%)</span>
+      <span class="dl-legend-item"><span class="dl-legend-box box-critical"></span> Defect Hotspot (≥60%)</span>
     </div>
   </div>
 
@@ -195,7 +194,10 @@
   <div *ngIf="selectedPackage" class="dl-package-focus-banner">
     <div class="dl-focus-left">
       <span class="dl-focus-badge">PACKAGE DRILL-DOWN</span>
-      <strong class="dl-focus-title">📁 {{ selectedPackage }}</strong>
+      <strong class="dl-focus-title">
+        <ui-icon name="folder" [size]="15"></ui-icon>
+        {{ selectedPackage }}
+      </strong>
       <span class="dl-focus-meta">Showing {{ filteredItems.length }} classes in this package</span>
     </div>
     <button type="button" class="btn btn-sm btn-outline-secondary dl-btn-focus-back" (click)="selectPackage(null)">
@@ -223,12 +225,20 @@
               rx="2"
             />
           </clipPath>
+          <clipPath *ngFor="let pkg of packageGroups; let pi = index" [id]="'pkg-clip-' + pi">
+            <rect
+              [attr.x]="pkg.x + 2"
+              [attr.y]="pkg.y + 2"
+              [attr.width]="Math.max(0, pkg.width - 4)"
+              height="18"
+            />
+          </clipPath>
         </defs>
 
         <!-- SciTools Understand Package Group Boundaries -->
         <g *ngIf="layoutMode === 'package' && !selectedPackage" class="dl-treemap-packages">
           <g
-            *ngFor="let pkg of packageGroups"
+            *ngFor="let pkg of packageGroups; let pi = index"
             class="dl-pkg-group"
             [class.is-target-package]="(externalHoveredCell && externalHoveredCell.packageName === pkg.packageName) || (selectedCell && selectedCell.packageName === pkg.packageName)"
             (click)="selectPackage(pkg.packageName)"
@@ -240,24 +250,25 @@
               [attr.width]="pkg.width"
               [attr.height]="pkg.height"
               class="dl-pkg-boundary"
-              rx="4"
+              rx="3"
             />
             <!-- Package Header Banner -->
             <rect
               [attr.x]="pkg.x"
               [attr.y]="pkg.y"
               [attr.width]="pkg.width"
-              height="21"
+              height="20"
               class="dl-pkg-header-rect"
-              rx="3"
+              rx="2"
             />
             <text
-              *ngIf="pkg.width >= 70"
+              *ngIf="pkg.width >= 60"
               [attr.x]="pkg.x + 6"
               [attr.y]="pkg.y + 14"
               class="dl-pkg-title"
+              [attr.clip-path]="'url(#pkg-clip-' + pi + ')'"
             >
-              📁 {{ pkg.packageName }} ({{ pkg.totalSize | number }} LOC{{ pkg.hotspotCount ? ' · ' + pkg.hotspotCount + ' Hotspots' : '' }}) ↗
+              {{ getPackageLabel(pkg) }}
             </text>
           </g>
         </g>
@@ -275,7 +286,7 @@
           (mousemove)="onCellMouseMove($event)"
           (mouseleave)="onCellMouseLeave()"
         >
-          <title>{{ cell.name }} ({{ cell.size | number }} LOC) — Risk: {{ (cell.riskScore * 100) | number:'1.0-0' }}%{{ cell.smells.length > 0 ? ' · ⚠️ ' + cell.smells[0].name : '' }}</title>
+          <title>{{ cell.name }} ({{ cell.size | number }} LOC) — Risk: {{ (cell.riskScore * 100) | number:'1.0-0' }}%{{ cell.smells.length > 0 ? ' · ' + cell.smells[0].name : '' }}</title>
           <rect
             class="dl-treemap-cell-rect"
             [attr.x]="cell.x"
@@ -283,40 +294,52 @@
             [attr.width]="cell.width"
             [attr.height]="cell.height"
             [attr.fill]="cell.color"
-            rx="3"
+            rx="2"
           />
-          <!-- Class Name (clipped so it fits cleanly even on tight boxes) -->
+          <!-- Class Name: only displayed when cell meets readability threshold (>= 56px width & >= 26px height) to prevent text clipping -->
           <text
-            *ngIf="cell.width >= 26 && cell.height >= 14"
+            *ngIf="cell.width >= 56 && cell.height >= 26"
             class="dl-cell-name"
-            [attr.x]="cell.x + 4"
-            [attr.y]="cell.y + (cell.height >= 38 ? 16 : Math.round(cell.height / 2) + 4)"
-            [attr.font-size]="cell.width >= 85 ? '11px' : (cell.width >= 44 ? '9.5px' : '8px')"
+            [attr.x]="cell.x + 5"
+            [attr.y]="cell.y + (cell.height >= 44 ? 17 : Math.round(cell.height / 2) + 4)"
+            [attr.font-size]="cell.width >= 100 ? '11px' : (cell.width >= 70 ? '10px' : '9px')"
             [attr.clip-path]="'url(#cell-clip-' + i + ')'"
           >
             {{ cell.simpleName }}
           </text>
-          <!-- LOC Subtitle: only displayed when tile is tall enough (>= 38px) to fit 2 distinct non-overlapping lines -->
+          <!-- LOC Subtitle: only displayed when tile is tall enough (>= 44px) to fit 2 distinct non-overlapping lines -->
           <text
-            *ngIf="cell.width >= 36 && cell.height >= 38"
+            *ngIf="cell.width >= 64 && cell.height >= 44"
             class="dl-cell-loc"
-            [attr.x]="cell.x + 4"
-            [attr.y]="cell.y + 30"
-            [attr.font-size]="cell.width >= 48 ? '9.5px' : '8px'"
+            [attr.x]="cell.x + 5"
+            [attr.y]="cell.y + 32"
+            [attr.font-size]="cell.width >= 80 ? '9.5px' : '8.5px'"
             [attr.clip-path]="'url(#cell-clip-' + i + ')'"
           >
             {{ cell.size | number }} LOC
           </text>
-          <!-- Critical Smell tag if ample space (>= 58px) -->
-          <text
-            *ngIf="cell.width >= 90 && cell.height >= 58 && cell.smells.length > 0"
-            class="dl-cell-smell-badge"
-            [attr.x]="cell.x + 4"
-            [attr.y]="cell.y + 46"
+          <!-- Anti-Pattern Micro Tag: only displayed on large tiles (>= 110px width & >= 68px height) -->
+          <g
+            *ngIf="cell.width >= 110 && cell.height >= 68 && cell.smells.length > 0"
+            class="dl-cell-tag-group"
             [attr.clip-path]="'url(#cell-clip-' + i + ')'"
           >
-            ⚠️ {{ cell.smells[0].name }}
-          </text>
+            <rect
+              [attr.x]="cell.x + 5"
+              [attr.y]="cell.y + 44"
+              [attr.width]="getSmellTagWidth(cell)"
+              height="16"
+              rx="2"
+              class="dl-cell-tag-rect"
+            />
+            <text
+              [attr.x]="cell.x + 10"
+              [attr.y]="cell.y + 55"
+              class="dl-cell-tag-text"
+            >
+              {{ getPrimarySmellName(cell) }}
+            </text>
+          </g>
 
           <!-- Interactive Locator Pin / Beacon when hovered or selected from Dependency Graph -->
           <g
@@ -328,7 +351,7 @@
               [attr.y]="Math.max(2, cell.y - 20)"
               [attr.width]="Math.max(140, cell.simpleName.length * 8 + 28)"
               height="20"
-              rx="4"
+              rx="3"
               class="dl-locator-bg"
             />
             <text
@@ -336,7 +359,7 @@
               [attr.y]="Math.max(16, cell.y - 6)"
               class="dl-locator-text"
             >
-              📍 {{ cell.simpleName }} · {{ cell.size | number }} LOC
+              TARGET: {{ cell.simpleName }} · {{ cell.size | number }} LOC
             </text>
           </g>
         </g>
@@ -362,11 +385,11 @@
           <strong class="dl-tt-name" [title]="hoveredCell.name">{{ hoveredCell.simpleName }}</strong>
           <span
             class="dl-badge-risk"
-            [class.badge-critical]="hoveredCell.color === '#be123c'"
-            [class.badge-warning]="hoveredCell.color === '#b45309'"
-            [class.badge-clean]="hoveredCell.color === '#047857'"
+            [class.badge-critical]="hoveredCell.color === '#991b1b'"
+            [class.badge-warning]="hoveredCell.color === '#c2410c'"
+            [class.badge-clean]="hoveredCell.color === '#166534'"
           >
-            {{ hoveredCell.color === '#be123c' ? 'Critical Hotspot' : (hoveredCell.color === '#b45309' ? 'Warning / Elevated' : 'Clean / Low Risk') }}
+            {{ hoveredCell.color === '#991b1b' ? 'Defect Hotspot' : (hoveredCell.color === '#c2410c' ? 'Elevated Risk' : 'Low Risk / Clean') }}
           </span>
         </div>
         <div class="dl-tt-sub">{{ hoveredCell.packageName || hoveredCell.name }}</div>
@@ -378,7 +401,7 @@
         </div>
         <div *ngIf="hoveredCell.smells.length > 0" class="dl-tt-smells">
           <span *ngFor="let s of hoveredCell.smells" class="dl-tt-smell-tag">
-            ⚠️ {{ s.name }}
+            {{ s.name }}
           </span>
         </div>
         <div class="dl-tt-footer">Click class to inspect architecture &amp; blast radius</div>
@@ -548,7 +571,7 @@
 
           <!-- No smells clean state -->
           <div *ngIf="selectedCell.smells.length === 0" class="dl-smell-clean-state">
-            <span class="dl-clean-icon">✨</span>
+            <ui-icon name="check" class="dl-clean-icon"></ui-icon>
             <div class="dl-clean-body">
               <strong>Well-Structured Architecture</strong>
               <p>No structural code smells or anti-patterns detected across dimensions. Metric thresholds comply with Fowler's design principles.</p>

@@ -42,11 +42,11 @@
         <div class="dl-table-box">
           <ui-table [columns]="metricStatsColumns" [rows]="pagedAggregateRows"
                     trackByKey="metric">
-            <ng-template uiTableCell="meanManual" let-row>{{ number(row.manual.mean) }}</ng-template>
-            <ng-template uiTableCell="meanPredefined" let-row>{{ number(row.predefined.mean) }}</ng-template>
-            <ng-template uiTableCell="stdManual" let-row>{{ number(row.manual.standardDeviation) }}</ng-template>
-            <ng-template uiTableCell="stdPredefined" let-row>{{ number(row.predefined.standardDeviation) }}</ng-template>
-            <ng-template uiTableCell="percentageDifference" let-row>{{ percentage(row.percentageDifference) }}</ng-template>
+            <ng-template uiTableCell="meanManual" let-row><span class="dl-mono">{{ number(row.manual.mean) }}</span></ng-template>
+            <ng-template uiTableCell="meanPredefined" let-row><span class="dl-mono">{{ number(row.predefined.mean) }}</span></ng-template>
+            <ng-template uiTableCell="stdManual" let-row><span class="dl-mono">{{ number(row.manual.standardDeviation) }}</span></ng-template>
+            <ng-template uiTableCell="stdPredefined" let-row><span class="dl-mono">{{ number(row.predefined.standardDeviation) }}</span></ng-template>
+            <ng-template uiTableCell="percentageDifference" let-row><span class="dl-mono">{{ percentage(row.percentageDifference) }}</span></ng-template>
           </ui-table>
           <ui-pagination [total]="aggregateRows.length" [page]="metricPage" [pageSize]="metricPageSize" noun="metrics"
                          (pageChange)="onMetricPageChange($event)" (pageSizeChange)="onMetricPageSizeChange($event)">
@@ -86,11 +86,11 @@
           <div class="dl-table-box">
             <ui-table [columns]="metricStatsColumns" [rows]="pagedInstanceMetricStats"
                       trackByKey="metric">
-              <ng-template uiTableCell="meanManual" let-row>{{ number(row.manual.mean) }}</ng-template>
-              <ng-template uiTableCell="meanPredefined" let-row>{{ number(row.predefined.mean) }}</ng-template>
-              <ng-template uiTableCell="stdManual" let-row>{{ number(row.manual.standardDeviation) }}</ng-template>
-              <ng-template uiTableCell="stdPredefined" let-row>{{ number(row.predefined.standardDeviation) }}</ng-template>
-              <ng-template uiTableCell="percentageDifference" let-row>{{ percentage(row.percentageDifference) }}</ng-template>
+              <ng-template uiTableCell="meanManual" let-row><span class="dl-mono">{{ number(row.manual.mean) }}</span></ng-template>
+              <ng-template uiTableCell="meanPredefined" let-row><span class="dl-mono">{{ number(row.predefined.mean) }}</span></ng-template>
+              <ng-template uiTableCell="stdManual" let-row><span class="dl-mono">{{ number(row.manual.standardDeviation) }}</span></ng-template>
+              <ng-template uiTableCell="stdPredefined" let-row><span class="dl-mono">{{ number(row.predefined.standardDeviation) }}</span></ng-template>
+              <ng-template uiTableCell="percentageDifference" let-row><span class="dl-mono">{{ percentage(row.percentageDifference) }}</span></ng-template>
             </ui-table>
             <ui-pagination [total]="instanceMetricStats.length" [page]="metricPage" [pageSize]="metricPageSize" noun="metrics"
                            (pageChange)="onMetricPageChange($event)" (pageSizeChange)="onMetricPageSizeChange($event)">
@@ -101,8 +101,8 @@
         <div class="dl-tab-content" *ngIf="activeTab === 'files'">
           <div class="dl-table-box">
             <ui-table [columns]="instanceRowColumns" [rows]="pagedInstanceRows">
-              <ng-template uiTableCell="manualValue" let-row>{{ number(row.manualValue) }}</ng-template>
-              <ng-template uiTableCell="predefinedValue" let-row>{{ number(row.predefinedValue) }}</ng-template>
+              <ng-template uiTableCell="manualValue" let-row><span class="dl-mono">{{ number(row.manualValue) }}</span></ng-template>
+              <ng-template uiTableCell="predefinedValue" let-row><span class="dl-mono">{{ number(row.predefinedValue) }}</span></ng-template>
             </ui-table>
             <ui-pagination [total]="instanceRows.length" [page]="filePage" [pageSize]="filePageSize" noun="files"
                            (pageChange)="onFilePageChange($event)" (pageSizeChange)="onFilePageSizeChange($event)">

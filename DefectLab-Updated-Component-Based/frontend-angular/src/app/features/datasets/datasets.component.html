@@ -1,25 +1,38 @@
 <ui-card cardClass="dl-page-card">
-  <ui-page-header title="Dataset catalog">
-    <ui-search-toggle header-search label="Search datasets" placeholder="Project or version"
-        [query]="search" (queryChange)="search = $event">
-    </ui-search-toggle>
+  <ui-page-header title="Dataset Catalog">
     <ui-button header-actions icon="plus" link="/metric-storage/new">Add Dataset</ui-button>
   </ui-page-header>
 
-  <div class="dl-form-row dl-form-row-3">
-    <ui-select label="Metric family" [options]="familyFilterOptions"
-               [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
-    </ui-select>
-    <ui-select label="Data source" [options]="originFilterOptions"
-               [value]="originFilter" (valueChange)="onOriginFilterChange($event)">
-    </ui-select>
-  </div>
-
-  <section class="dl-grid dl-grid-3">
+  <section class="dl-grid dl-grid-3 dl-catalog-stats">
     <ui-metric-card variant="stat" label="Total datasets" [value]="rows.length"></ui-metric-card>
     <ui-metric-card variant="stat" label="PROMISE datasets" [value]="countFamily('PROMISE')"></ui-metric-card>
     <ui-metric-card variant="stat" label="AEEEM datasets" [value]="countFamily('AEEEM')"></ui-metric-card>
   </section>
+
+  <div class="dl-table-toolbar">
+    <div class="dl-table-search-box">
+      <span class="dl-search-icon">
+        <ui-icon name="search" [size]="14"></ui-icon>
+      </span>
+      <input type="text" placeholder="Search project or version…"
+             [ngModel]="search" (ngModelChange)="search = $event; resetPage()">
+    </div>
+
+    <div class="dl-catalog-filter-group">
+      <div class="dl-catalog-filter">
+        <span class="dl-filter-label">Family:</span>
+        <ui-select [options]="familyFilterOptions"
+                   [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
+        </ui-select>
+      </div>
+      <div class="dl-catalog-filter">
+        <span class="dl-filter-label">Source:</span>
+        <ui-select [options]="originFilterOptions"
+                   [value]="originFilter" (valueChange)="onOriginFilterChange($event)">
+        </ui-select>
+      </div>
+    </div>
+  </div>
 
   <div class="dl-detail-section dl-fill">
     <ui-state *ngIf="loading" kind="loading" message="Loading datasets…"></ui-state>
@@ -29,21 +42,29 @@
           <strong>{{ row.projectName }}</strong>
         </ng-template>
         <ng-template uiTableCell="projectVersion" let-row>
-          {{ row.projectVersion || '—' }}
+          <span class="dl-mono" style="color: var(--muted); font-size: 12px;">{{ row.projectVersion || '—' }}</span>
         </ng-template>
         <ng-template uiTableCell="datasetFamily" let-row>
-          <ui-badge [tone]="row.datasetFamily">{{ row.datasetFamily }}</ui-badge>
+          <span class="dl-tag-mono">{{ row.datasetFamily }}</span>
         </ng-template>
         <ng-template uiTableCell="datasetType" let-row>
-          {{ row.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' }}
+          <span style="color: var(--ink-body); font-size: 12.5px;">{{ row.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' }}</span>
         </ng-template>
         <ng-template uiTableCell="hasActualLabel" let-row>
-          <ui-badge [tone]="row.hasActualLabel ? 'green' : 'amber'">
+          <span class="dl-status-cell" [class.clean]="row.hasActualLabel" [class.muted]="!row.hasActualLabel">
+            <span class="dl-status-dot"></span>
             {{ row.hasActualLabel ? 'Labeled' : 'Unlabeled' }}
-          </ui-badge>
+          </span>
         </ng-template>
-        <ng-template uiTableCell="totalFiles" let-row>{{ row.totalFiles | number }}</ng-template>
-        <ng-template uiTableCell="createdAt" let-row>{{ row.createdAt | date:'mediumDate' }}</ng-template>
+        <ng-template uiTableCell="totalFiles" let-row>
+          <span class="dl-mono">{{ row.totalFiles | number }}</span>
+        </ng-template>
+        <ng-template uiTableCell="totalMetrics" let-row>
+          <span class="dl-mono">{{ row.totalMetrics }}</span>
+        </ng-template>
+        <ng-template uiTableCell="createdAt" let-row>
+          <span class="dl-mono" style="color: var(--muted); font-size: 12px;">{{ row.createdAt | date:'mediumDate' }}</span>
+        </ng-template>
         <ng-template uiTableCell="actions" let-row>
           <ui-button variant="ghost" size="sm" icon="view" [link]="['/metric-storage', row.id]"
                      title="Preview dataset" ariaLabel="Preview dataset"></ui-button>

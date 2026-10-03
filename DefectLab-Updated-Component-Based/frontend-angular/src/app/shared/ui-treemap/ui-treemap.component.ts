@@ -491,11 +491,11 @@ export class UiTreemapComponent implements OnChanges, AfterViewInit, OnDestroy {
     const isBuggy = data.predictedLabel === 1 || data.riskScore >= 0.5;
 
     if (isBuggy || data.riskScore >= 0.6 || hasCriticalSmell) {
-      color = '#be123c'; // SciTools Understand Crimson Hotspot
+      color = '#991b1b'; // SciTools Understand Dark Ruby Crimson Hotspot
     } else if (data.riskScore >= 0.35 || data.smells.length > 0) {
-      color = '#b45309'; // Warning Amber
+      color = '#c2410c'; // SciTools Understand Burnt Amber / Warning
     } else {
-      color = '#047857'; // Deep Clean Emerald
+      color = '#166534'; // SciTools Understand Deep Forest Green / Clean
     }
 
     return {
@@ -570,4 +570,33 @@ export class UiTreemapComponent implements OnChanges, AfterViewInit, OnDestroy {
   closeInspector(): void {
     this.selectedCell = null;
   }
+
+  getPackageLabel(pkg: TreemapGroup): string {
+    const stats = ` (${(pkg.totalSize || 0).toLocaleString()} LOC${pkg.hotspotCount ? ' · ' + pkg.hotspotCount + ' Hotspots' : ''})`;
+    const maxChars = Math.floor(pkg.width / 6.8);
+    if (maxChars < 8) {
+      return '';
+    }
+    const full = pkg.packageName + stats;
+    if (full.length <= maxChars) {
+      return full;
+    }
+    const available = maxChars - stats.length;
+    if (available > 6) {
+      return pkg.packageName.substring(0, available - 1) + '…' + stats;
+    }
+    return pkg.packageName.substring(0, maxChars - 1) + '…';
+  }
+
+  getSmellTagWidth(cell: TreemapCell): number {
+    const name = (cell.smells && cell.smells.length > 0 && cell.smells[0]?.name) ? cell.smells[0].name : '';
+    return Math.min(cell.width - 10, name.length * 6.8 + 14);
+  }
+
+  getPrimarySmellName(cell: TreemapCell): string {
+    return (cell.smells && cell.smells.length > 0 && cell.smells[0]?.name)
+      ? cell.smells[0].name.toUpperCase()
+      : '';
+  }
 }
+

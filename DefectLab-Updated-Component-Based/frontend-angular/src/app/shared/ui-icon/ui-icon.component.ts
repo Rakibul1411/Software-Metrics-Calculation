@@ -40,7 +40,8 @@ export type UiIconName =
   | 'shield'
   | 'target'
   | 'database'
-  | 'code';
+  | 'code'
+  | 'folder';
 
 const PATHS: Record<UiIconName, string> = {
   'check': 'M4 12.5 9 17.5 20 6.5',
@@ -75,7 +76,8 @@ const PATHS: Record<UiIconName, string> = {
   'shield': 'M12 3s7 3 7 8c0 5-7 10-7 10S5 16 5 11c0-5 7-8 7-8Z',
   'target': 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm0-6a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
   'database': 'M12 4c4.4 0 8 1.3 8 3v10c0 1.7-3.6 3-8 3s-8-1.3-8-3V7c0-1.7 3.6-3 8-3Zm0 6c4.4 0 8-1.3 8-3M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
-  'code': 'M8 9l-4 3 4 3m8-6l4 3-4 3m-6 3l2-12'
+  'code': 'M8 9l-4 3 4 3m8-6l4 3-4 3m-6 3l2-12',
+  'folder': 'M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2Z'
 };
 
 @Component({

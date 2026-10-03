@@ -1,35 +1,45 @@
 <ui-card cardClass="dl-page-card">
   <ui-page-header title="Prediction Runs">
-    <ui-search-toggle header-search label="Search prediction runs" placeholder="Project name"
-        [query]="search" (queryChange)="search = $event">
-    </ui-search-toggle>
     <ui-button header-actions icon="plus" link="/defect-predictions/new">Run Prediction</ui-button>
   </ui-page-header>
 
-  <div class="dl-form-row dl-form-row-3">
-    <ui-select label="Metric family" [options]="familyFilterOptions"
-               [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
-    </ui-select>
+  <div class="dl-table-toolbar">
+    <div class="dl-table-search-box">
+      <span class="dl-search-icon">
+        <ui-icon name="search" [size]="14"></ui-icon>
+      </span>
+      <input type="text" placeholder="Search target project…"
+             [ngModel]="search" (ngModelChange)="search = $event; resetPage()">
+    </div>
+
+    <div class="dl-catalog-filter-group">
+      <div class="dl-catalog-filter">
+        <span class="dl-filter-label">Family:</span>
+        <ui-select [options]="familyFilterOptions"
+                   [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
+        </ui-select>
+      </div>
+    </div>
   </div>
 
   <div class="dl-detail-section dl-fill">
     <ui-state *ngIf="loading" kind="loading" message="Loading prediction runs…"></ui-state>
     <div class="dl-table-box" *ngIf="!loading && filtered.length; else emptyRuns">
       <ui-table [columns]="runsColumns" [rows]="pageRows" trackByKey="id">
-        <ng-template uiTableCell="run" let-row>#{{ row.id }}</ng-template>
+        <ng-template uiTableCell="run" let-row><span class="dl-mono">#{{ row.id }}</span></ng-template>
         <ng-template uiTableCell="group" let-row>
-          <span [title]="row.comparisonGroupId || ''">{{ groupLabel(row) }}</span>
+          <span [title]="row.comparisonGroupId || ''" class="dl-mono">{{ groupLabel(row) }}</span>
         </ng-template>
-        <ng-template uiTableCell="target" let-row>{{ row.targetDataset.displayName }}</ng-template>
+        <ng-template uiTableCell="target" let-row><strong>{{ row.targetDataset.displayName }}</strong></ng-template>
         <ng-template uiTableCell="family" let-row>
-          <ui-badge [tone]="row.modelConfig.datasetFamily">{{ row.modelConfig.datasetFamily }}</ui-badge>
+          <span class="dl-tag-mono">{{ row.modelConfig.datasetFamily }}</span>
         </ng-template>
         <ng-template uiTableCell="type" let-row>
-          {{ row.targetDataset.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' }}
+          <span style="color: var(--ink-body); font-size: 12.5px;">{{ row.targetDataset.datasetType === 'PREDEFINED' ? 'Predefined' : 'Manual extracted' }}</span>
         </ng-template>
         <ng-template uiTableCell="model" let-row>{{ row.modelConfig.modelName }} · {{ setting(row) }}</ng-template>
-        <ng-template uiTableCell="buggy" let-row>{{ row.summary.predictedBuggy }}</ng-template>
-        <ng-template uiTableCell="created" let-row>{{ row.createdAt | date:'mediumDate' }}</ng-template>
+        <ng-template uiTableCell="buggy" let-row><span class="dl-mono">{{ row.summary.predictedBuggy }}</span></ng-template>
+        <ng-template uiTableCell="created" let-row><span class="dl-mono" style="color: var(--muted); font-size: 12px;">{{ row.createdAt | date:'mediumDate' }}</span></ng-template>
         <ng-template uiTableCell="inspect" let-row>
           <ui-button variant="ghost" size="sm" icon="view" [link]="['/defect-predictions', row.id]"
                      title="Inspect" ariaLabel="Inspect run"></ui-button>

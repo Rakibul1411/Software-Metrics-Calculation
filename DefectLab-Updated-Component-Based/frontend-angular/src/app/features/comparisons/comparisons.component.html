@@ -1,15 +1,25 @@
 <ui-card cardClass="dl-page-card">
   <ui-page-header title="Metric Comparisons">
-    <ui-search-toggle header-search label="Search comparisons" placeholder="Project name"
-        [query]="search" (queryChange)="search = $event">
-    </ui-search-toggle>
     <ui-button header-actions icon="plus" link="/metric-comparisons/new">New Comparison</ui-button>
   </ui-page-header>
 
-  <div class="dl-form-row dl-form-row-3">
-    <ui-select label="Metric family" [options]="familyFilterOptions"
-               [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
-    </ui-select>
+  <div class="dl-table-toolbar">
+    <div class="dl-table-search-box">
+      <span class="dl-search-icon">
+        <ui-icon name="search" [size]="14"></ui-icon>
+      </span>
+      <input type="text" placeholder="Search comparison project…"
+             [ngModel]="search" (ngModelChange)="search = $event; resetPage()">
+    </div>
+
+    <div class="dl-catalog-filter-group">
+      <div class="dl-catalog-filter">
+        <span class="dl-filter-label">Family:</span>
+        <ui-select [options]="familyFilterOptions"
+                   [value]="familyFilter" (valueChange)="onFamilyFilterChange($event)">
+        </ui-select>
+      </div>
+    </div>
   </div>
 
   <div class="dl-detail-section dl-fill">
@@ -20,7 +30,7 @@
           <strong>{{ row.displayName }}</strong>
         </ng-template>
         <ng-template uiTableCell="family" let-row>
-          <ui-badge [tone]="row.datasetFamily">{{ row.datasetFamily }}</ui-badge>
+          <span class="dl-tag-mono">{{ row.datasetFamily }}</span>
         </ng-template>
         <ng-template uiTableCell="actions" let-row>
           <ui-button variant="ghost" size="sm" icon="view"

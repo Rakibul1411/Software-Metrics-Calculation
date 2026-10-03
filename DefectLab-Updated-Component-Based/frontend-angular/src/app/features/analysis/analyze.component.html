@@ -6,8 +6,7 @@
     currentLabel="Analyze Source">
   </ui-page-header>
 
-  <div class="dl-detail-section dl-form-fill">
-    <form class="dl-form-stack dl-form-fill" (ngSubmit)="submit()">
+  <form class="dl-form-stack dl-form-fill" (ngSubmit)="submit()">
       <div class="dl-form-row dl-form-row-3">
         <ui-radio-group label="Metric family" [options]="familyOptions"
                          [value]="family" (valueChange)="onFamilyChange($event)">
@@ -51,5 +50,4 @@
         </ui-button>
       </div>
     </form>
-  </div>
 </ui-card>

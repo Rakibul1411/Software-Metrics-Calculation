@@ -1,12 +1,19 @@
 <ui-card cardClass="dl-page-card">
   <ui-page-header title="Prediction Reports">
-    <ui-search-toggle header-search label="Search reports" placeholder="Group, source or target"
-        [query]="search" (queryChange)="search = $event">
-    </ui-search-toggle>
     <ui-button header-actions icon="plus" link="/defect-predictions/new">
       Run Prediction
     </ui-button>
   </ui-page-header>
+
+  <div class="dl-table-toolbar">
+    <div class="dl-table-search-box">
+      <span class="dl-search-icon">
+        <ui-icon name="search" [size]="14"></ui-icon>
+      </span>
+      <input type="text" placeholder="Search reports by group, source, or target…"
+             [ngModel]="search" (ngModelChange)="search = $event; resetPage()">
+    </div>
+  </div>
 
   <div class="dl-detail-section dl-fill">
     <ui-state *ngIf="loading" kind="loading" message="Loading reports…"></ui-state>
@@ -14,14 +21,14 @@
       <ui-table [columns]="columns" [rows]="pageRows">
         <ng-template uiTableCell="group" let-row>
           <span [title]="row.comparisonGroupId || ''" class="dl-mono" style="font-weight: 600;">{{ groupLabel(row) }}</span>
-          <span *ngIf="row.runs.length > 1" class="dl-badge-risk badge-clean" style="margin-left: 6px; font-size: 9.5px;">
+          <span *ngIf="row.runs.length > 1" class="dl-tag-mono" style="margin-left: 6px; font-size: 10px;">
             Dual Target
           </span>
         </ng-template>
-        <ng-template uiTableCell="source" let-row>{{ row.runs[0].sourceDataset.displayName }}</ng-template>
+        <ng-template uiTableCell="source" let-row><strong>{{ row.runs[0].sourceDataset.displayName }}</strong></ng-template>
         <ng-template uiTableCell="targets" let-row>{{ targetNames(row) }}</ng-template>
         <ng-template uiTableCell="model" let-row>{{ row.runs[0].modelConfig.modelName }}</ng-template>
-        <ng-template uiTableCell="created" let-row>{{ row.runs[0].createdAt | date:'mediumDate' }}</ng-template>
+        <ng-template uiTableCell="created" let-row><span class="dl-mono" style="color: var(--muted); font-size: 12px;">{{ row.runs[0].createdAt | date:'mediumDate' }}</span></ng-template>
         <ng-template uiTableCell="view" let-row>
           <ui-button variant="ghost" size="sm" icon="view"
                      [link]="['/prediction-reports', groupKey(row)]"

@@ -2,6 +2,7 @@
   <span class="dl-radio-group-label" *ngIf="label">{{ label }}</span>
   <div class="dl-radio-row">
     <label class="dl-radio" *ngFor="let option of options"
+           [class.dl-radio-selected]="option.value === value"
            [class.dl-disabled]="disabled || option.disabled">
       <input type="radio" [name]="name" [value]="option.value"
              [checked]="option.value === value" [disabled]="disabled || option.disabled"

@@ -2,6 +2,9 @@
   <header class="dl-dash-heading">
     <div class="dl-dash-heading-title">
       <h2>Workspace Overview</h2>
+      <p class="dl-dash-subtitle">
+        Software metrics, architectural health, defect blast radius, and machine learning quality workbench
+      </p>
     </div>
     <div class="dl-dash-actions">
       <ui-button icon="plus" link="/source-analysis">Analyze Source</ui-button>
@@ -13,125 +16,191 @@
 
   <ng-container *ngIf="view as view">
     <section class="dl-dash-summary-grid">
-      <article class="dl-dash-panel">
-        <div class="dl-dash-card-head">
-          <div>
-            <span class="dl-dash-eyebrow">Dataset Portfolio</span>
-            <strong>{{ view.data.totalDatasets | number }}</strong>
-            <small>{{ view.volumeTotal | number }} classes across assets</small>
-          </div>
-          <span class="dl-dash-live"><i></i> Live</span>
+      <article class="dl-dash-metric dl-dash-kpi-card" routerLink="/metric-storage">
+        <div class="dl-dash-card-header">
+          <span class="dl-dash-card-label">Datasets &amp; Classes</span>
+          <span class="dl-dash-live"><i class="dl-live-dot"></i> Live</span>
         </div>
-
-        <div class="dl-dash-mix" aria-label="Dataset origin distribution">
-          <span class="manual"
-                [style.width.%]="percent(view.data.manualDatasets, view.data.totalDatasets)"></span>
-          <span class="predefined"
-                [style.width.%]="percent(view.data.predefinedDatasets, view.data.totalDatasets)"></span>
+        <div class="dl-dash-metric-value">
+          <strong class="dl-kpi-num">{{ view.data.totalDatasets | number }}</strong>
+        </div>
+        <div class="dl-dash-metric-meta">
+          <span>{{ view.volumeTotal | number }} classes</span>
+          <span class="dl-dash-meta-sep">·</span>
+          <span>{{ percent(view.data.labeledDatasets, view.data.totalDatasets) | number:'1.0-0' }}% labeled</span>
+        </div>
+        <div class="dl-dash-mix-bar" aria-label="Dataset origin distribution">
+          <span class="dl-mix-seg manual"
+                [style.width.%]="percent(view.data.manualDatasets, view.data.totalDatasets)"
+                [title]="'Manual: ' + view.data.manualDatasets"></span>
+          <span class="dl-mix-seg predefined"
+                [style.width.%]="percent(view.data.predefinedDatasets, view.data.totalDatasets)"
+                [title]="'Predefined: ' + view.data.predefinedDatasets"></span>
         </div>
         <div class="dl-dash-legend">
-          <span><i class="manual"></i>Manual {{ view.data.manualDatasets }}</span>
-          <span><i class="predefined"></i>Predefined {{ view.data.predefinedDatasets }}</span>
+          <span><i class="dl-dot-manual"></i>{{ view.data.manualDatasets }} manual</span>
+          <span><i class="dl-dot-predefined"></i>{{ view.data.predefinedDatasets }} library</span>
         </div>
-
-        <footer>
-          <span>Prediction Ready</span>
-          <strong>{{ percent(view.data.labeledDatasets, view.data.totalDatasets) | number:'1.0-0' }}%</strong>
-        </footer>
       </article>
 
-      <article class="dl-dash-metric">
-        <div class="dl-dash-metric-icon danger">
-          <ui-icon name="warning" [size]="18"></ui-icon>
+      <article class="dl-dash-metric dl-dash-kpi-card" routerLink="/prediction-reports">
+        <div class="dl-dash-card-header">
+          <span class="dl-dash-card-label">Defects Detected</span>
+          <ui-icon class="dl-dash-card-icon" name="warning" [size]="14"></ui-icon>
         </div>
-        <span>Defects Detected</span>
-        <strong>{{ view.defectStats.totalPredictedBuggy | number }}</strong>
-        <small>{{ view.defectStats.defectRate | number:'1.1-1' }}% rate · {{ view.defectStats.totalRuns }} runs</small>
-        <a routerLink="/prediction-reports">Review reports <b>→</b></a>
+        <div class="dl-dash-metric-value">
+          <strong class="dl-kpi-num">{{ view.defectStats.totalPredictedBuggy | number }}</strong>
+        </div>
+        <div class="dl-dash-metric-meta">
+          <span>{{ view.defectStats.defectRate | number:'1.1-1' }}% rate</span>
+          <span class="dl-dash-meta-sep">·</span>
+          <span>{{ view.defectStats.totalRuns }} runs</span>
+        </div>
       </article>
 
-      <article class="dl-dash-metric">
-        <div class="dl-dash-metric-icon success">
-          <ui-icon name="chart" [size]="18"></ui-icon>
+      <article class="dl-dash-metric dl-dash-kpi-card" routerLink="/defect-predictions">
+        <div class="dl-dash-card-header">
+          <span class="dl-dash-card-label">Model Reliability</span>
+          <ui-icon class="dl-dash-card-icon" name="chart" [size]="14"></ui-icon>
         </div>
-        <span>Model Reliability</span>
-        <strong>{{ view.defectStats.avgF1 !== null ? (view.defectStats.avgF1 | number:'1.2-2') : '—' }}</strong>
-        <small>Avg F1 · ROC-AUC {{ view.defectStats.avgRocAuc !== null ? (view.defectStats.avgRocAuc | number:'1.2-2') : '—' }}</small>
-        <span class="dl-dash-submetric" *ngIf="view.defectStats.avgPrecision !== null">
-          Prec {{ view.defectStats.avgPrecision | number:'1.2-2' }} · Rec {{ view.defectStats.avgRecall | number:'1.2-2' }}
-        </span>
-        <a routerLink="/defect-predictions">Model workspace <b>→</b></a>
+        <div class="dl-dash-metric-value">
+          <strong class="dl-kpi-num">{{ view.defectStats.avgF1 !== null ? (view.defectStats.avgF1 | number:'1.2-2') : '—' }}</strong>
+          <span class="dl-dash-val-unit" *ngIf="view.defectStats.avgF1 !== null">Avg F1</span>
+        </div>
+        <div class="dl-dash-metric-meta">
+          <span>ROC-AUC {{ view.defectStats.avgRocAuc !== null ? (view.defectStats.avgRocAuc | number:'1.2-2') : '—' }}</span>
+        </div>
       </article>
 
-      <article class="dl-dash-metric">
-        <div class="dl-dash-metric-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
-          <ui-icon name="shield" [size]="18"></ui-icon>
+      <article class="dl-dash-metric dl-dash-kpi-card" [routerLink]="['/prediction-reports', (view.topHotspots && view.topHotspots.length ? view.topHotspots[0].reportKey : '')]">
+        <div class="dl-dash-card-header">
+          <span class="dl-dash-card-label">Maintainability</span>
+          <ui-icon class="dl-dash-card-icon" name="shield" [size]="14"></ui-icon>
         </div>
-        <span>Code Architecture</span>
-        <strong>Grade {{ view.architecturalStats.maintainabilityRating }}</strong>
-        <small>MI: {{ view.architecturalStats.overallMaintainabilityIndex }}/100 · {{ view.architecturalStats.totalGodClasses }} God Classes</small>
-        <span class="dl-dash-submetric">
-          {{ view.architecturalStats.totalSpaghettiCoupling }} Spaghetti Couplings
-        </span>
-        <a [routerLink]="['/prediction-reports', (view.topHotspots && view.topHotspots.length ? view.topHotspots[0].reportKey : '')]">Inspect Treemap <b>→</b></a>
+        <div class="dl-dash-metric-value">
+          <div class="dl-grade-val-wrap">
+            <span class="dl-grade-prefix">Grade</span>
+            <strong class="dl-grade-char">{{ view.architecturalStats.maintainabilityRating }}</strong>
+          </div>
+        </div>
+        <div class="dl-dash-metric-meta">
+          <span>SEI MI {{ view.architecturalStats.overallMaintainabilityIndex }}/100</span>
+          <span class="dl-dash-meta-sep">·</span>
+          <span>{{ view.architecturalStats.totalGodClasses }} God classes</span>
+        </div>
       </article>
 
-      <article class="dl-dash-metric">
-        <div class="dl-dash-metric-icon warn">
-          <ui-icon name="target" [size]="18"></ui-icon>
+      <article class="dl-dash-metric dl-dash-kpi-card" routerLink="/prediction-reports">
+        <div class="dl-dash-card-header">
+          <span class="dl-dash-card-label">Critical Hotspot Target</span>
+          <ui-icon class="dl-dash-card-icon" name="target" [size]="14"></ui-icon>
         </div>
-        <span>Top Defect Hotspot</span>
-        <strong [title]="view.defectStats.highestRiskDataset || 'No hotspots'">{{ view.defectStats.highestRiskDataset || 'None' }}</strong>
-        <small>{{ view.defectStats.highestRiskCount > 0 ? (view.defectStats.highestRiskCount + ' buggy classes') : 'No defect alerts' }}</small>
-        <a routerLink="/prediction-reports">Inspect target <b>→</b></a>
+        <div class="dl-dash-metric-value">
+          <strong class="dl-hotspot-target-name" [title]="view.defectStats.highestRiskDataset || 'No hotspots'">
+            {{ view.defectStats.highestRiskDataset || 'None' }}
+          </strong>
+        </div>
+        <div class="dl-dash-metric-meta">
+          <span>{{ view.defectStats.highestRiskCount > 0 ? (view.defectStats.highestRiskCount + ' buggy classes') : 'Zero critical alerts' }}</span>
+        </div>
       </article>
     </section>
 
     <!-- Architectural Health Pulse -->
     <section class="dl-dash-arch-health-section" *ngIf="view.architecturalStats && view.architecturalStats.totalAnalyzedClasses > 0">
-      <article class="dl-dash-panel">
+      <article class="dl-dash-panel dl-arch-panel-clean">
         <div class="dl-dash-section-head">
           <div>
-            <h3>Architectural Health &amp; Anti-Pattern Distribution</h3>
+            <h3>Architectural Health &amp; Code Quality</h3>
+            <span class="dl-dash-panel-sub">SEI Maintainability Index &amp; module distribution across analyzed project</span>
           </div>
-          <span class="dl-dash-period">Target: {{ (view.topHotspots && view.topHotspots.length ? view.topHotspots[0].targetDatasetName : 'Analyzed Project') }}</span>
+          <div class="dl-dash-head-tags">
+            <span class="dl-treemap-ref-tag" title="Standard: SEI Maintainability Index (Oman &amp; Hagemeister 1992)">
+              SEI Standard
+            </span>
+            <span class="dl-dash-target-pill">{{ (view.topHotspots && view.topHotspots.length ? view.topHotspots[0].targetDatasetName : 'Analyzed Project') }}</span>
+          </div>
         </div>
 
         <div class="dl-arch-health-grid">
           <div class="dl-arch-health-card">
-            <span class="dl-arch-card-label">Clean Modules</span>
-            <strong class="dl-arch-card-val text-success">{{ view.architecturalStats.cleanClassesCount }} Classes</strong>
-            <small>High cohesion (LCOM &lt; 0.8), low coupling</small>
+            <div class="dl-arch-card-top">
+              <span class="dl-arch-card-label">Clean Modules</span>
+              <span class="dl-arch-status-pill clean">Healthy</span>
+            </div>
+            <div class="dl-arch-val-row">
+              <strong class="dl-arch-num">{{ view.architecturalStats.cleanClassesCount }}</strong>
+              <span class="dl-arch-unit">classes</span>
+            </div>
             <div class="dl-prob-track">
-              <span class="dl-prob-fill" style="background: #047857;" [style.width.%]="percent(view.architecturalStats.cleanClassesCount, view.architecturalStats.totalAnalyzedClasses)"></span>
+              <span class="dl-prob-fill dl-fill-healthy" [style.width.%]="percent(view.architecturalStats.cleanClassesCount, view.architecturalStats.totalAnalyzedClasses)"></span>
             </div>
           </div>
 
           <div class="dl-arch-health-card">
-            <span class="dl-arch-card-label">Elevated Risk / Warning</span>
-            <strong class="dl-arch-card-val text-warn">{{ view.architecturalStats.warningClassesCount }} Classes</strong>
-            <small>Elevated complexity or coupling</small>
+            <div class="dl-arch-card-top">
+              <span class="dl-arch-card-label">Elevated Risk</span>
+              <span class="dl-arch-status-pill warn">Warning</span>
+            </div>
+            <div class="dl-arch-val-row">
+              <strong class="dl-arch-num">{{ view.architecturalStats.warningClassesCount }}</strong>
+              <span class="dl-arch-unit">classes</span>
+            </div>
             <div class="dl-prob-track">
-              <span class="dl-prob-fill" style="background: #b45309;" [style.width.%]="percent(view.architecturalStats.warningClassesCount, view.architecturalStats.totalAnalyzedClasses)"></span>
+              <span class="dl-prob-fill dl-fill-warning" [style.width.%]="percent(view.architecturalStats.warningClassesCount, view.architecturalStats.totalAnalyzedClasses)"></span>
             </div>
           </div>
 
           <div class="dl-arch-health-card">
-            <span class="dl-arch-card-label">Critical Hotspots</span>
-            <strong class="dl-arch-card-val text-danger">{{ view.architecturalStats.criticalHotspotsCount }} Classes</strong>
-            <small>{{ view.architecturalStats.totalGodClasses }} God Classes · {{ view.architecturalStats.totalSpaghettiCoupling }} Spaghetti</small>
+            <div class="dl-arch-card-top">
+              <span class="dl-arch-card-label">Critical Hotspots</span>
+              <span class="dl-arch-status-pill danger">Critical</span>
+            </div>
+            <div class="dl-arch-val-row">
+              <strong class="dl-arch-num">{{ view.architecturalStats.criticalHotspotsCount }}</strong>
+              <span class="dl-arch-unit">classes</span>
+            </div>
             <div class="dl-prob-track">
-              <span class="dl-prob-fill" style="background: #be123c;" [style.width.%]="percent(view.architecturalStats.criticalHotspotsCount, view.architecturalStats.totalAnalyzedClasses)"></span>
+              <span class="dl-prob-fill dl-fill-critical" [style.width.%]="percent(view.architecturalStats.criticalHotspotsCount, view.architecturalStats.totalAnalyzedClasses)"></span>
             </div>
           </div>
 
           <div class="dl-arch-health-card">
-            <span class="dl-arch-card-label">SEI Maintainability Index</span>
-            <strong class="dl-arch-card-val text-accent">{{ view.architecturalStats.overallMaintainabilityIndex }}/100 (Grade {{ view.architecturalStats.maintainabilityRating }})</strong>
-            <small>Halstead Volume + McCabe Cyclomatic</small>
-            <div class="dl-prob-track">
-              <span class="dl-prob-fill" style="background: #2563eb;" [style.width.%]="view.architecturalStats.overallMaintainabilityIndex"></span>
+            <div class="dl-arch-card-top">
+              <span class="dl-arch-card-label">SEI Maintainability</span>
+              <span class="dl-arch-status-pill accent">Grade {{ view.architecturalStats.maintainabilityRating }}</span>
             </div>
+            <div class="dl-arch-val-row">
+              <strong class="dl-arch-num">{{ view.architecturalStats.overallMaintainabilityIndex }}</strong>
+              <span class="dl-arch-scale">/100</span>
+            </div>
+            <div class="dl-prob-track">
+              <span class="dl-prob-fill dl-fill-accent" [style.width.%]="view.architecturalStats.overallMaintainabilityIndex"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Architectural Smells Summary Bar -->
+        <div class="dl-dash-smell-summary-bar" *ngIf="view.architecturalStats.totalGodClasses || view.architecturalStats.totalSpaghettiCoupling || view.architecturalStats.totalIncoherentModules">
+          <div class="dl-smell-item" title="Classes with WMC > 40 and LOC > 500">
+            <span class="dl-smell-dot danger"></span>
+            <span class="dl-smell-name">God Classes:</span>
+            <strong>{{ view.architecturalStats.totalGodClasses }}</strong>
+            <small>(WMC &gt; 40, LOC &gt; 500)</small>
+          </div>
+          <div class="dl-smell-sep">·</div>
+          <div class="dl-smell-item" title="Classes with CBO > 20 or RFC > 50">
+            <span class="dl-smell-dot warn"></span>
+            <span class="dl-smell-name">Spaghetti Coupling:</span>
+            <strong>{{ view.architecturalStats.totalSpaghettiCoupling }}</strong>
+            <small>(CBO &gt; 20, RFC &gt; 50)</small>
+          </div>
+          <div class="dl-smell-sep">·</div>
+          <div class="dl-smell-item" title="Classes with LCOM ≥ 0.8">
+            <span class="dl-smell-dot info"></span>
+            <span class="dl-smell-name">Incoherent Modules:</span>
+            <strong>{{ view.architecturalStats.totalIncoherentModules }}</strong>
+            <small>(LCOM &ge; 0.80)</small>
           </div>
         </div>
       </article>
@@ -139,57 +208,68 @@
 
     <!-- Critical Defect Hotspots Section -->
     <section class="dl-dash-hotspots-section" *ngIf="view.topHotspots && view.topHotspots.length">
-      <article class="dl-dash-panel">
+      <article class="dl-dash-panel dl-hotspots-panel">
         <div class="dl-dash-section-head">
-          <div>
-            <h3>Critical Defect Hotspots</h3>
+          <div class="dl-hotspots-head-group">
+            <div>
+              <h3>Critical Defect Hotspots &amp; Blast Radius</h3>
+              <span class="dl-dash-panel-sub">Ranked high-risk classes evaluated by complexity metrics and defect probability</span>
+            </div>
           </div>
-          <span class="dl-dash-period">Highest defect probability</span>
+          <div class="dl-dash-head-tags">
+            <span class="dl-treemap-ref-tag" title="Methodology: BugMaps Defect Topology (Hora et al. 2012)">
+              BugMaps Topology
+            </span>
+            <span class="dl-hotspots-count">{{ view.topHotspots.length }} high-risk classes</span>
+          </div>
         </div>
 
-        <div class="dl-hotspots-list">
-          <div class="dl-hotspot-item" *ngFor="let item of view.topHotspots">
-            <div class="dl-hotspot-rank">#{{ item.riskRank }}</div>
-            <div class="dl-hotspot-main">
-              <div class="dl-hotspot-title-row">
-                <strong class="dl-hotspot-name" [title]="item.classIdentifier">{{ item.simpleName }}</strong>
-                <span class="dl-hotspot-package">{{ item.packageName }}</span>
-                <span class="dl-hotspot-smell-badge" *ngIf="item.primarySmell && item.primarySmell !== 'High Defect Susceptibility Hotspot'">
+        <div class="dl-hotspots-table">
+          <a class="dl-hotspot-row" *ngFor="let item of view.topHotspots"
+             [routerLink]="['/prediction-reports', item.reportKey]"
+             [title]="'Inspect ' + item.simpleName + ' in Metric Treemap'">
+            <span class="dl-hotspot-rank">#{{ item.riskRank }}</span>
+            <div class="dl-hotspot-identity">
+              <div class="dl-hotspot-name-group">
+                <strong class="dl-hotspot-name">{{ item.simpleName }}</strong>
+                <span class="dl-hotspot-smell" *ngIf="item.primarySmell && item.primarySmell !== 'High Defect Susceptibility Hotspot'">
                   {{ item.primarySmell }}
                 </span>
               </div>
-              <div class="dl-hotspot-meta-row">
-                <span class="dl-hotspot-metric-pill"><strong>LOC:</strong> {{ item.loc | number }}</span>
-                <span class="dl-hotspot-metric-pill"><strong>WMC:</strong> {{ item.wmc }}</span>
-                <span class="dl-hotspot-metric-pill"><strong>CBO:</strong> {{ item.cbo }}</span>
-                <span class="dl-hotspot-metric-pill blast" *ngIf="item.blastRadius">
-                  <strong>Blast:</strong> {{ item.blastRadius }} Callers
-                </span>
-                <span class="dl-hotspot-target-name">{{ item.targetDatasetName }} · Run #{{ item.runId }}</span>
-              </div>
+              <span class="dl-hotspot-pkg">{{ item.packageName }}</span>
             </div>
-            <div class="dl-hotspot-prob-box">
-              <span class="dl-hotspot-prob-number">{{ (item.defectProbability * 100) | number:'1.1-1' }}% Risk</span>
+            <div class="dl-hotspot-metrics">
+              <span class="dl-m-item" title="Lines of Code (LOC)"><span class="dl-m-lbl">LOC</span> {{ item.loc | number }}</span>
+              <span class="dl-m-sep">·</span>
+              <span class="dl-m-item" title="Weighted Methods per Class / Cyclomatic Complexity"><span class="dl-m-lbl">WMC</span> {{ item.wmc }}</span>
+              <span class="dl-m-sep">·</span>
+              <span class="dl-m-item" title="Coupling Between Objects (CBO / Fan-Out)"><span class="dl-m-lbl">CBO</span> {{ item.cbo }}</span>
+              <ng-container *ngIf="item.blastRadius">
+                <span class="dl-m-sep">·</span>
+                <span class="dl-m-item" title="Downstream Defect Blast Radius (Impacted Dependent Classes)"><span class="dl-m-lbl">Blast</span> {{ item.blastRadius }}</span>
+              </ng-container>
+              <span class="dl-m-sep">·</span>
+              <span class="dl-m-target">{{ item.targetDatasetName }}</span>
+            </div>
+            <div class="dl-hotspot-prob">
+              <span class="dl-prob-val">{{ (item.defectProbability * 100) | number:'1.0-0' }}%</span>
               <div class="dl-prob-track">
-                <span class="dl-prob-fill buggy" [style.width.%]="item.defectProbability * 100"></span>
+                <span class="dl-prob-fill dl-fill-critical" [style.width.%]="item.defectProbability * 100"></span>
               </div>
             </div>
-            <div class="dl-hotspot-action">
-              <ui-badge tone="amber">Buggy</ui-badge>
-              <a [routerLink]="['/prediction-reports', item.reportKey]" class="dl-btn-inspect-link" title="Open Hotspot Treemap">
-                Inspect ↗
-              </a>
-            </div>
-          </div>
+            <span class="dl-hotspot-arrow" title="Inspect in Treemap">→</span>
+          </a>
         </div>
       </article>
     </section>
 
     <section class="dl-dash-analytics-grid">
+      <!-- 1. Volume Distribution -->
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
             <h3>Classes per Dataset</h3>
+            <span class="dl-dash-panel-sub">Volume ranking across active datasets</span>
           </div>
           <span class="dl-dash-period">Top {{ view.volume.categories.length }}</span>
         </div>
@@ -200,7 +280,7 @@
         </div>
 
         <ui-bar-chart *ngIf="view.volume.categories.length; else noVolume"
-                      [data]="view.volume" orientation="horizontal" [categoryWidth]="190"
+                      [data]="view.volume" orientation="horizontal" [categoryWidth]="180"
                       caption="Number of classes stored in each dataset">
         </ui-bar-chart>
         <ng-template #noVolume>
@@ -208,51 +288,71 @@
         </ng-template>
       </article>
 
-      <div class="dl-dash-stack">
-        <article class="dl-dash-panel">
+      <!-- 2. Dataset Family Split & Model Readiness -->
+      <article class="dl-dash-panel dl-dash-panel-split">
+        <div class="dl-dash-split-part">
           <div class="dl-dash-section-head">
             <div>
               <h3>Datasets by Family</h3>
+              <span class="dl-dash-panel-sub">Origin split across metric families</span>
             </div>
+            <span class="dl-dash-period">PROMISE / AEEEM</span>
           </div>
 
           <ui-bar-chart [data]="view.composition" orientation="horizontal" mode="stacked"
                         [categoryWidth]="90"
                         caption="Datasets in each metric family, split by data source">
           </ui-bar-chart>
-        </article>
-        <article class="dl-dash-panel">
+        </div>
+
+        <div class="dl-dash-split-divider"></div>
+
+        <div class="dl-dash-split-part dl-dash-activity-part">
           <div class="dl-dash-section-head">
             <div>
-              <h3>Model Activity</h3>
+              <h3>Model Activity & Coverage</h3>
+              <span class="dl-dash-panel-sub">Training dataset readiness and comparison logs</span>
             </div>
-            <span class="dl-dash-status-dot"></span>
-          </div>
-          <strong class="dl-dash-run-count">{{ view.data.comparisonRuns | number }}</strong>
-          <span class="dl-dash-run-label">comparison reports</span>
-
-          <div class="dl-dash-readiness">
-            <div>
-              <span>Labeled coverage</span>
-              <strong>{{ view.data.labeledDatasets }} / {{ view.data.totalDatasets }}</strong>
-            </div>
-            <div class="dl-dash-progress-track">
-              <span [style.width.%]="percent(view.data.labeledDatasets, view.data.totalDatasets)"></span>
-            </div>
+            <span class="dl-dash-status-dot" title="Model engine ready"></span>
           </div>
 
-          <div class="dl-dash-prediction-actions">
-            <ui-button icon="chart" link="/defect-predictions">Run model</ui-button>
-            <ui-button variant="ghost" icon="view" link="/prediction-reports">Reports</ui-button>
-          </div>
-        </article>
-      </div>
+          <div class="dl-dash-activity-body">
+            <div class="dl-dash-activity-meta">
+              <div class="dl-dash-activity-stat">
+                <strong>{{ view.data.comparisonRuns | number }}</strong>
+                <span>comparison reports</span>
+              </div>
+              <div class="dl-dash-readiness-badge">
+                <span>Coverage: {{ view.data.labeledDatasets }} / {{ view.data.totalDatasets }}</span>
+              </div>
+            </div>
 
+            <div class="dl-dash-readiness">
+              <div class="dl-dash-readiness-labels">
+                <span>Labeled training coverage</span>
+                <strong>{{ percent(view.data.labeledDatasets, view.data.totalDatasets) | number:'1.0-0' }}%</strong>
+              </div>
+              <div class="dl-dash-progress-track">
+                <span [style.width.%]="percent(view.data.labeledDatasets, view.data.totalDatasets)"></span>
+              </div>
+            </div>
+
+            <div class="dl-dash-prediction-actions">
+              <ui-button icon="chart" link="/defect-predictions">Run model</ui-button>
+              <ui-button variant="ghost" icon="view" link="/prediction-reports">Reports</ui-button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 3. Model Quality Benchmark -->
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
-            <h3>Model Quality (0–1 Scale)</h3>
+            <h3>Model Quality Benchmark</h3>
+            <span class="dl-dash-panel-sub">Performance metrics across scored prediction runs</span>
           </div>
+          <span class="dl-dash-period">0–1 Scale</span>
         </div>
 
         <ui-bar-chart *ngIf="view.quality.series.length; else noQuality"
@@ -266,16 +366,19 @@
         </ng-template>
       </article>
 
+      <!-- 4. Class Balance per Run -->
       <article class="dl-dash-panel">
         <div class="dl-dash-section-head">
           <div>
             <h3>Class Balance per Run</h3>
+            <span class="dl-dash-panel-sub">Share of classes predicted buggy against clean</span>
           </div>
+          <span class="dl-dash-period">100% Normalized</span>
         </div>
 
         <ui-bar-chart *ngIf="view.balance.categories.length; else noBalance"
                       [data]="view.balance" orientation="horizontal" mode="stacked"
-                      [normalize]="true" valueFormat="percent" [categoryWidth]="110"
+                      [normalize]="true" valueFormat="percent" [categoryWidth]="125"
                       caption="Share of classes each run predicted buggy against clean">
         </ui-bar-chart>
         <ng-template #noBalance>
@@ -289,6 +392,7 @@
         <div class="dl-dash-section-head">
           <div>
             <h3>Recent Datasets</h3>
+            <span class="dl-dash-panel-sub">Latest metrics ingested into workspace</span>
           </div>
           <a routerLink="/metric-storage">View all</a>
         </div>
@@ -316,6 +420,7 @@
         <div class="dl-dash-section-head">
           <div>
             <h3>Recent Prediction Runs</h3>
+            <span class="dl-dash-panel-sub">Latest defect models trained & evaluated</span>
           </div>
           <a routerLink="/prediction-reports">View reports</a>
         </div>

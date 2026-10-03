@@ -19,7 +19,7 @@ import {
 const FALLBACK_WIDTH = 640;
 const MIN_WIDTH = 280;
 /** Bars are capped rather than filling their band — the leftover is air. */
-const BAR_MAX = 24;
+const BAR_MAX = 16;
 /** The surface-coloured gap that separates touching marks. */
 const GAP = 2;
 const AXIS_GUTTER = 30;
@@ -280,7 +280,7 @@ export class UiBarChartComponent implements OnChanges, AfterViewInit, OnDestroy 
           series: entry.label,
           value,
           text,
-          label: stacked ? '' : text,
+          label: stacked ? '' : (series.length > 1 ? '' : text),
           labelX: x + thickness / 2,
           labelY: y - 7,
           labelAnchor: 'middle',
@@ -300,7 +300,7 @@ export class UiBarChartComponent implements OnChanges, AfterViewInit, OnDestroy 
     const horizontal = this.orientation === 'horizontal';
     const along = horizontal ? w : h;
     const across = horizontal ? h : w;
-    const r = Math.min(4, along, across / 2);
+    const r = Math.min(2, along, across / 2);
     if (!last || r <= 0 || along <= r) {
       return square;
     }
@@ -321,7 +321,8 @@ export class UiBarChartComponent implements OnChanges, AfterViewInit, OnDestroy 
     if (this.data.series[index]?.tone === 'alert') {
       return 'alert';
     }
-    return index % 2 === 0 ? 1 : 3;
+    const slots = [1, 2, 3, 4, 5];
+    return slots[index % slots.length];
   }
 
   private categoryTotal(index: number): number {

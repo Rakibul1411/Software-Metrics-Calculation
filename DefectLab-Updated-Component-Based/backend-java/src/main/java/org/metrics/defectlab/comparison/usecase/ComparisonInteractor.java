@@ -473,8 +473,12 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
             result.add(pair);
         }
 
-        result.sort((left, right) -> String.valueOf(left.get("displayName"))
-                .compareToIgnoreCase(String.valueOf(right.get("displayName"))));
+        result.sort((left, right) -> {
+            String leftName = String.valueOf(left.get("displayName"));
+            String rightName = String.valueOf(right.get("displayName"));
+            int cmp = leftName.compareToIgnoreCase(rightName);
+            return cmp != 0 ? cmp : leftName.compareTo(rightName);
+        });
         return result;
     }
 

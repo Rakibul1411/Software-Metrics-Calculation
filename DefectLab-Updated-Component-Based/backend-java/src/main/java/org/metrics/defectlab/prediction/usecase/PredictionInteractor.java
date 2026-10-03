@@ -589,9 +589,11 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
                     rowOrder = new LinkedHashMap<>();
                     for (int i = 0; i < targetTable.getRows().size(); i++) {
                         List<String> r = targetTable.getRows().get(i);
-                        String id = identifierIndex >= 0 && identifierIndex < r.size()
+                        String rawId = identifierIndex >= 0 && identifierIndex < r.size()
                                 ? r.get(identifierIndex) : "row_" + i;
+                        String id = normalizeIdentifier(rawId);
                         rowOrder.putIfAbsent(id, i);
+                        rowOrder.putIfAbsent("row_" + i, i);
                     }
                 }
             } catch (Exception ignored) {
@@ -601,18 +603,40 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
         final Map<String, Integer> finalRowOrder = rowOrder;
         List<Map<String, Object>> sorted = new ArrayList<>(predictions);
         sorted.sort((a, b) -> {
-            String idA = String.valueOf(a.getOrDefault("classIdentifier", ""));
-            String idB = String.valueOf(b.getOrDefault("classIdentifier", ""));
+            String idA = a != null ? normalizeIdentifier(a.get("classIdentifier")) : "";
+            String idB = b != null ? normalizeIdentifier(b.get("classIdentifier")) : "";
             if (finalRowOrder != null) {
                 Integer orderA = finalRowOrder.get(idA);
                 Integer orderB = finalRowOrder.get(idB);
                 if (orderA != null && orderB != null) {
-                    return Integer.compare(orderA, orderB);
+                    int cmp = Integer.compare(orderA, orderB);
+                    if (cmp != 0) {
+                        return cmp;
+                    }
+                } else if (orderA != null) {
+                    return -1;
+                } else if (orderB != null) {
+                    return 1;
                 }
             }
-            return naturalCompare(idA, idB);
+            int cmp = naturalCompare(idA, idB);
+            if (cmp != 0) {
+                return cmp;
+            }
+            return idA.compareTo(idB);
         });
         return sorted;
+    }
+
+    private static String normalizeIdentifier(Object value) {
+        if (value == null) {
+            return "";
+        }
+        String s = String.valueOf(value).trim();
+        if ((s.startsWith("\"") && s.endsWith("\"")) || (s.startsWith("'") && s.endsWith("'"))) {
+            s = s.substring(1, s.length() - 1).trim();
+        }
+        return s;
     }
 
     private static int findIdentifierColumn(DatasetTable table) {
@@ -628,46 +652,64 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
         if (s1 == null && s2 == null) return 0;
         if (s1 == null) return -1;
         if (s2 == null) return 1;
+        if (s1.equals(s2)) return 0;
 
-        if (s1.startsWith("row_") && s2.startsWith("row_")) {
-            try {
-                long n1 = Long.parseLong(s1.substring(4));
-                long n2 = Long.parseLong(s2.substring(4));
-                return Long.compare(n1, n2);
-            } catch (NumberFormatException ignored) {
-                // fall through
-            }
-        }
-
+        int len1 = s1.length();
+        int len2 = s2.length();
         int i = 0, j = 0;
-        int len1 = s1.length(), len2 = s2.length();
+
         while (i < len1 && j < len2) {
             char c1 = s1.charAt(i);
             char c2 = s2.charAt(j);
+
             if (Character.isDigit(c1) && Character.isDigit(c2)) {
                 int start1 = i;
                 while (i < len1 && Character.isDigit(s1.charAt(i))) i++;
                 int start2 = j;
                 while (j < len2 && Character.isDigit(s2.charAt(j))) j++;
-                String num1 = s1.substring(start1, i);
-                String num2 = s2.substring(start2, j);
-                try {
-                    long val1 = Long.parseLong(num1);
-                    long val2 = Long.parseLong(num2);
-                    int cmp = Long.compare(val1, val2);
-                    if (cmp != 0) return cmp;
-                } catch (NumberFormatException ignored) {
-                    int cmp = num1.compareTo(num2);
-                    if (cmp != 0) return cmp;
+
+                int nonZero1 = start1;
+                while (nonZero1 < i && s1.charAt(nonZero1) == '0') nonZero1++;
+                int nonZero2 = start2;
+                while (nonZero2 < j && s2.charAt(nonZero2) == '0') nonZero2++;
+
+                int countDigits1 = i - nonZero1;
+                int countDigits2 = j - nonZero2;
+
+                if (countDigits1 != countDigits2) {
+                    return Integer.compare(countDigits1, countDigits2);
+                }
+
+                while (nonZero1 < i && nonZero2 < j) {
+                    char d1 = s1.charAt(nonZero1);
+                    char d2 = s2.charAt(nonZero2);
+                    if (d1 != d2) {
+                        return Character.compare(d1, d2);
+                    }
+                    nonZero1++;
+                    nonZero2++;
+                }
+
+                int tokenLen1 = i - start1;
+                int tokenLen2 = j - start2;
+                if (tokenLen1 != tokenLen2) {
+                    return Integer.compare(tokenLen1, tokenLen2);
                 }
             } else {
-                int cmp = Character.compare(Character.toLowerCase(c1), Character.toLowerCase(c2));
-                if (cmp != 0) return cmp;
+                char lower1 = Character.toLowerCase(c1);
+                char lower2 = Character.toLowerCase(c2);
+                if (lower1 != lower2) {
+                    return Character.compare(lower1, lower2);
+                }
                 i++;
                 j++;
             }
         }
-        return Integer.compare(len1, len2);
+
+        if (i < len1) return 1;
+        if (j < len2) return -1;
+
+        return s1.compareTo(s2);
     }
 
     private List<Map<String, Object>> limitPredictions(

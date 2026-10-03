@@ -188,9 +188,10 @@
               </div>
             </ng-template>
             <ng-template uiTableCell="predictedLabel" let-row>
-              <ui-badge [tone]="row.predictedLabel === 1 ? 'amber' : 'neutral'">
+              <span class="dl-status-cell" [class.danger]="row.predictedLabel === 1" [class.muted]="row.predictedLabel !== 1">
+                <span class="dl-status-dot"></span>
                 {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}
-              </ui-badge>
+              </span>
             </ng-template>
           </ui-table>
           <ui-pagination [total]="filteredManualRows.length" [page]="manualPage" [pageSize]="manualPageSize" noun="files"
@@ -260,16 +261,18 @@
               </div>
             </ng-template>
             <ng-template uiTableCell="predictedLabel" let-row>
-              <ui-badge [tone]="row.predictedLabel === 1 ? 'amber' : 'neutral'">
+              <span class="dl-status-cell" [class.danger]="row.predictedLabel === 1" [class.muted]="row.predictedLabel !== 1">
+                <span class="dl-status-dot"></span>
                 {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}
-              </ui-badge>
+              </span>
             </ng-template>
             <ng-template uiTableCell="actualLabel" let-row>
-              <ui-badge *ngIf="row.actualLabel !== null; else noActualPredefined"
-                        [tone]="row.actualLabel === 1 ? 'red' : 'green'">
+              <span *ngIf="row.actualLabel !== null; else noActualPredefined"
+                    class="dl-status-cell" [class.danger]="row.actualLabel === 1" [class.clean]="row.actualLabel === 0">
+                <span class="dl-status-dot"></span>
                 {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
-              </ui-badge>
-              <ng-template #noActualPredefined>—</ng-template>
+              </span>
+              <ng-template #noActualPredefined><span style="color: var(--muted);">—</span></ng-template>
             </ng-template>
           </ui-table>
           <ui-pagination [total]="filteredPredefinedRows.length" [page]="predefinedPage" [pageSize]="predefinedPageSize" noun="files"
@@ -316,31 +319,45 @@
       <div class="dl-table-box" *ngIf="filteredMatchedRows.length; else noMatchedMatches">
         <ui-table [columns]="matchedColumns" [rows]="pagedMatchedRows" trackByKey="identifier">
           <ng-template uiTableCell="manualPrediction" let-row>
-            <ui-badge [tone]="row.manualPrediction === 1 ? 'amber' : 'neutral'">{{ row.manualPrediction === 1 ? 'Buggy' : 'Clean' }}</ui-badge>
+            <span class="dl-status-cell" [class.danger]="row.manualPrediction === 1" [class.muted]="row.manualPrediction !== 1">
+              <span class="dl-status-dot"></span>
+              {{ row.manualPrediction === 1 ? 'Buggy' : 'Clean' }}
+            </span>
           </ng-template>
           <ng-template uiTableCell="predefinedPrediction" let-row>
-            <ui-badge [tone]="row.predefinedPrediction === 1 ? 'amber' : 'neutral'">{{ row.predefinedPrediction === 1 ? 'Buggy' : 'Clean' }}</ui-badge>
+            <span class="dl-status-cell" [class.danger]="row.predefinedPrediction === 1" [class.muted]="row.predefinedPrediction !== 1">
+              <span class="dl-status-dot"></span>
+              {{ row.predefinedPrediction === 1 ? 'Buggy' : 'Clean' }}
+            </span>
           </ng-template>
           <ng-template uiTableCell="actualLabel" let-row>
-            <ui-badge *ngIf="row.actualLabel !== null; else noActualMatched" [tone]="row.actualLabel === 1 ? 'red' : 'green'">
+            <span *ngIf="row.actualLabel !== null; else noActualMatched"
+                  class="dl-status-cell" [class.danger]="row.actualLabel === 1" [class.clean]="row.actualLabel === 0">
+              <span class="dl-status-dot"></span>
               {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
-            </ui-badge>
-            <ng-template #noActualMatched>—</ng-template>
+            </span>
+            <ng-template #noActualMatched><span style="color: var(--muted);">—</span></ng-template>
           </ng-template>
           <ng-template uiTableCell="manualResult" let-row>
-            <ui-badge [tone]="row.manualCorrect === null ? 'amber' : (row.manualCorrect ? 'green' : 'red')">
+            <span *ngIf="row.manualCorrect !== null; else noManualResult"
+                  class="dl-status-cell" [class.clean]="row.manualCorrect" [class.danger]="!row.manualCorrect">
+              <span class="dl-status-dot"></span>
               {{ correctness(row.manualCorrect) }}
-            </ui-badge>
+            </span>
+            <ng-template #noManualResult><span style="color: var(--muted);">—</span></ng-template>
           </ng-template>
           <ng-template uiTableCell="predefinedResult" let-row>
-            <ui-badge [tone]="row.predefinedCorrect === null ? 'amber' : (row.predefinedCorrect ? 'green' : 'red')">
+            <span *ngIf="row.predefinedCorrect !== null; else noPredefinedResult"
+                  class="dl-status-cell" [class.clean]="row.predefinedCorrect" [class.danger]="!row.predefinedCorrect">
+              <span class="dl-status-dot"></span>
               {{ correctness(row.predefinedCorrect) }}
-            </ui-badge>
+            </span>
+            <ng-template #noPredefinedResult><span style="color: var(--muted);">—</span></ng-template>
           </ng-template>
           <ng-template uiTableCell="modelsAgree" let-row>
-            <ui-badge [tone]="row.modelsAgree ? 'green' : 'amber'">
+            <span class="dl-tag-mono" [style.color]="row.modelsAgree ? '#10b981' : '#f59e0b'">
               {{ row.modelsAgree ? 'Yes' : 'No' }}
-            </ui-badge>
+            </span>
           </ng-template>
         </ui-table>
         <ui-pagination [total]="filteredMatchedRows.length" [page]="matchedPage" [pageSize]="matchedPageSize" noun="matched files"
