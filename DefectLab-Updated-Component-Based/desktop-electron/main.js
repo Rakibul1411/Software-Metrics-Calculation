@@ -13,9 +13,11 @@ const customEnv = {
   PATH: `${process.env.HOME}/.orbstack/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:${process.env.PATH || ''}`
 };
 
-function getProjectRoot() {
-  // If running from source, project root is parent directory
-  return path.resolve(__dirname, '..');
+function getComposeFilePath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'docker-compose.prod.yml');
+  }
+  return path.join(__dirname, 'docker-compose.prod.yml');
 }
 
 function createWindow() {
@@ -67,17 +69,18 @@ async function checkAndStartApp() {
       return;
     }
 
-    const projectDir = getProjectRoot();
+    const composeFile = getComposeFilePath();
+    const workingDir = path.dirname(composeFile);
     sendStatus('Checking for latest updates from Docker Hub...');
 
     // 2. Automatically pull the latest images (timeout after 30s if offline)
-    const pullCommand = `docker compose -f ${PROD_COMPOSE_FILE} pull`;
-    exec(pullCommand, { cwd: projectDir, env: customEnv, timeout: 30000 }, () => {
+    const pullCommand = `docker compose -f "${composeFile}" pull`;
+    exec(pullCommand, { cwd: workingDir, env: customEnv, timeout: 30000 }, () => {
       // 3. Launch services (will auto-recreate containers if new images were downloaded)
       sendStatus('Starting DefectLab Docker services...');
-      const upCommand = `docker compose -f ${PROD_COMPOSE_FILE} up -d`;
+      const upCommand = `docker compose -f "${composeFile}" up -d`;
 
-      exec(upCommand, { cwd: projectDir, env: customEnv }, (startErr, stdout, stderr) => {
+      exec(upCommand, { cwd: workingDir, env: customEnv }, (startErr, stdout, stderr) => {
         if (startErr) {
           sendError(`Failed to start services: ${stderr || startErr.message}`);
           return;
