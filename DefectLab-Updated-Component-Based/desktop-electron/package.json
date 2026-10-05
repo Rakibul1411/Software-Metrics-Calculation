@@ -6,8 +6,8 @@
   "scripts": {
     "start": "electron .",
     "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win",
-    "build:all": "electron-builder -mw"
+    "build:win": "electron-builder --win --x64",
+    "build:all": "electron-builder -m -w --x64"
   },
   "author": "Rakibul Islam",
   "license": "MIT",
