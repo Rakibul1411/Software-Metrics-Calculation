@@ -1,239 +1,164 @@
 # DefectLab FastAPI ML Service
 
-This module implements schema validation, preparation, optional shallow
-CORAL, KNN prediction, and evaluation. It is an internal stateless service
-called by Spring Boot.
+This service provides machine learning capabilities for cross-project software defect prediction. It handles dataset schema validation, feature preprocessing, domain standardization, optional unsupervised domain adaptation (Shallow CORAL), K-Nearest Neighbors (KNN) classification, risk ranking, and post-prediction model evaluation.
 
-For the complete product workflow, see the [project README](../README.md).
+It is an internal, stateless microservice invoked by the Spring Boot backend via authenticated HTTP requests.
 
-## Technology
+For the complete product overview, see the [project README](../README.md).
 
-- Python
-- FastAPI
-- pandas
-- NumPy
-- scikit-learn
-- Uvicorn
+## Technology Stack
 
-Pinned versions are listed in `requirements.txt`.
+- **Framework**: FastAPI with Uvicorn ASGI server
+- **Data Manipulation**: pandas, NumPy
+- **Machine Learning**: scikit-learn
+- **Testing**: pytest
 
-## Security boundary
+Pinned dependencies are listed in `requirements.txt`.
 
-The browser must not call this service directly.
+## Security and Network Boundary
 
-`app.main` middleware protects every `/ml/*` route except `/ml/health`.
-Spring Boot must send:
+The ML service is designed to run in a private network or container bridge:
+- The browser never communicates directly with FastAPI.
+- Every endpoint under `/ml/*` (except `/ml/health`) requires an internal service token sent in the `X-DefectLab-Service-Token` header.
+- The service maintains no persistent database connections, session state, or file storage.
 
-```text
-X-DefectLab-Service-Token: <shared ML_SERVICE_TOKEN>
-```
+## Source Code Organization
 
-The service has no database credentials, user sessions, or durable artifact
-storage.
-
-## Source structure
-
-The layout follows the clean-architecture dependency rule: `domain/` is pure
-business logic with zero framework imports, `services/` holds
-domain-independent algorithms, and `api/` is the *only* package allowed to
-import FastAPI and translate HTTP payloads to and from domain calls.
-`domain/` and `services/` never import from `api/`.
+The service is organized into modular packages separating API endpoints, core algorithms, and domain validation:
 
 ```text
 app/
-├── main.py                          composition root: FastAPI app, token middleware, router wiring
+├── main.py                          FastAPI application setup, security middleware, and routes
 ├── core/
-│   └── config.py                    environment settings
-├── domain/                          framework-free business logic
-│   ├── feature_profile.py           PROMISE/AEEEM feature registries and header aliases
-│   ├── dataset_preparation.py       schema validation, label parsing, PreparedFrame
-│   ├── prediction_pipeline.py       preparation + KNN pipeline (PipelineOutcome)
-│   └── evaluation.py                classification evaluation metrics
-├── services/                        generic, domain-independent algorithms
-│   └── shallow_coral_service.py     covariance alignment (linear CORAL)
-└── api/                             the only package that imports fastapi
-    └── routes.py                    /ml route handlers
+│   └── config.py                    Application settings and service token configuration
+├── domain/                          Core domain logic and data transformations
+│   ├── feature_profile.py           PROMISE (20 features) and AEEEM (56 features) specifications
+│   ├── dataset_preparation.py       Header normalization, numeric coercion, label parsing
+│   ├── prediction_pipeline.py       Preprocessing, CORAL alignment, KNN training, and ranking
+│   └── evaluation.py                Performance metrics (ROC-AUC, PR-AUC, MCC, Recall@20% LOC)
+├── services/                        Domain-independent mathematical services
+│   └── shallow_coral_service.py     Correlation Alignment (CORAL) covariance adaptation
+└── api/                             HTTP route controllers
+    └── routes.py                    Endpoints for /ml/predict, /ml/evaluate, and /ml/health
 ```
 
-Adding a new capability: put the business rule in `domain/` (or a new module
-there) with no FastAPI import, unit-test it directly, then add a thin
-`api/routes.py` handler that calls it and shapes the JSON response. Removing
-a capability is symmetric — delete the route handler, then the now-unused
-`domain/` function, and the corresponding test file.
+## API Endpoints
 
-## Internal API
-
-| Method | Route | Purpose |
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/ml/health` | Public internal-health check |
-| `POST` | `/ml/predict` | Prepare, train, predict, and rank |
-| `POST` | `/ml/evaluate` | Calculate metrics from actual/predicted results |
+| `GET` | `/ml/health` | Public internal health check endpoint |
+| `POST` | `/ml/predict` | Executes data preparation, optional CORAL, KNN training, scoring, and ranking |
+| `POST` | `/ml/evaluate` | Computes comprehensive classification evaluation metrics on labeled targets |
 
-`/` and `/health` also return basic service information. Spring Boot uses
-`/ml/health`.
-
-## Supported families
+## Supported Metric Families
 
 ### PROMISE
-
-- canonical identifier: `name`;
-- 20 registered predictors;
-- recognized actual-label aliases.
+- **Identifier**: `name` (fully qualified Java class name)
+- **Features**: 20 object-oriented and structural metrics (e.g. WMC, DIT, RFC, CBO, LCOM, LOC)
+- **Label**: Binarized bug count (`bug > 0` indicates defect)
 
 ### AEEEM
+- **Identifier**: Class name or file path
+- **Features**: 56 static, change history, and entropy metrics across 5 sub-families
+- **Label**: Clean / Buggy state
 
-- 56 registered static/history predictors;
-- recognized clean/buggy label forms.
+Source and target datasets must share the same metric family. Cross-family prediction is rejected at the API boundary.
 
-Source and target must use the same family.
+## Machine Learning Pipeline
 
-## Fixed standard pipeline
-
-Every `/ml/predict` request uses:
+Every `/ml/predict` request executes the following deterministic pipeline:
 
 ```text
-Header normalization
-  -> family/feature validation
-  -> numeric coercion
-  -> source-median imputation
-  -> zero-variance source-feature removal
-  -> StandardScaler fit independently on each domain (zero mean, unit variance)
-  -> optional shallow CORAL source-to-target alignment
-  -> KNN fit with user-selected K=1-5
-  -> probability and thresholded label
-  -> descending risk rank
+1. Header Normalization & Validation
+   - Normalize case, spaces, and known header aliases
+   - Validate presence of required feature predictors
+   
+2. Data Cleaning & Imputation
+   - Coerce numeric features; reject invalid non-numeric records
+   - Median imputation using source training set statistics
+   - Removal of zero-variance features in the training domain
+
+3. Independent Standardization
+   - Apply StandardScaler independently to source and target feature spaces
+   - Ensures zero mean and unit variance per domain
+
+4. Domain Adaptation (Optional Shallow CORAL)
+   - When enabled, calculates covariance matrices of source and target domains
+   - Applies closed-form whitening and re-coloring transformations:
+     Cs^(-1/2) * Ct^(1/2)
+   - Minimizes domain shift while preserving label topology
+
+5. Model Training & Defect Scoring
+   - Trains K-Nearest Neighbors classifier (K configurable from 1 to 5)
+   - Uses Euclidean distance (p=2) and uniform distance weighting
+   - Calculates posterior probability of defect from nearest neighbor votes
+
+6. Risk Ranking & Categorization
+   - Threshold decision boundary (default 0.5) assigns binary prediction
+   - Rows are ranked in descending order of defect probability
+   - Categorized into risk bands: HIGH (>= 0.7), MEDIUM (>= 0.4), LOW (< 0.4)
 ```
 
-The `coral` boolean controls whether dataset alignment runs before fitting.
-Each domain is standardized with its own mean/variance (not a source-fit
-scaler reused on target), matching CORAL's assumption that both domains
-independently reach zero mean and unit variance before alignment (Sun, Feng
-& Saenko, Section 2.1).
+### Data Leakage Prevention
 
-### Leakage prevention
+- Target labels are completely excluded from imputation, scaling, alignment, training, and scoring.
+- When an unlabeled dataset is submitted for prediction, no labels are assumed or fabricated.
+- Target labels (if available in benchmark datasets) are only supplied to `/ml/evaluate` after predictions are frozen.
 
-Target labels are excluded from:
+## Evaluation Metrics
 
-- imputation;
-- scaling;
-- CORAL;
-- fitting; and
-- prediction.
+The `/ml/evaluate` endpoint computes a comprehensive set of performance metrics:
 
-Actual labels are returned only for post-prediction evaluation when a labeled
-target supplies them.
-
-## KNN behavior
-
-- K is selected by the user from 1 through 5.
-- K cannot exceed the number of source rows.
-- Uniform weights and Euclidean/Minkowski `p=2` distance are used.
-- Probabilities are the Buggy-neighbor proportion.
-
-## Prediction output
-
-Each target row produces:
-
-```json
-{
-  "classIdentifier": "example.Class",
-  "defectScore": 0.82,
-  "defectProbability": 0.82,
-  "predictedLabel": 1,
-  "riskRank": 1,
-  "riskBand": "HIGH"
-}
-```
-
-The response also includes family, model, used features, selected K,
-threshold, seed, applied-pipeline flags, covariance distances, and warnings.
-
-## Evaluation
-
-`/ml/evaluate` calculates:
-
-- confusion matrix;
-- accuracy;
-- precision;
-- recall;
-- specificity;
-- F1;
-- balanced accuracy;
-- Matthews correlation coefficient;
-- ROC-AUC;
-- PR-AUC;
-- Recall@20% LOC when applicable;
-- AUCEC when applicable.
-
-Undefined metrics return `value: null` and a reason.
+- **Confusion Matrix**: True Positive (TP), False Positive (FP), True Negative (TN), False Negative (FN)
+- **Basic Rates**: Accuracy, Precision, Recall / True Positive Rate, Specificity / True Negative Rate
+- **Balanced Metrics**: F1-Score, Balanced Accuracy, Matthews Correlation Coefficient (MCC)
+- **Curve Areas**: Area Under the ROC Curve (ROC-AUC), Area Under the Precision-Recall Curve (PR-AUC)
+- **Effort-Aware Metrics**: Recall@20% LOC and AUCEC (Area Under Cost-Effectiveness Curve) when LOC is present
 
 ## Configuration
 
-| Variable | Default | Purpose |
+| Environment Variable | Default Value | Description |
 |---|---|---|
-| `PROJECT_NAME` | `Defect Prediction ML Service` | FastAPI title |
-| `ML_SERVICE_TOKEN` | local development token | Shared Spring/FastAPI secret |
+| `PROJECT_NAME` | `Defect Prediction ML Service` | Application title reported in OpenAPI docs |
+| `ML_SERVICE_TOKEN` | `local-dev-service-token-32-chars-ok` | Shared authorization token matching Spring Boot |
 
-Use a long random `ML_SERVICE_TOKEN` outside local development. Bind host and
-port are fixed in the Dockerfile/uvicorn command, not read from environment
-settings.
+## Installation & Setup
 
-## Install
+Create a virtual environment and install dependencies:
 
 ```bash
+cd ml-service-python
 python3 -m venv venv
 venv/bin/python -m pip install --upgrade pip
 venv/bin/python -m pip install -r requirements.txt pytest
 ```
 
-## Run
+## Running the Service
 
-From the repository root, start FastAPI with change detection:
+Start Uvicorn with auto-reload:
 
 ```bash
-export ML_SERVICE_TOKEN='replace-with-the-shared-value'
-scripts/run-python-dev.sh
+PYTHONPATH=. ./venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Uvicorn watches `ml-service-python/app` and restarts the worker after Python
-changes. The launcher uses `ml-service-python/venv/bin/python` when available
-and otherwise falls back to `python3`.
-
-Health:
+Verify service status:
 
 ```bash
 curl http://localhost:8000/ml/health
+# {"status":"UP","service":"ml-service-python"}
 ```
 
-## Test
+## Testing
 
-From this directory:
+Run the automated test suite with pytest:
 
 ```bash
-PYTHONPATH=. venv/bin/python -m pytest tests -q
+PYTHONPATH=. venv/bin/pytest tests -v
 ```
 
-Compile check:
-
-```bash
-venv/bin/python -m compileall -q app tests
-```
-
-Test files mirror the `domain/` modules one-to-one (`test_feature_profile.py`,
-`test_dataset_preparation.py`, `test_prediction_pipeline.py`,
-`test_evaluation.py`), plus `test_shallow_coral_service.py` for the
-`services/` layer. Shared row-building fixtures live in `tests/helpers.py`.
-
-## Development rules
-
-- Keep this service stateless.
-- Do not add database or browser authentication logic.
-- Preserve source-only fitting and target-label isolation.
-- Keep feature aliases/registries in `domain/feature_profile.py`.
-- Return readable `SchemaError` messages for invalid data.
-- Keep the preparation pipeline fixed unless the product contract explicitly
-  changes.
-- Preserve one output prediction for every input target record.
-- Nothing under `domain/` or `services/` may import `fastapi`; only `api/`
-  may. This keeps every business rule directly unit-testable without an HTTP
-  client.
+All **37 automated unit tests** verify:
+- Feature profile discovery and alias mapping for PROMISE and AEEEM datasets.
+- Schema verification and invalid character handling in dataset preparation.
+- Closed-form whitening and re-coloring covariance alignment in Shallow CORAL.
+- KNN training, probability thresholding, ranking, and tie-breaking stability.
+- Evaluation metric correctness and division-by-zero safety checks.

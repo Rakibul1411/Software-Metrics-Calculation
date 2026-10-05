@@ -6,7 +6,9 @@ import org.metrics.defectlab.auth.domain.User;
 import org.metrics.defectlab.auth.usecase.port.UserRepository;
 import org.springframework.stereotype.Repository;
 
-/** Gateway: fulfils the {@link UserRepository} port on top of Spring Data JPA. */
+/**
+ * JPA implementation of {@link UserRepository}.
+ */
 @Repository
 public class UserRepositoryAdapter implements UserRepository {
 

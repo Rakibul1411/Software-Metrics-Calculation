@@ -4,7 +4,9 @@ import java.io.IOException;
 
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 
-/** Input boundary: registers a ready metric CSV/ARFF uploaded by a user. */
+/**
+ * Handles uploading and registering user-provided metric dataset files.
+ */
 public interface UploadDatasetUseCase {
 
     MetricDataset upload(Long userId, String requestedProjectName, String projectVersion,

@@ -35,9 +35,12 @@ import org.metrics.defectlab.analysis.javaparser.JavaLanguageConfiguration;
 import org.metrics.defectlab.analysis.javaparser.JavaParserConfigurationResolver;
 import org.metrics.defectlab.analysis.javaparser.JdtProjectEnvironment;
 import org.metrics.defectlab.analysis.javaparser.ResolvedJavaProject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class AeeemJavaSourceParser {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AeeemJavaSourceParser.class);
     private static final int MAX_DIAGNOSTICS = 5;
     private static final int DEFAULT_BATCH_SIZE = 96;
     private static final Pattern PACKAGE_DECLARATION = Pattern.compile(
@@ -109,7 +112,7 @@ public final class AeeemJavaSourceParser {
             ResolvedJavaProject configuration = JavaParserConfigurationResolver.resolve(
                     normalizedRoot, filesToParse, languageFallback(effectiveProfile));
             for (String diagnostic : configuration.getDiagnostics()) {
-                System.err.println("AEEEM JDT configuration warning: " + diagnostic);
+                LOGGER.warn("AEEEM JDT configuration warning: {}", diagnostic);
             }
             String[] classPath = JdtProjectEnvironment.collectJarClassPath(
                     normalizedRoot,
@@ -152,8 +155,8 @@ public final class AeeemJavaSourceParser {
                 }
             }
             if (diagnosticCounts[1] > 0) {
-                System.err.println("AEEEM JDT warning: " + diagnosticCounts[1]
-                        + " additional diagnostics were suppressed for this snapshot.");
+                LOGGER.warn("AEEEM JDT warning: {} additional diagnostics were suppressed for this snapshot.",
+                        diagnosticCounts[1]);
             }
         }
         Map<String, AeeemMetricResult> unique = new LinkedHashMap<>();
@@ -358,7 +361,7 @@ public final class AeeemJavaSourceParser {
 
     private static void reportDiagnostic(String message, int[] diagnosticCounts) {
         if (diagnosticCounts[0] < MAX_DIAGNOSTICS) {
-            System.err.println("AEEEM JDT warning: " + message);
+            LOGGER.warn("AEEEM JDT warning: {}", message);
             diagnosticCounts[0]++;
         } else {
             diagnosticCounts[1]++;

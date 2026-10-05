@@ -8,7 +8,9 @@ import org.metrics.defectlab.comparison.usecase.port.MetricComparisonRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
-/** Gateway: fulfils the {@link MetricComparisonRepository} port on top of Spring Data JPA. */
+/**
+ * JPA implementation of {@link MetricComparisonRepository}.
+ */
 @Repository
 public class MetricComparisonRepositoryAdapter implements MetricComparisonRepository {
 

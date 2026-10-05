@@ -3,8 +3,7 @@ package org.metrics.defectlab.comparison.domain;
 import java.time.Instant;
 
 /**
- * Enterprise Business Rule: a saved metric comparison, free of any
- * persistence or framework annotations.
+ * Represents a saved metric comparison between manual and predefined benchmark datasets.
  */
 public class MetricComparison {
 

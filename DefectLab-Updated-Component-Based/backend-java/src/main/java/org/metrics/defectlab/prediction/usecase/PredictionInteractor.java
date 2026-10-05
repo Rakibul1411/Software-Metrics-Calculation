@@ -190,10 +190,7 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
             }
         }
         if (predefined != null) {
-            // A PREDEFINED target must differ from the source just as a MANUAL one
-            // does: ck_prediction_different rejects the row either way, and
-            // without this check the whole model run happens before the insert
-            // fails with an opaque database error.
+            // Source and predefined target datasets must be distinct
             validateDifferentAndFamily(source, predefined);
             if (predefined.getDatasetType() != MetricDataset.Type.PREDEFINED) {
                 throw new IllegalArgumentException(

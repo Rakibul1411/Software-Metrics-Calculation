@@ -15,11 +15,15 @@ import java.util.Set;
 import org.metrics.defectlab.analysis.aeeem.history.GitChangePeriod;
 import org.metrics.defectlab.analysis.aeeem.history.AeeemAnalysisOptions;
 import org.metrics.defectlab.analysis.aeeem.parser.ProductionSourceSelector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Mines raw Git line changes and groups them into the selected snapshot intervals.
  */
 public final class GitChangeHistoryMiner {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GitChangeHistoryMiner.class);
 
     public List<GitChangePeriod> mine(
             Path repository,
@@ -43,8 +47,8 @@ public final class GitChangeHistoryMiner {
                 try {
                     fileChanges = changes(repository, previous, current, options);
                 } catch (Exception exception) {
-                    System.err.println("AEEEM Git history miner caught unexpected error for interval "
-                            + previous + ".." + current + ": " + exception.getMessage());
+                    LOGGER.error("AEEEM Git history miner caught unexpected error for interval {}..{}: {}",
+                            previous, current, exception.getMessage());
                     fileChanges = Collections.emptyList();
                 }
                 for (GitNumstatParser.FileChange change : fileChanges) {
@@ -101,8 +105,8 @@ public final class GitChangeHistoryMiner {
 
         // 2. If rename detection triggered a promisor remote fetch failure, retry with --no-renames
         if (result != null && result.isPromisorOrNetworkFailure()) {
-            System.err.println("AEEEM Git history: promisor remote fetch failed during rename detection between "
-                    + previous + " and " + current + "; retrying with --no-renames.");
+            LOGGER.warn("AEEEM Git history: promisor remote fetch failed during rename detection between {} and {}; retrying with --no-renames.",
+                    previous, current);
             GitCommandRunner.GitResult noRenameResult = executeLogWithRetry(
                     repository, false, previous, current, pathSpec);
             if (noRenameResult != null && noRenameResult.isSuccess()) {
@@ -111,8 +115,8 @@ public final class GitChangeHistoryMiner {
             if (noRenameResult != null && !noRenameResult.getOutput().isEmpty()) {
                 List<GitNumstatParser.FileChange> partial = GitNumstatParser.parse(noRenameResult.getOutput());
                 if (!partial.isEmpty()) {
-                    System.err.println("AEEEM Git history: salvaged " + partial.size()
-                            + " changes from partial output between " + previous + " and " + current);
+                    LOGGER.warn("AEEEM Git history: salvaged {} changes from partial output between {} and {}",
+                            partial.size(), previous, current);
                     return supplementWithTreeDiff(repository, previous, current, pathSpec, partial);
                 }
             }
@@ -122,22 +126,22 @@ public final class GitChangeHistoryMiner {
         if (result != null && !result.getOutput().isEmpty()) {
             List<GitNumstatParser.FileChange> partial = GitNumstatParser.parse(result.getOutput());
             if (!partial.isEmpty()) {
-                System.err.println("AEEEM Git history: salvaged " + partial.size()
-                        + " changes from partial output between " + previous + " and " + current);
+                LOGGER.warn("AEEEM Git history: salvaged {} changes from partial output between {} and {}",
+                        partial.size(), previous, current);
                 return supplementWithTreeDiff(repository, previous, current, pathSpec, partial);
             }
         }
 
         // 4. Fall back to tree-only diff (--name-status), which operates on local tree objects and never touches blobs/remote
-        System.err.println("AEEEM Git history: falling back to tree diff (--name-status) between "
-                + previous + " and " + current);
+        LOGGER.warn("AEEEM Git history: falling back to tree diff (--name-status) between {} and {}",
+                previous, current);
         List<GitNumstatParser.FileChange> treeChanges = mineTreeChanges(repository, previous, current, pathSpec);
         if (!treeChanges.isEmpty()) {
             return treeChanges;
         }
 
-        System.err.println("AEEEM Git history warning: no changes could be retrieved between "
-                + previous + " and " + current + "; proceeding with zero changes for this interval.");
+        LOGGER.warn("AEEEM Git history warning: no changes could be retrieved between {} and {}; proceeding with zero changes for this interval.",
+                previous, current);
         return Collections.emptyList();
     }
 
@@ -177,9 +181,8 @@ public final class GitChangeHistoryMiner {
                 if (!result.isPromisorOrNetworkFailure() || attempt == maxAttempts) {
                     return result;
                 }
-                System.err.println("AEEEM Git history: network timeout during log attempt "
-                        + attempt + "/" + maxAttempts + " between " + previous + " and " + current
-                        + ". Retrying in " + (attempt * 1500) + "ms...");
+                LOGGER.warn("AEEEM Git history: network timeout during log attempt {}/{} between {} and {}. Retrying in {}ms...",
+                        attempt, maxAttempts, previous, current, (attempt * 1500));
                 try {
                     Thread.sleep(attempt * 1500L);
                 } catch (InterruptedException e) {
@@ -187,8 +190,8 @@ public final class GitChangeHistoryMiner {
                     return result;
                 }
             } catch (IOException exception) {
-                System.err.println("AEEEM Git history command execution error (attempt "
-                        + attempt + "/" + maxAttempts + "): " + exception.getMessage());
+                LOGGER.error("AEEEM Git history command execution error (attempt {}/{}): {}",
+                        attempt, maxAttempts, exception.getMessage());
                 if (attempt == maxAttempts) {
                     return result;
                 }
@@ -219,7 +222,7 @@ public final class GitChangeHistoryMiner {
                 return GitNumstatParser.parseNameStatus(result.getOutput(), 10L);
             }
         } catch (Exception exception) {
-            System.err.println("AEEEM Git history tree diff failed: " + exception.getMessage());
+            LOGGER.error("AEEEM Git history tree diff failed: {}", exception.getMessage());
         }
         return Collections.emptyList();
     }

@@ -8,7 +8,9 @@ import org.metrics.defectlab.comparison.usecase.port.ComparisonReportRenderer;
 import org.metrics.defectlab.shared.report.PdfReportWriter;
 import org.springframework.stereotype.Component;
 
-/** Gateway: fulfils the {@link ComparisonReportRenderer} port using {@link PdfReportWriter}. */
+/**
+ * PDF report rendering implementation for metric comparisons.
+ */
 @Component
 public class PdfComparisonReportRenderer implements ComparisonReportRenderer {
 

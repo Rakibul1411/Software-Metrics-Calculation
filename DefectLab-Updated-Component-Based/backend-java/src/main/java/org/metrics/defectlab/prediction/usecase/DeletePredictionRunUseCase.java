@@ -2,7 +2,9 @@ package org.metrics.defectlab.prediction.usecase;
 
 import java.io.IOException;
 
-/** Input boundary: deletes a prediction run and its stored artifacts. */
+/**
+ * Deletes a prediction run and cleans up associated artifact files.
+ */
 public interface DeletePredictionRunUseCase {
 
     void delete(Long userId, Long runId) throws IOException;

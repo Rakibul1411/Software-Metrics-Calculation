@@ -469,13 +469,21 @@ with object storage. The Docker configuration uses a persistent volume.
 - Docker Engine
 - Docker Compose
 
-### Start
+### Option A: Instant Run with Pre-built Images (Recommended - 1 minute)
 
-From `DefectLab-Updated-Component-Based/`:
+No need to compile code or install Maven/Node/Python! You can run pre-built public images from Docker Hub (`rakibalnatiq/defectlab-*`):
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Option B: Build from Source
+
+If you want to build locally from the source files:
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up --build -d
 ```
 
 Open:
@@ -797,28 +805,22 @@ inward on `usecase`, `usecase` depends only on `domain` and its own
 | `comparison` | Independent MANUAL/PREDEFINED metric comparison |
 | `shared` | Configuration, database/error contracts, plus the read-only Dashboard and Report presenters, which have no domain or use case of their own |
 
-Within a business component:
+Within each backend component:
 
-- `api` — controllers that translate HTTP requests into use-case calls and back;
-- `usecase` — one interactor per component implementing every use-case
-  interface, depending only on `domain` and `usecase/port`;
-- `usecase/port` — output-port interfaces for anything outside the process
-  (a repository, a hasher, an HTTP client);
-- `domain` — entities and business rules, with zero framework imports; and
-- `infrastructure` — adapters that fulfil a port: JPA repositories, file/Git/
-  ZIP handling, the ML REST client.
+- `api`: REST controllers exposing HTTP endpoints;
+- `usecase`: application services orchestrating workflows, commands, and queries;
+- `domain`: domain models, business validation rules, and quality invariants;
+- `infrastructure`: JPA persistence repositories, external HTTP clients, and filesystem handlers.
 
-`dashboard` and `report` are not top-level packages: each was a single
-controller with no domain or use case of its own, so both now live under
-`shared/api` as cross-component presenters.
+`dashboard` and `report` live under `shared/api` as cross-component aggregated presenters.
 
 ## Implementation documentation
 
 The canonical guides for architecture, research, and component development are:
 
-- [SE801 Final Project Design Document](docs/SE801_FINAL_DESIGN_DOCUMENT.md) — Master comprehensive specification containing Component-level design, Clean Architecture boundaries, sequence diagrams, statecharts, UI actions, API/DB contracts, and testing.
+- [SE801 Final Project Design Document](research-and-docs/docs/SE801_FINAL_DESIGN_DOCUMENT.md) — Master comprehensive specification containing component-level design, architectural boundaries, sequence diagrams, statecharts, UI actions, API/DB contracts, and testing.
 - [Academic Papers Guide](research-and-docs/papers/PAPERS_GUIDE.md) — 15 seminal defect prediction papers, mathematical definitions, citations, and publication roadmap.
-- [Backend implementation](backend-java/README.md) — Spring Boot clean architecture and service guide.
+- [Backend implementation](backend-java/README.md) — Spring Boot architecture and service guide.
 - [Frontend implementation](frontend-angular/README.md) — Angular components and state management.
 - [ML service implementation](ml-service-python/README.md) — FastAPI and CORAL domain adaptation pipeline.
 
@@ -833,9 +835,9 @@ scripts/run-tests.sh
 The script:
 
 1. verifies package, route, table, and project-structure rules;
-2. runs 152 automated Maven backend tests (covering AST extraction, CORAL domain adaptation, comparator contracts, and REST APIs);
-3. compiles and tests the Python service; and
-4. creates an Angular build.
+2. runs 154 automated Maven backend tests (153 passing, 1 network test skipped);
+3. compiles and tests the Python service (37 automated pytest tests passing); and
+4. creates an Angular production build.
 
 Run layers separately:
 

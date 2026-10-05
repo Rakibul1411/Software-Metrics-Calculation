@@ -6,10 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Column-level quality report.
- *
- * <p>Reports problems instead of repairing them: the SRS forbids guessing whether
- * a negative value is valid, so unexpected values are surfaced as blocking issues.</p>
+ * Evaluates column distributions, missing value markers, and value boundaries
+ * for software metric datasets.
  */
 public final class DatasetQuality {
 

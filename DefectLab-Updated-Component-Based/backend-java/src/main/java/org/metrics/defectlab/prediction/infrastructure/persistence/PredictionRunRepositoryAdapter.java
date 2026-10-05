@@ -7,7 +7,9 @@ import org.metrics.defectlab.prediction.domain.PredictionRun;
 import org.metrics.defectlab.prediction.usecase.port.PredictionRunRepository;
 import org.springframework.stereotype.Repository;
 
-/** Gateway: fulfils the {@link PredictionRunRepository} port on top of Spring Data JPA. */
+/**
+ * JPA implementation of {@link PredictionRunRepository}.
+ */
 @Repository
 public class PredictionRunRepositoryAdapter implements PredictionRunRepository {
 

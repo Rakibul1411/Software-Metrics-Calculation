@@ -7,7 +7,9 @@ import org.metrics.defectlab.dataset.domain.DatasetTable;
 import org.metrics.defectlab.dataset.usecase.port.DatasetFileReader;
 import org.springframework.stereotype.Component;
 
-/** Gateway: fulfils the {@link DatasetFileReader} port using {@link DatasetFileParser}. */
+/**
+ * Adapter that parses metric datasets from disk into tabular domain models.
+ */
 @Component
 public class DatasetFileReaderAdapter implements DatasetFileReader {
 

@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import org.metrics.defectlab.prediction.domain.PredictionRun;
 
-/** Output port: how use cases persist and look up prediction runs, free of any framework detail. */
+/** Repository interface for persisting and querying defect prediction runs. */
 public interface PredictionRunRepository {
 
     PredictionRun save(PredictionRun run);

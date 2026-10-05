@@ -1,6 +1,6 @@
 package org.metrics.defectlab.auth.usecase.port;
 
-/** Output port: how use cases hash and verify passwords, free of any framework detail. */
+/** Service interface for hashing and verifying user passwords. */
 public interface PasswordHasher {
 
     String hash(String rawPassword);

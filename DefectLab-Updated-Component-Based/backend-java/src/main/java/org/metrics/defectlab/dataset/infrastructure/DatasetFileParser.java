@@ -16,10 +16,8 @@ import org.metrics.defectlab.dataset.domain.DatasetTable;
 import org.metrics.defectlab.dataset.domain.MetricHeaderNormalizer;
 
 /**
- * Reads CSV and ARFF datasets into a {@link DatasetTable}.
- *
- * <p>Headers are trimmed and lowercased so family detection matches by canonical
- * name rather than by column position, as the SRS requires.</p>
+ * Parses tabular software metric datasets from CSV and ARFF file formats.
+ * Column headers are normalized to support flexible matching.
  */
 public final class DatasetFileParser {
 

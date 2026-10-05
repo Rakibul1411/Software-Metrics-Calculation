@@ -4,7 +4,9 @@ import java.util.List;
 
 import org.metrics.defectlab.prediction.domain.PredictionRun;
 
-/** Input boundary: lists every prediction run owned by a user. */
+/**
+ * Lists all prediction runs executed by a user.
+ */
 public interface ListPredictionRunsUseCase {
 
     List<PredictionRun> list(Long userId);

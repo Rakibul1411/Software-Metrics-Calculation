@@ -5,7 +5,9 @@ import java.nio.file.Path;
 
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 
-/** Input boundary: registers metrics produced by the source-analysis component. */
+/**
+ * Registers metrics produced by source code extraction into the dataset repository.
+ */
 public interface RegisterExtractedDatasetUseCase {
 
     MetricDataset registerExtracted(Long userId, String projectName, String projectVersion,

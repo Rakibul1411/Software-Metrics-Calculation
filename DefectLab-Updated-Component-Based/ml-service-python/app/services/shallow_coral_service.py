@@ -4,21 +4,10 @@ import numpy as np
 
 
 class ShallowCoralService:
-    """
-    Shallow/linear CORrelation ALignment (CORAL).
+    """Linear Correlation Alignment (CORAL) domain adaptation.
 
-    This is the closed-form feature transformation from the original CORAL
-    method, not Deep CORAL. The method aligns source-domain covariance with
-    target-domain covariance without using target labels.
-
-    Formula:
-        Cs = cov(Xs) + lambda * I
-        Ct = cov(Xt) + lambda * I
-        A = Cs^(-1/2) @ Ct^(1/2)
-        Xs_aligned = Xs @ A
-
-    The caller should center/standardize source and target domains before
-    calling ``align``.
+    Aligns second-order statistics (covariance) of the source domain with the
+    target domain via closed-form whitening and re-coloring transformations.
     """
 
     ALGORITHM_NAME = "shallow/linear CORAL"
@@ -37,14 +26,11 @@ class ShallowCoralService:
         self.eigenvalue_floor = float(eigenvalue_floor)
 
     def align(self, X_source: np.ndarray, X_target: np.ndarray) -> np.ndarray:
-        """Align source features to the target covariance structure."""
         source = self._validate_matrix(X_source, "source")
         target = self._validate_matrix(X_target, "target")
 
         if source.shape[1] != target.shape[1]:
-            raise ValueError(
-                "Source and target must have the same number of feature columns."
-            )
+            raise ValueError("Source and target must have the same number of feature columns.")
         if source.shape[0] < 2:
             raise ValueError("CORAL requires at least two source rows.")
         if target.shape[0] < 2:
@@ -54,9 +40,7 @@ class ShallowCoralService:
         aligned_source = source @ coral_transform
 
         if not np.isfinite(aligned_source).all():
-            raise ValueError(
-                "CORAL produced NaN or infinite values. Check the input features."
-            )
+            raise ValueError("CORAL produced NaN or infinite values. Check the input features.")
 
         return aligned_source
 
@@ -65,83 +49,52 @@ class ShallowCoralService:
         X_source: np.ndarray,
         X_target: np.ndarray,
     ) -> np.ndarray:
-        """
-        Return the closed-form shallow CORAL whitening/re-coloring matrix.
-
-        This is Algorithm 1 from Sun, Feng, and Saenko. It is a matrix
-        transformation only: there is no neural network, gradient, learned
-        representation, or CORAL loss.
-        """
         source = self._validate_matrix(X_source, "source")
         target = self._validate_matrix(X_target, "target")
+
         if source.shape[1] != target.shape[1]:
-            raise ValueError(
-                "Source and target must have the same number of feature columns."
-            )
+            raise ValueError("Source and target must have the same number of feature columns.")
         if source.shape[0] < 2 or target.shape[0] < 2:
-            raise ValueError(
-                "Shallow CORAL requires at least two source and two target rows."
-            )
+            raise ValueError("Shallow CORAL requires at least two source and two target rows.")
 
-        feature_count = source.shape[1]
-        identity = np.eye(feature_count, dtype=np.float64)
-        covariance_source = self._covariance(source) + self.regularization * identity
-        covariance_target = self._covariance(target) + self.regularization * identity
+        d = source.shape[1]
+        eye = np.eye(d, dtype=np.float64)
 
-        source_inverse_sqrt = self._symmetric_matrix_power(
-            covariance_source,
-            power=-0.5,
-        )
-        target_sqrt = self._symmetric_matrix_power(
-            covariance_target,
-            power=0.5,
-        )
-        return source_inverse_sqrt @ target_sqrt
+        cov_s = self._covariance(source) + self.regularization * eye
+        cov_t = self._covariance(target) + self.regularization * eye
+
+        inv_sqrt_s = self._symmetric_matrix_power(cov_s, power=-0.5)
+        sqrt_t = self._symmetric_matrix_power(cov_t, power=0.5)
+
+        return inv_sqrt_s @ sqrt_t
 
     @staticmethod
-    def _covariance(values: np.ndarray) -> np.ndarray:
-        covariance = np.cov(values, rowvar=False, ddof=1)
-        covariance = np.atleast_2d(np.asarray(covariance, dtype=np.float64))
-        return 0.5 * (covariance + covariance.T)
+    def _covariance(matrix: np.ndarray) -> np.ndarray:
+        cov = np.cov(matrix, rowvar=False, ddof=1)
+        cov = np.atleast_2d(np.asarray(cov, dtype=np.float64))
+        return 0.5 * (cov + cov.T)
 
-    def _symmetric_matrix_power(
-        self,
-        matrix: np.ndarray,
-        power: float,
-    ) -> np.ndarray:
-        """Compute a stable real power of a symmetric covariance matrix."""
-        symmetric_matrix = 0.5 * (matrix + matrix.T)
-        eigenvalues, eigenvectors = np.linalg.eigh(symmetric_matrix)
+    def _symmetric_matrix_power(self, matrix: np.ndarray, power: float) -> np.ndarray:
+        sym = 0.5 * (matrix + matrix.T)
+        eigenvalues, eigenvectors = np.linalg.eigh(sym)
 
-        eigenvalues = np.clip(
-            eigenvalues,
-            self.eigenvalue_floor,
-            None,
-        )
-        powered_eigenvalues = np.power(eigenvalues, power)
+        clipped_evals = np.clip(eigenvalues, self.eigenvalue_floor, None)
+        powered_evals = np.power(clipped_evals, power)
 
-        result = (
-            eigenvectors
-            @ np.diag(powered_eigenvalues)
-            @ eigenvectors.T
-        )
-        return 0.5 * (result + result.T)
+        res = eigenvectors @ np.diag(powered_evals) @ eigenvectors.T
+        return 0.5 * (res + res.T)
 
     @staticmethod
-    def _validate_matrix(values: np.ndarray, domain_name: str) -> np.ndarray:
-        matrix = np.asarray(values, dtype=np.float64)
+    def _validate_matrix(matrix_in: np.ndarray, domain_name: str) -> np.ndarray:
+        mat = np.asarray(matrix_in, dtype=np.float64)
 
-        if matrix.ndim != 2:
-            raise ValueError(
-                f"The {domain_name} feature matrix must be two-dimensional."
-            )
-        if matrix.shape[0] == 0:
+        if mat.ndim != 2:
+            raise ValueError(f"The {domain_name} feature matrix must be two-dimensional.")
+        if mat.shape[0] == 0:
             raise ValueError(f"The {domain_name} feature matrix contains no rows.")
-        if matrix.shape[1] == 0:
+        if mat.shape[1] == 0:
             raise ValueError(f"The {domain_name} feature matrix contains no columns.")
-        if not np.isfinite(matrix).all():
-            raise ValueError(
-                f"The {domain_name} feature matrix contains NaN or infinite values."
-            )
+        if not np.isfinite(mat).all():
+            raise ValueError(f"The {domain_name} feature matrix contains NaN or infinite values.")
 
-        return matrix
+        return mat

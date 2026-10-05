@@ -3,8 +3,7 @@ package org.metrics.defectlab.dataset.domain;
 import java.time.Instant;
 
 /**
- * Enterprise Business Rule: a registered metric dataset, free of any
- * persistence or framework annotations.
+ * Represents a registered software metric dataset (PROMISE or AEEEM).
  */
 public class MetricDataset {
 

@@ -19,10 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Interface Adapter: a small read composition over the dataset and
- * prediction components. It has no domain or use cases of its own, so it
- * lives here as a cross-component presenter rather than as a standalone
- * component.
+ * REST controller providing aggregated summary metrics and recent activity for the user dashboard.
  */
 @RestController
 @RequestMapping("/api/dashboard")

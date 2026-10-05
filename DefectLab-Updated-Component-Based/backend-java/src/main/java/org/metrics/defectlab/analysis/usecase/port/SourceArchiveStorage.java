@@ -5,7 +5,7 @@ import java.nio.file.Path;
 
 import org.metrics.defectlab.analysis.usecase.UploadedArchive;
 
-/** Output port: how use cases stage uploaded project archives and clean them up. */
+/** Manages staging and cleanup of uploaded source project archives. */
 public interface SourceArchiveStorage {
 
     Path storeUploadedFile(UploadedArchive file) throws IOException;

@@ -6,10 +6,7 @@ import java.util.Map;
 import org.metrics.defectlab.dataset.domain.MetricDataset;
 
 /**
- * Maps dataset entities to the path-free summary shared by every component
- * that needs to embed a dataset reference in its own use-case output. Lives
- * in the use-case ring (not {@code dataset.api}) so other components' use
- * cases can depend on it without reaching into dataset's interface adapters.
+ * Utility class to map dataset domain entities into summary representations.
  */
 public final class DatasetSummaryMapper {
 

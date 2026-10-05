@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
-/** Output port: renders a downloadable metric-comparison report, free of any PDF-library detail. */
+/** Generates printable comparison report documents from structured summary tables. */
 public interface ComparisonReportRenderer {
 
     void writeTables(Path target, String title, List<String> introLines, List<Table> tables)

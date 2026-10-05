@@ -3,7 +3,9 @@ package org.metrics.defectlab.prediction.usecase;
 import java.io.IOException;
 import java.nio.file.Path;
 
-/** Input boundary: locates the stored downloadable artifacts for a run. */
+/**
+ * Locates the stored downloadable artifacts for a prediction run.
+ */
 public interface GetPredictionArtifactUseCase {
 
     Path predictionFile(Long userId, Long runId);

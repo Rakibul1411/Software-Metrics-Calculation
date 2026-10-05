@@ -4,7 +4,9 @@ import java.util.Map;
 
 import org.metrics.defectlab.comparison.domain.MetricComparison;
 
-/** Input boundary: builds display summaries for a metric comparison. */
+/**
+ * Generates display summaries for metric comparisons.
+ */
 public interface GetComparisonSummaryUseCase {
 
     Map<String, Object> summary(Long userId, MetricComparison comparison);

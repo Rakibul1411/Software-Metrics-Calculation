@@ -2,6 +2,6 @@ package org.metrics.defectlab.dataset.usecase;
 
 import java.io.InputStream;
 
-/** Input boundary value: a framework-free view of an uploaded file. */
+/** Encapsulates an uploaded dataset file stream and metadata. */
 public record UploadedFile(InputStream content, String originalFilename, long size) {
 }

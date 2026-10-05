@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Interface Adapter: translates HTTP requests into use-case calls and back. */
+/** REST controller for model training, defect prediction, and metric evaluation. */
 @RestController
 @RequestMapping("/api/predictions")
 public class PredictionController {

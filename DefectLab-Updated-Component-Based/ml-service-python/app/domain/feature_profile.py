@@ -1,11 +1,3 @@
-"""
-Feature registry.
-
-Each column carries its role, allowed range, missing markers and transformation,
-so the pipeline never has to guess whether a value is valid. Family detection
-matches the exact required feature set by canonical name, never by position.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -19,15 +11,12 @@ PROMISE_FEATURES: tuple[str, ...] = (
     "loc", "dam", "moa", "mfa", "cam", "ic", "cbm", "amc", "max_cc", "avg_cc",
 )
 
-# These 16 are non-negative counts; an unexpected negative value is invalid
-# data. The four ratios (PROMISE_SCALE_ONLY) are checked separately below.
 PROMISE_NONNEGATIVE_FEATURES: frozenset[str] = frozenset({
     "wmc", "dit", "noc", "cbo", "rfc", "lcom", "ca", "ce",
     "npm", "loc", "moa", "ic", "cbm", "amc", "max_cc", "avg_cc",
 })
-PROMISE_SCALE_ONLY: frozenset[str] = frozenset({"lcom3", "dam", "mfa", "cam"})
 
-# Ratios that must stay inside [0, 1]; anything outside is invalid data.
+PROMISE_SCALE_ONLY: frozenset[str] = frozenset({"lcom3", "dam", "mfa", "cam"})
 PROMISE_UNIT_RANGE: frozenset[str] = frozenset({"dam", "mfa", "cam"})
 
 AEEEM_BASE_METRICS: tuple[str, ...] = (
@@ -42,8 +31,7 @@ AEEEM_ENTROPY_FEATURES: tuple[str, ...] = (
     "cvsentropy", "cvswentropy", "cvslinentropy", "cvslogentropy", "cvsexpentropy",
 )
 
-# Prior-defect-history columns. Excluded from X: they need verified
-# issue-to-commit linkage and leak defect history into the model.
+# Defect history features excluded to prevent target leakage
 AEEEM_EXCLUDED_PREFIXES: tuple[str, ...] = (
     "numberofbugsfounduntil",
     "numberofnontrivialbugsfounduntil",
@@ -107,22 +95,21 @@ _SIMPLE_ALIASES: dict[str, str] = {
 
 
 def normalize_header(header: str) -> str:
-    """Trim, lowercase, and map published AEEEM/PROMISE aliases."""
     normalized = str(header).strip().lower()
-    compact = "".join(character for character in normalized if character.isalnum())
+    compact = "".join(char for char in normalized if char.isalnum())
     if compact in _SIMPLE_ALIASES:
         return _SIMPLE_ALIASES[compact]
-    for alias, canonical_prefix in _AEEEM_PREFIX_ALIASES.items():
+    for alias, prefix in _AEEEM_PREFIX_ALIASES.items():
         if compact.startswith(alias):
             suffix = compact[len(alias):]
             if suffix in _AEEEM_SUFFIX_ALIASES:
-                return canonical_prefix + _AEEEM_SUFFIX_ALIASES[suffix]
+                return prefix + _AEEEM_SUFFIX_ALIASES[suffix]
     return normalized
 
 
 def is_excluded_history_column(header: str) -> bool:
-    collapsed = normalize_header(header).replace(":", "").replace("_", "")
-    return collapsed.startswith(AEEEM_EXCLUDED_PREFIXES)
+    clean = normalize_header(header).replace(":", "").replace("_", "")
+    return clean.startswith(AEEEM_EXCLUDED_PREFIXES)
 
 
 @dataclass(frozen=True)
@@ -149,11 +136,11 @@ def aeeem_profile() -> FeatureProfile:
     nonnegative_features: set[str] = set()
     for prefix in AEEEM_PREFIXES:
         for base in AEEEM_BASE_METRICS:
-            column = f"{prefix}{base}"
-            features.append(column)
-            # LDHH values are signed deltas, so they can legitimately be negative.
+            col = f"{prefix}{base}"
+            features.append(col)
+            # LDHH represents code change churn/deltas, which may be negative
             if prefix != "ldhh_":
-                nonnegative_features.add(column)
+                nonnegative_features.add(col)
     features.extend(AEEEM_ENTROPY_FEATURES)
     return FeatureProfile(
         family="AEEEM",
@@ -164,18 +151,16 @@ def aeeem_profile() -> FeatureProfile:
 
 
 def detect_profile(headers: Iterable[str]) -> FeatureProfile | None:
-    """Returns the profile whose complete feature list is present, else None."""
-    normalized = {normalize_header(header) for header in headers}
+    norm_headers = {normalize_header(h) for h in headers}
     for profile in (promise_profile(), aeeem_profile()):
-        if set(profile.features).issubset(normalized):
+        if set(profile.features).issubset(norm_headers):
             return profile
     return None
 
 
 def find_label_column(headers: Iterable[str], profile: FeatureProfile) -> str | None:
-    """Accepts the family's own label column or the shared ``bug`` column."""
-    normalized = {normalize_header(header) for header in headers}
-    for candidate in (profile.label_column, PROMISE_LABEL):
-        if candidate in normalized:
-            return candidate
+    norm_headers = {normalize_header(h) for h in headers}
+    for col in (profile.label_column, PROMISE_LABEL):
+        if col in norm_headers:
+            return col
     return None

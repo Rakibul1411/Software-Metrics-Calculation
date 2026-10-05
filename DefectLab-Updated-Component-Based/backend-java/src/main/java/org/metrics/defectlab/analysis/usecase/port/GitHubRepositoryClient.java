@@ -5,7 +5,7 @@ import java.nio.file.Path;
 
 import org.metrics.defectlab.analysis.aeeem.history.AeeemAnalysisOptions;
 
-/** Output port: how use cases resolve a GitHub URL and materialise its source on disk. */
+/** Resolves GitHub repository URLs and handles remote git clone operations. */
 public interface GitHubRepositoryClient {
 
     GitHubTarget parseTarget(String gitUrl);

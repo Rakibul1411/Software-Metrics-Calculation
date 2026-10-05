@@ -14,12 +14,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * Gateway: fulfils the {@link MlServiceClient} port over HTTP against the
- * internal FastAPI service.
- *
- * <p>The ML service is never exposed to the browser; a shared token identifies
- * this caller, and validation failures are surfaced with the ML service's own
- * message so the dashboard can show a real reason.</p>
+ * REST client for communicating with the internal Python ML service.
  */
 @Component
 public class RestMlServiceClient implements MlServiceClient {

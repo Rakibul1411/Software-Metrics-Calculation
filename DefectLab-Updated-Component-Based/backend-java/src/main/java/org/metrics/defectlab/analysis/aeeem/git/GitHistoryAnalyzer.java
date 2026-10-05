@@ -21,8 +21,12 @@ import org.metrics.defectlab.analysis.aeeem.history.LdhhCalculator;
 import org.metrics.defectlab.analysis.aeeem.history.WchuCalculator;
 import org.metrics.defectlab.analysis.aeeem.model.AeeemMetricResult;
 import org.metrics.defectlab.analysis.aeeem.parser.AeeemJavaSourceParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class GitHistoryAnalyzer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GitHistoryAnalyzer.class);
 
     private final BiWeeklySnapshotGenerator snapshotGenerator = new BiWeeklySnapshotGenerator();
     private final GitChangeHistoryMiner changeHistoryMiner = new GitChangeHistoryMiner();
@@ -54,20 +58,18 @@ public final class GitHistoryAnalyzer {
 
         List<Map<String, AeeemMetricResult>> history = new ArrayList<>();
         Map<String, Map<String, AeeemMetricResult>> metricsByTree = new LinkedHashMap<>();
-        System.out.println("AEEEM history analysis: " + snapshots.size()
-                + " bi-weekly snapshots selected for "
-                + options.getProfile().getDisplayName() + ".");
-        System.out.println("AEEEM repository scope: "
-                + (options.isScoped() ? options.getModulePath() : "<repository root>") + ".");
+        LOGGER.info("AEEEM history analysis: {} bi-weekly snapshots selected for {}.",
+                snapshots.size(), options.getProfile().getDisplayName());
+        LOGGER.info("AEEEM repository scope: {}.",
+                options.isScoped() ? options.getModulePath() : "<repository root>");
         for (String warning : selection.getWarnings()) {
-            System.out.println("AEEEM compatibility note: " + warning);
+            LOGGER.warn("AEEEM compatibility note: {}", warning);
         }
         if (options.isBenchmarkProfile()
                 && snapshots.size() != options.getProfile().getReferenceSnapshotCount()) {
-            System.out.println("AEEEM benchmark note: the selected Git mirror produced "
-                    + snapshots.size() + " scheduled snapshots; the historic dataset reports "
-                    + options.getProfile().getReferenceSnapshotCount()
-                    + " parsed versions. SCM migration and inactive periods can differ.");
+            LOGGER.info("AEEEM benchmark note: the selected Git mirror produced {} scheduled snapshots; "
+                    + "the historic dataset reports {} parsed versions.",
+                    snapshots.size(), options.getProfile().getReferenceSnapshotCount());
         }
         AeeemJavaSourceParser.SourceFileCache fileCache =
                 new AeeemJavaSourceParser.SourceFileCache();
@@ -84,14 +86,13 @@ public final class GitHistoryAnalyzer {
                 Map<String, AeeemMetricResult> cached = metricsByTree.get(treeIdentity);
                 if (cached != null) {
                     history.add(cached);
-                    System.out.println("AEEEM snapshot " + (index + 1) + "/" + snapshots.size()
-                            + " reused (" + snapshot.getDate()
-                            + ", selected module tree is unchanged).");
+                    LOGGER.info("AEEEM snapshot {}/{} reused ({}, selected module tree is unchanged).",
+                            index + 1, snapshots.size(), snapshot.getDate());
                     continue;
                 }
 
-                System.out.println("AEEEM snapshot " + (index + 1) + "/" + snapshots.size()
-                        + " started (" + snapshot.getDate() + ").");
+                LOGGER.info("AEEEM snapshot {}/{} started ({}).",
+                        index + 1, snapshots.size(), snapshot.getDate());
                 if (index > 0) {
                     snapshotGenerator.checkoutCommit(worktree, snapshot);
                 }
@@ -106,8 +107,8 @@ public final class GitHistoryAnalyzer {
                 Map<String, AeeemMetricResult> snapshotMetrics = byName(metrics);
                 metricsByTree.put(treeIdentity, snapshotMetrics);
                 history.add(snapshotMetrics);
-                System.out.println("AEEEM snapshot " + (index + 1) + "/" + snapshots.size()
-                        + " completed: " + metrics.size() + " production classes.");
+                LOGGER.info("AEEEM snapshot {}/{} completed: {} production classes.",
+                        index + 1, snapshots.size(), metrics.size());
             }
         } finally {
             if (worktree != null) {
@@ -130,20 +131,20 @@ public final class GitHistoryAnalyzer {
         }
         WchuCalculator.apply(history, finalSnapshot);
         LdhhCalculator.apply(history, finalSnapshot);
-        System.out.println("AEEEM change-entropy calculation started.");
+        LOGGER.info("AEEEM change-entropy calculation started.");
         List<GitChangePeriod> changePeriods;
         try {
             changePeriods = changeHistoryMiner.mine(repository, snapshots, options);
         } catch (Exception exception) {
-            System.err.println("AEEEM change-entropy mining error: " + exception.getMessage());
+            LOGGER.error("AEEEM change-entropy mining error: {}", exception.getMessage(), exception);
             changePeriods = Collections.emptyList();
         }
         new GitChangeEntropyCalculator().apply(changePeriods, finalSnapshot,
                 AeeemHistoryConfiguration.fromEnvironment());
-        System.out.println("AEEEM change-entropy calculation completed.");
-        System.out.println("AEEEM snapshots generated: " + snapshots.size());
-        System.out.println("AEEEM final classes analyzed: " + finalSnapshot.size());
-        System.out.println("AEEEM final features: 56");
+        LOGGER.info("AEEEM change-entropy calculation completed.");
+        LOGGER.info("AEEEM snapshots generated: {}", snapshots.size());
+        LOGGER.info("AEEEM final classes analyzed: {}", finalSnapshot.size());
+        LOGGER.info("AEEEM final features: 56");
         List<String> analysisWarnings = new ArrayList<>(selection.getWarnings());
         int referenceRows = options.getProfile().getReferenceRowCount();
         if (options.isBenchmarkProfile() && referenceRows > 0

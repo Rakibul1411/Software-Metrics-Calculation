@@ -5,7 +5,9 @@ import java.util.Map;
 
 import org.metrics.defectlab.prediction.domain.PredictionRun;
 
-/** Input boundary: builds display summaries for prediction runs, including grouped ones. */
+/**
+ * Generates display summaries and metrics for prediction runs.
+ */
 public interface GetPredictionSummaryUseCase {
 
     Map<String, Object> summary(Long userId, PredictionRun run);

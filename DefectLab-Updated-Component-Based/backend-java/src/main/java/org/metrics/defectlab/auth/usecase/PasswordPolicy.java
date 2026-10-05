@@ -1,6 +1,8 @@
 package org.metrics.defectlab.auth.usecase;
 
-/** Application Business Rule: the password strength policy this app enforces. */
+/**
+ * Enforces application password length and complexity rules.
+ */
 public final class PasswordPolicy {
 
     private static final int MINIMUM_LENGTH = 8;
