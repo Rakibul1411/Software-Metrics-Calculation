@@ -34,13 +34,17 @@ You do **not** need Java, Maven, Node.js, or Python installed on your machine. Y
 
 ### Option A: Instant Run with Pre-built Images (Recommended)
 
-You don't even need to clone the full repository. You can run DefectLab with just the `docker-compose.prod.yml` file.
+You don't even need to clone the full repository. You can run DefectLab with just the `docker-compose.prod.yml` file:
+👉 **GitHub File Link**: [https://github.com/Rakibul1411/Software-Metrics-Calculation/blob/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml](https://github.com/Rakibul1411/Software-Metrics-Calculation/blob/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml)
 
 1. **Create an empty folder and download the compose file:**
-   ```bash
-   mkdir defectlab && cd defectlab
-   curl -o docker-compose.yml https://raw.githubusercontent.com/Rakibul1411/Software-Metrics-Calculation/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml
-   ```
+   - **Via Terminal (1-step):**
+     ```bash
+     mkdir defectlab && cd defectlab
+     curl -o docker-compose.yml https://raw.githubusercontent.com/Rakibul1411/Software-Metrics-Calculation/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml
+     ```
+   - **Or via Browser:**
+     Open the [GitHub File Link](https://github.com/Rakibul1411/Software-Metrics-Calculation/blob/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml), click the **Download raw file** button (top right), and save it as `docker-compose.yml`.
 
 2. **Start the application:**
    ```bash
