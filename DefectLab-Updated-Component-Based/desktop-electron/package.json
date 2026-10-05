@@ -1,0 +1,36 @@
+{
+  "name": "defectlab-desktop",
+  "version": "1.0.0",
+  "description": "DefectLab Cross-Project Defect Prediction Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:all": "electron-builder -mw"
+  },
+  "author": "Rakibul Islam",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "org.metrics.defectlab",
+    "productName": "DefectLab",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}

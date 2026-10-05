@@ -43,5 +43,8 @@ Final dataset list/
 Aeeem/
 research-and-docs/Final dataset list/
 research-and-docs/Aeeem/
-research-and-docs/diagrams/
 research-and-docs/
+
+# Electron Desktop App
+desktop-electron/node_modules/
+desktop-electron/dist-electron/
