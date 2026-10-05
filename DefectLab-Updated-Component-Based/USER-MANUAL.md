@@ -154,16 +154,20 @@ git push origin master
 
 ## Part 3: How Users Receive Your Latest Updates
 
-When you push new images to Docker Hub, an end-user does **not** need to reinstall the `.dmg` or `.exe` app.
+When you push new images to Docker Hub, an end-user does **not** need to reinstall the `.dmg` or `.exe` app, and they don't even need to touch the terminal!
 
-To pull your latest changes, the user simply runs:
+### 1. For Desktop App Users (.dmg / .exe) — 100% Fully Automatic!
+- Whenever the user opens the **DefectLab desktop app**, it automatically checks Docker Hub in the background (*"Checking for latest updates from Docker Hub..."*).
+- If you have pushed updated code or models, the desktop app **automatically downloads the new Docker images and restarts the services** seamlessly.
+- **The user does not need to run ANY terminal command!**
 
+### 2. For Web / Terminal Users (Docker Compose):
+If a user is running DefectLab directly via browser/terminal:
 ```bash
 docker compose pull
 docker compose up -d
 ```
-
-Next time they open the **DefectLab desktop app** (or refresh `http://localhost:4200`), they will immediately be running your brand-new features, UI updates, and ML enhancements!
+The browser at `http://localhost:4200` will instantly reflect your latest updates!
 
 ---
 

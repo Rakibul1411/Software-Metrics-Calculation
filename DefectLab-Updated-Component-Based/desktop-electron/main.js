@@ -58,33 +58,34 @@ function isServiceReady() {
 }
 
 async function checkAndStartApp() {
-  sendStatus('Checking services status...');
+  sendStatus('Checking Docker environment...');
 
-  const alreadyRunning = await isServiceReady();
-  if (alreadyRunning) {
-    loadApp();
-    return;
-  }
-
-  // Check if Docker is available
+  // 1. Check if Docker is available
   exec('docker info', { env: customEnv }, (dockerErr) => {
     if (dockerErr) {
       sendError('Docker is not running. Please launch Docker Desktop or OrbStack, then click Retry.');
       return;
     }
 
-    sendStatus('Starting DefectLab Docker services...');
     const projectDir = getProjectRoot();
-    const command = `docker compose -f ${PROD_COMPOSE_FILE} up -d`;
+    sendStatus('Checking for latest updates from Docker Hub...');
 
-    exec(command, { cwd: projectDir, env: customEnv }, (startErr, stdout, stderr) => {
-      if (startErr) {
-        sendError(`Failed to start services: ${stderr || startErr.message}`);
-        return;
-      }
+    // 2. Automatically pull the latest images (timeout after 30s if offline)
+    const pullCommand = `docker compose -f ${PROD_COMPOSE_FILE} pull`;
+    exec(pullCommand, { cwd: projectDir, env: customEnv, timeout: 30000 }, () => {
+      // 3. Launch services (will auto-recreate containers if new images were downloaded)
+      sendStatus('Starting DefectLab Docker services...');
+      const upCommand = `docker compose -f ${PROD_COMPOSE_FILE} up -d`;
 
-      sendStatus('Waiting for services to become healthy...');
-      pollUntilReady();
+      exec(upCommand, { cwd: projectDir, env: customEnv }, (startErr, stdout, stderr) => {
+        if (startErr) {
+          sendError(`Failed to start services: ${stderr || startErr.message}`);
+          return;
+        }
+
+        sendStatus('Connecting to DefectLab Core...');
+        pollUntilReady();
+      });
     });
   });
 }
