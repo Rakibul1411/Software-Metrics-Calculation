@@ -14,13 +14,13 @@
         <ui-radio-group label="Source input" [options]="modeOptions"
                          [value]="mode" (valueChange)="onModeChange($event)">
         </ui-radio-group>
-        <ui-input label="Project version" [required]="true"
-                   placeholder="Example: 1.7 or 3.4"
-                   [value]="projectVersion" (valueChange)="projectVersion = $event">
-        </ui-input>
         <ui-input label="Project name"
                    placeholder="Automatically derived when empty"
                    [value]="projectName" (valueChange)="projectName = $event">
+        </ui-input>
+        <ui-input label="Project version" [required]="true"
+                   placeholder="Example: 1.7 or 3.4"
+                   [value]="projectVersion" (valueChange)="projectVersion = $event">
         </ui-input>
         <ui-input *ngIf="mode === 'github'" label="Public GitHub URL" [required]="true"
                    placeholder="https://github.com/owner/repository"
