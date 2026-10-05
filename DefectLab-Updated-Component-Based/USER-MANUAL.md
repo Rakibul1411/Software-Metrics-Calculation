@@ -122,41 +122,37 @@ docker compose down -v
 
 ---
 
-## Part 3: Developer Guide (Code Updates & Automated CI/CD)
+## Part 3: Developer Guide (How to Update Code & Push to Docker Hub)
 
-Whenever you make code improvements to the Java backend, Python ML engine, or Angular UI:
+Whenever you make improvements or changes to the code (Java backend, Python ML service, or Angular frontend), follow these **3 simple steps** to update both Docker Hub and GitHub:
 
-### Option 1: Automatic CI/CD with GitHub Actions (Recommended)
-
-DefectLab includes `.github/workflows/docker-publish.yml`. When enabled, whenever you push changes to the `master` branch on GitHub, GitHub Actions will **automatically build and push updated images to Docker Hub** without you having to do anything manually on your machine!
-
-#### One-Time Setup for GitHub Actions:
-1. **Generate a Docker Hub Token:**
-   - Go to [Docker Hub Account Settings -> Security](https://hub.docker.com/settings/security).
-   - Click **New Access Token** -> Description: `github-actions` -> Permissions: `Read & Write` -> Click **Generate**.
-   - Copy the generated token string.
-2. **Add Secrets in your GitHub Repository:**
-   - Go to your repository on GitHub: `https://github.com/Rakibul1411/Software-Metrics-Calculation`.
-   - Click **Settings** (tab at the top) -> Left sidebar: **Secrets and variables** -> **Actions**.
-   - Click **New repository secret**:
-     - Name: `DOCKERHUB_USERNAME` | Value: `rakibalnatiq`
-   - Click **New repository secret** again:
-     - Name: `DOCKERHUB_TOKEN` | Value: *(Paste your Docker Hub token from step 1)*
-3. **Commit & Push to master:**
-   ```bash
-   git add .
-   git commit -m "feat: your new feature"
-   git push origin master
-   ```
-   🎉 GitHub Actions will instantly build the new images and update Docker Hub!
-
----
-
-### Option 2: Manual Push from your Laptop
-If you ever want to push images directly from your terminal:
+### Step 1: Test your changes locally
+Verify that your changes work properly on your machine:
 ```bash
+docker compose up -d --build
+```
+Open [http://localhost:4200](http://localhost:4200) to confirm everything works as expected.
+
+### Step 2: Build and Push updated images to Docker Hub
+From the `DefectLab-Updated-Component-Based` directory, run:
+
+```bash
+# 1. Build the updated images
 docker compose build
+
+# 2. Push the updated images to your public Docker Hub account
 docker compose push
+```
+
+> 💡 **Result:** Docker will push the updated `rakibalnatiq/defectlab-backend:latest`, `rakibalnatiq/defectlab-ml:latest`, and `rakibalnatiq/defectlab-frontend:latest` images to Docker Hub. Any user running `docker compose pull && docker compose up -d` will immediately get your latest code!
+
+### Step 3: Push code changes to GitHub
+Save your code changes to GitHub so the source repository is always up-to-date:
+
+```bash
+git add .
+git commit -m "feat: updated defect prediction features"
+git push origin master
 ```
 
 ---
