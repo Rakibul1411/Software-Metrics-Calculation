@@ -78,7 +78,17 @@ docker compose -f docker-compose.prod.yml up -d
 By default, DefectLab spins up an isolated, local PostgreSQL container inside Docker. If a user wants to connect to their own **Neon DB (Cloud PostgreSQL)** instead of running the local Postgres container:
 
 #### Step 1: Create an `.env` file
-Inside the folder where you run Docker, create a file named `.env`:
+
+Users do **not** need to search GitHub manually. You can get the template in one step:
+
+- **Via Terminal (1-step download):**
+  ```bash
+  curl -o .env https://raw.githubusercontent.com/Rakibul1411/Software-Metrics-Calculation/master/DefectLab-Updated-Component-Based/.env.example
+  ```
+- **Or view template on GitHub:**
+  👉 **[.env.example on GitHub](https://github.com/Rakibul1411/Software-Metrics-Calculation/blob/master/DefectLab-Updated-Component-Based/.env.example)**
+
+Then open `.env` and fill in your Neon DB credentials:
 
 ```env
 # Point Spring Boot to your Neon DB connection URL:
