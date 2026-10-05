@@ -18,9 +18,6 @@ services:
 
   ml:
     image: rakibalnatiq/defectlab-ml:latest
-    build:
-      context: .
-      dockerfile: ml-service-python/Dockerfile
     restart: unless-stopped
     environment:
       ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:-local-development-token}
@@ -34,9 +31,6 @@ services:
 
   backend:
     image: rakibalnatiq/defectlab-backend:latest
-    build:
-      context: .
-      dockerfile: backend-java/Dockerfile
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
@@ -67,9 +61,6 @@ services:
 
   frontend:
     image: rakibalnatiq/defectlab-frontend:latest
-    build:
-      context: .
-      dockerfile: frontend-angular/Dockerfile
     restart: unless-stopped
     ports:
       - "4200:80"

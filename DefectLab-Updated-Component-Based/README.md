@@ -469,13 +469,21 @@ with object storage. The Docker configuration uses a persistent volume.
 - Docker Engine
 - Docker Compose
 
-### Start
+### Option A: Instant Run with Pre-built Images (Recommended - 1 minute)
 
-From `DefectLab-Updated-Component-Based/`:
+No need to compile code or install Maven/Node/Python! You can run pre-built public images from Docker Hub (`rakibalnatiq/defectlab-*`):
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Option B: Build from Source
+
+If you want to build locally from the source files:
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up --build -d
 ```
 
 Open:
