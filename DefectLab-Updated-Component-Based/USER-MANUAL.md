@@ -14,9 +14,7 @@ Welcome to the **DefectLab** deployment and operational manual. This document co
   - [Option B: Run from Cloned Repository](#option-b-run-from-cloned-repository)
   - [Option C: Using Neon DB (Remote PostgreSQL) instead of Local DB](#option-c-using-neon-db-cloud-database-instead-of-local-postgresql)
 - [Part 2: How to Stop & Manage Data](#part-2-how-to-stop--manage-data)
-- [Part 3: Developer Guide (Code Updates & Docker Hub Publishing)](#part-3-developer-guide-for-project-owner)
-  - [Workflow: Updating Code, GitHub & Docker Hub](#workflow-updating-code-github--docker-hub)
-  - [Automating with GitHub Actions (CI/CD)](#optional-automating-with-github-actions-cicd)
+- [Part 3: Developer Guide (How to Update Code & Push to Docker Hub)](#part-3-developer-guide-how-to-update-code--push-to-docker-hub)
 - [Part 4: Common Troubleshooting & Corner Cases](#part-4-common-troubleshooting--corner-cases)
 
 ---
