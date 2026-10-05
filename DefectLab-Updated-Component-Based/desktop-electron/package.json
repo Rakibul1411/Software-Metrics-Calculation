@@ -21,6 +21,9 @@
     "directories": {
       "output": "dist-electron"
     },
+    "extraResources": [
+      "docker-compose.prod.yml"
+    ],
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [
