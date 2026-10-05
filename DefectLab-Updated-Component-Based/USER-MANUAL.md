@@ -1,177 +1,195 @@
 # DefectLab - User Manual & Developer Guide
 
-Welcome to the **DefectLab** deployment and operational manual. This document contains complete instructions for:
-1. **End-Users / Reviewers**: How to run DefectLab instantly with pre-built Docker images (with Local PostgreSQL or Cloud Neon DB).
-2. **Developers (Project Owner)**: How to push code changes, update GitHub, and update Docker Hub images.
-3. **Database Customization**: How to switch seamlessly between internal PostgreSQL and remote Neon DB.
+Welcome to the **DefectLab** operational and deployment manual. This document covers:
+1. **End-User Guide**: How to install and run DefectLab using the native Desktop App (`.dmg` for Mac / `.exe` for Windows) or Docker Compose, and understanding which database it connects to.
+2. **Developer Guide (Project Owner)**: How to make code changes and push updated images to Docker Hub **without ever needing to rebuild `.dmg` or `.exe` files**.
+3. **End-User Update Guide**: How users seamlessly receive your latest code updates.
 
 ---
 
 ## 📋 Table of Contents
-- [Part 1: End-User Quickstart (How to Run the Project)](#part-1-end-user-quickstart)
+- [Part 1: End-User Guide (How to Run DefectLab)](#part-1-end-user-guide)
   - [Prerequisites](#prerequisites)
-  - [Option A: Instant Run with Pre-built Images (Recommended - 1 Minute)](#option-a-instant-run-with-pre-built-images-recommended)
-  - [Option B: Run from Cloned Repository](#option-b-run-from-cloned-repository)
-  - [Option C: Using Neon DB (Remote PostgreSQL) instead of Local DB](#option-c-using-neon-db-cloud-database-instead-of-local-postgresql)
-- [Part 2: How to Stop & Manage Data](#part-2-how-to-stop--manage-data)
-- [Part 3: Developer Guide (How to Update Code & Push to Docker Hub)](#part-3-developer-guide-how-to-update-code--push-to-docker-hub)
-- [Part 4: Common Troubleshooting & Corner Cases](#part-4-common-troubleshooting--corner-cases)
+  - [Method 1: Run with Desktop App (.dmg for Mac / .exe for Windows)](#method-1-native-desktop-app-recommended)
+  - [Method 2: Run via Terminal with Docker Compose](#method-2-run-via-terminal-with-docker-compose)
+  - [Database Details: Which Database Does It Connect To?](#database-details-which-database-does-it-connect-to)
+  - [Optional: Connecting to Cloud Neon DB instead of Local PostgreSQL](#optional-connecting-to-cloud-neon-db)
+- [Part 2: Developer Guide (Code Updates & Docker Hub Publishing)](#part-2-developer-guide-for-project-owner)
+  - [Why You NEVER Need to Rebuild .dmg or .exe Files](#why-you-never-need-to-rebuild-dmg-or-exe-files)
+  - [Step-by-Step: Updating Code and Pushing to Docker Hub](#step-by-step-updating-code-and-pushing-to-docker-hub)
+- [Part 3: How Users Receive Your Latest Updates](#part-3-how-users-receive-your-latest-updates)
+- [Part 4: Stopping Services and Resetting Data](#part-4-stopping-services-and-resetting-data)
+- [Part 5: Troubleshooting & FAQ](#part-5-troubleshooting--faq)
 
 ---
 
-## Part 1: End-User Quickstart
+## Part 1: End-User Guide
 
 ### Prerequisites
-You do **not** need Java, Maven, Node.js, or Python installed on your machine. You only need:
-- **Docker** and **Docker Compose**:
-  - **macOS**: [OrbStack](https://orbstack.dev/) (recommended for speed) or Docker Desktop.
+Users do **not** need Java, Maven, Node.js, or Python installed on their computer. They only need:
+- **Docker** or **OrbStack**:
+  - **macOS**: [OrbStack](https://orbstack.dev/) (recommended, super lightweight) or Docker Desktop.
   - **Windows**: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (with WSL2 enabled).
-  - **Linux**: Docker Engine + Docker Compose Plugin.
+
+*(Make sure Docker or OrbStack is running before launching DefectLab).*
 
 ---
 
-### Option A: Instant Run with Pre-built Images (Recommended)
+### Method 1: Native Desktop App (Recommended)
 
-You don't even need to clone the full repository. You can run DefectLab with just the `docker-compose.prod.yml` file:
-👉 **GitHub File Link**: [https://github.com/Rakibul1411/Software-Metrics-Calculation/blob/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml](https://github.com/Rakibul1411/Software-Metrics-Calculation/blob/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml)
+DefectLab provides native desktop installers for both macOS and Windows:
 
-1. **Create an empty folder and download the compose file:**
-   - **Via Terminal (1-step):**
+#### For macOS Users:
+1. Open the **`DefectLab-1.0.0-arm64.dmg`** installer.
+2. Drag **DefectLab.app** into your **Applications** folder.
+3. Launch **DefectLab** from Launchpad or Applications.
+
+#### For Windows Users:
+1. Double-click the **`DefectLab Setup 1.0.0.exe`** installer.
+2. Follow the standard setup wizard. A desktop shortcut and start menu entry will be created.
+3. Launch **DefectLab** from your Desktop.
+
+#### What Happens When You Open the Desktop App:
+- A dark loading screen appears: *"Connecting to DefectLab Core..."*
+- The app automatically detects Docker, starts the internal services, and launches the full DefectLab workspace in a clean desktop window (no browser tabs or address bars).
+
+---
+
+### Method 2: Run via Terminal with Docker Compose
+
+If a user prefers running in their browser (`http://localhost:4200`):
+
+1. **Download the production compose file:**
+   - **Terminal (1 step):**
      ```bash
      mkdir defectlab && cd defectlab
      curl -o docker-compose.yml https://raw.githubusercontent.com/Rakibul1411/Software-Metrics-Calculation/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml
      ```
    - **Or via Browser:**
-     Open the [GitHub File Link](https://github.com/Rakibul1411/Software-Metrics-Calculation/blob/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml), click the **Download raw file** button (top right), and save it as `docker-compose.yml`.
+     Open [docker-compose.prod.yml on GitHub](https://github.com/Rakibul1411/Software-Metrics-Calculation/blob/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml) and click **Download raw file**.
 
 2. **Start the application:**
    ```bash
    docker compose up -d
    ```
+   *(Docker will pull pre-built images from Docker Hub: `rakibalnatiq/defectlab-frontend`, `rakibalnatiq/defectlab-backend`, `rakibalnatiq/defectlab-ml`, and `postgres:16-alpine`)*
 
-3. **Access the application:**
-   Open your browser and navigate to:
+3. **Open in browser:**
    👉 **[http://localhost:4200](http://localhost:4200)**
 
 ---
 
-### Option B: Run from Cloned Repository
+### Database Details: Which Database Does It Connect To?
 
-If you have cloned the source repository:
-
-```bash
-git clone https://github.com/Rakibul1411/Software-Metrics-Calculation.git
-cd Software-Metrics-Calculation/DefectLab-Updated-Component-Based
-```
-
-To run using pre-built images instantly:
-```bash
-docker compose -f docker-compose.prod.yml up -d
-```
-
-*(Or to build from source code locally: `docker compose up --build -d`)*
+- **Default Database**: By default, DefectLab spins up an **internal, isolated PostgreSQL 16 container** inside Docker.
+- **Pre-seeded Benchmarks**: The internal database comes pre-loaded with standard benchmark datasets (PROMISE Ant 1.3, 1.6, 1.7, Lucene 2.4, and AEEEM JDT 3.4, EQ 3.4, PDE 3.4.1, LC 2.4.0, ML 3.1).
+- **Security**: The database is connected internally via Docker's bridge network (`defectlab-net`), keeping it secure and isolated from other databases on the host computer.
 
 ---
 
-### Option C: Using Neon DB (Cloud Database) instead of Local PostgreSQL
+### Optional: Connecting to Cloud Neon DB
 
-By default, DefectLab spins up an isolated, local PostgreSQL container inside Docker. If a user wants to connect to their own **Neon DB (Cloud PostgreSQL)** instead of running the local Postgres container:
+If a user wants to connect to a remote **Neon DB (Cloud PostgreSQL)** instead of using the local PostgreSQL container:
 
-#### Step 1: Create an `.env` file
+1. Download the `.env` template:
+   ```bash
+   curl -o .env https://raw.githubusercontent.com/Rakibul1411/Software-Metrics-Calculation/master/DefectLab-Updated-Component-Based/.env.example
+   ```
+   *(Or view on GitHub: [.env.example](https://github.com/Rakibul1411/Software-Metrics-Calculation/blob/master/DefectLab-Updated-Component-Based/.env.example))*
 
-Users do **not** need to search GitHub manually. You can get the template in one step:
+2. Open `.env` and fill in your Neon DB connection details:
+   ```env
+   DEFECTLAB_DB_URL=jdbc:postgresql://<neon-hostname>/neondb?sslmode=require
+   DEFECTLAB_DB_USER=<neon-username>
+   DEFECTLAB_DB_PASSWORD=<neon-password>
+   ```
 
-- **Via Terminal (1-step download):**
-  ```bash
-  curl -o .env https://raw.githubusercontent.com/Rakibul1411/Software-Metrics-Calculation/master/DefectLab-Updated-Component-Based/.env.example
-  ```
-- **Or view template on GitHub:**
-  👉 **[.env.example on GitHub](https://github.com/Rakibul1411/Software-Metrics-Calculation/blob/master/DefectLab-Updated-Component-Based/.env.example)**
-
-Then open `.env` and fill in your Neon DB credentials:
-
-```env
-# Point Spring Boot to your Neon DB connection URL:
-DEFECTLAB_DB_URL=jdbc:postgresql://<neon-hostname>/<dbname>?sslmode=require
-DEFECTLAB_DB_USER=<neon-username>
-DEFECTLAB_DB_PASSWORD=<neon-password>
-```
-
-> **Example for Neon DB:**
-> ```env
-> DEFECTLAB_DB_URL=jdbc:postgresql://ep-silent-hill-123456.us-east-2.aws.neon.tech/neondb?sslmode=require
-> DEFECTLAB_DB_USER=rakibul_owner
-> DEFECTLAB_DB_PASSWORD=npg_secretpassword123
-> ```
-
-#### Step 2: (Optional) Disable local PostgreSQL container
-If you are using Neon DB, you don't need the local `postgres` container running. You can simply run only the application services:
-
-```bash
-docker compose -f docker-compose.prod.yml up -d ml backend frontend
-```
-
-Spring Boot will automatically connect to your Neon DB, initialize the schema, seed the default dataset benchmarks, and link with the Python ML microservice and Angular frontend!
+3. Start without the local postgres container:
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d ml backend frontend
+   ```
+   Spring Boot will connect directly to your Neon DB cloud instance!
 
 ---
 
-## Part 2: How to Stop & Manage Data
+## Part 2: Developer Guide (For Project Owner)
 
-### To stop DefectLab:
+### Why You NEVER Need to Rebuild `.dmg` or `.exe` Files
+
+The DefectLab desktop app uses a **Smart Web-Wrapper Architecture**:
+- The desktop app (`.dmg` / `.exe`) is a lightweight shell that loads the application interface served by Docker.
+- The business logic, ML models, and Angular UI reside inside the Docker containers (`rakibalnatiq/defectlab-*`).
+- **Benefit:** When you modify Java code, Python ML algorithms, or Angular frontend pages, you **only update the Docker Hub images**. The desktop app automatically renders your latest updates on its next run!
+
+---
+
+### Step-by-Step: Updating Code and Pushing to Docker Hub
+
+Whenever you make improvements to the project:
+
+#### Step 1: Test your changes locally
+```bash
+docker compose up -d --build
+```
+Verify the changes at `http://localhost:4200`.
+
+#### Step 2: Re-build and Push updated images to Docker Hub
+```bash
+# 1. Build updated images with your Docker Hub tags
+docker compose build
+
+# 2. Push images to your public Docker Hub account (rakibalnatiq)
+docker compose push
+```
+Docker Hub will push the updated layers for `rakibalnatiq/defectlab-backend:latest`, `rakibalnatiq/defectlab-ml:latest`, and `rakibalnatiq/defectlab-frontend:latest`.
+
+#### Step 3: Commit and Push your source code to GitHub
+```bash
+git add .
+git commit -m "feat: updated defect prediction logic and UI"
+git push origin master
+```
+
+---
+
+## Part 3: How Users Receive Your Latest Updates
+
+When you push new images to Docker Hub, an end-user does **not** need to reinstall the `.dmg` or `.exe` app.
+
+To pull your latest changes, the user simply runs:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Next time they open the **DefectLab desktop app** (or refresh `http://localhost:4200`), they will immediately be running your brand-new features, UI updates, and ML enhancements!
+
+---
+
+## Part 4: Stopping Services and Resetting Data
+
+### To stop DefectLab services:
 ```bash
 docker compose down
 ```
-*(Your data inside the database and uploaded datasets will be preserved in Docker volumes).*
+*(All database records and uploaded datasets remain safely stored in Docker volumes).*
 
-### To completely reset and delete all local data:
+### To completely wipe data and start fresh:
 ```bash
 docker compose down -v
 ```
 
 ---
 
-## Part 3: Developer Guide (How to Update Code & Push to Docker Hub)
+## Part 5: Troubleshooting & FAQ
 
-Whenever you make improvements or changes to the code (Java backend, Python ML service, or Angular frontend), follow these **3 simple steps** to update both Docker Hub and GitHub:
-
-### Step 1: Test your changes locally
-Verify that your changes work properly on your machine:
-```bash
-docker compose up -d --build
-```
-Open [http://localhost:4200](http://localhost:4200) to confirm everything works as expected.
-
-### Step 2: Build and Push updated images to Docker Hub
-From the `DefectLab-Updated-Component-Based` directory, run:
-
-```bash
-# 1. Build the updated images
-docker compose build
-
-# 2. Push the updated images to your public Docker Hub account
-docker compose push
-```
-
-> 💡 **Result:** Docker will push the updated `rakibalnatiq/defectlab-backend:latest`, `rakibalnatiq/defectlab-ml:latest`, and `rakibalnatiq/defectlab-frontend:latest` images to Docker Hub. Any user running `docker compose pull && docker compose up -d` will immediately get your latest code!
-
-### Step 3: Push code changes to GitHub
-Save your code changes to GitHub so the source repository is always up-to-date:
-
-```bash
-git add .
-git commit -m "feat: updated defect prediction features"
-git push origin master
-```
+| Issue | Cause | Solution |
+| :--- | :--- | :--- |
+| **"Docker is not running" error on desktop app** | Docker Desktop or OrbStack is closed. | Launch OrbStack or Docker Desktop, then click **Retry** on the app screen. |
+| **Port 4200 or 8080 already in use** | Another local app is using that port. | In `docker-compose.prod.yml`, change `"4200:80"` to `"5000:80"` (or another available port). |
+| **Changes not appearing after update** | Docker is using cached image layers. | Run `docker compose pull && docker compose up -d`. |
+| **Neon DB connection refused** | Missing SSL mode in Neon JDBC URL. | Ensure the URL ends with `?sslmode=require`. |
 
 ---
-
-## Part 4: Common Troubleshooting & Corner Cases
-
-| Scenario / Error | Cause | Solution |
-| :--- | :--- | :--- |
-| **Port already in use (`4200` or `8080`)** | Another service on your computer is occupying port 4200 or 8080. | Stop the local service or change the host port in `docker-compose.prod.yml` (e.g. change `"4200:80"` to `"5000:80"`). |
-| **Neon DB SSL connection error** | Missing SSL mode query parameter in JDBC URL. | Ensure your URL ends with `?sslmode=require`. |
-| **Changes not showing up after `docker compose up`** | Docker is reusing locally cached image layers. | Run `docker compose pull` or `docker compose build --no-cache`. |
-| **Backend marked Unhealthy** | Database not ready yet or network latency on remote Neon DB. | The container has a 20-second startup grace period. Check logs using `docker compose logs backend --tail 50`. |
-
-**Made with ❤️ for DefectLab Project.**
+**Maintained with ❤️ by Rakibul Islam for DefectLab Project.**
