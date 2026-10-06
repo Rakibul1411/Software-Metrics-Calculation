@@ -23,7 +23,6 @@ build_and_push_frontend() {
     echo ""
     echo "📦 [1/3] Building & Pushing Frontend (Angular)..."
     docker compose build frontend
-    docker tag defectlab-updated-component-based-frontend:latest ${DOCKER_USER}/defectlab-frontend:latest
     docker push ${DOCKER_USER}/defectlab-frontend:latest
     echo "✅ Frontend published successfully!"
 }
@@ -32,7 +31,6 @@ build_and_push_backend() {
     echo ""
     echo "📦 [2/3] Building & Pushing Backend (Java Spring Boot)..."
     docker compose build backend
-    docker tag defectlab-updated-component-based-backend:latest ${DOCKER_USER}/defectlab-backend:latest
     docker push ${DOCKER_USER}/defectlab-backend:latest
     echo "✅ Backend published successfully!"
 }
@@ -41,7 +39,6 @@ build_and_push_ml() {
     echo ""
     echo "📦 [3/3] Building & Pushing ML Service (Python FastAPI)..."
     docker compose build ml
-    docker tag defectlab-updated-component-based-ml:latest ${DOCKER_USER}/defectlab-ml:latest
     docker push ${DOCKER_USER}/defectlab-ml:latest
     echo "✅ ML Service published successfully!"
 }

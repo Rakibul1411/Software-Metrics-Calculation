@@ -35,8 +35,8 @@ ml-service-python/.env
 # Research, benchmark datasets, and documentation (not needed inside runtime containers)
 research-and-docs/
 papers/
-Final dataset list/
-Aeeem/
+/Final dataset list/
+/Aeeem/
 docs/
 tmp/
 scratch/
