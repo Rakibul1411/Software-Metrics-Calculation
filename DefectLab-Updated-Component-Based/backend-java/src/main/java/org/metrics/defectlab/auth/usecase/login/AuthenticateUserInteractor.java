@@ -27,10 +27,10 @@ public class AuthenticateUserInteractor implements AuthenticateUserUseCase {
     @Override
     @Transactional(readOnly = true)
     public User authenticate(String email, String password) {
-        Optional<User> found = userRepository.findByEmail(User.normalizeEmail(email));
-        if (found.isEmpty() || !passwordHasher.matches(password, found.get().getPasswordHash())) {
+        Optional<User> foundUser = userRepository.findByEmail(User.normalizeEmail(email));
+        if (foundUser.isEmpty() || !passwordHasher.matches(password, foundUser.get().getPasswordHash())) {
             throw new InvalidCredentialsException("The email or password is incorrect.");
         }
-        return found.get();
+        return foundUser.get();
     }
 }

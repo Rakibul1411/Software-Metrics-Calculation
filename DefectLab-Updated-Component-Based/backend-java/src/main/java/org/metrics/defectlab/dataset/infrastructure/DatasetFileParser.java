@@ -37,9 +37,12 @@ public final class DatasetFileParser {
 
     private static DatasetTable parseCsv(Path file) throws IOException {
         try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8);
-             CSVParser parser = CSVFormat.DEFAULT.withFirstRecordAsHeader()
-                     .withIgnoreSurroundingSpaces(true)
-                     .withIgnoreEmptyLines(true)
+             CSVParser parser = CSVFormat.DEFAULT.builder()
+                     .setHeader()
+                     .setSkipHeaderRecord(true)
+                     .setIgnoreSurroundingSpaces(true)
+                     .setIgnoreEmptyLines(true)
+                     .build()
                      .parse(reader)) {
             List<String> headers = new ArrayList<>();
             for (String header : parser.getHeaderNames()) {

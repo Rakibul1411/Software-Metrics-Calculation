@@ -202,15 +202,15 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
             List<String> metrics, DatasetTable manual, DatasetTable predefined) {
         List<Map<String, Object>> rows = new ArrayList<>();
         for (String metric : metrics) {
-            Stats left = stats(numericValues(manual.column(metric)));
-            Stats right = stats(numericValues(predefined.column(metric)));
+            Stats manualStats = stats(numericValues(manual.column(metric)));
+            Stats predefinedStats = stats(numericValues(predefined.column(metric)));
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("metric", metric);
-            row.put("manual", left.toMap());
-            row.put("predefined", right.toMap());
-            row.put("meanDifference", difference(left.mean, right.mean));
-            row.put("sdDifference", difference(left.standardDeviation, right.standardDeviation));
-            row.put("percentageDifference", percentageDifference(left.mean, right.mean));
+            row.put("manual", manualStats.toMap());
+            row.put("predefined", predefinedStats.toMap());
+            row.put("meanDifference", difference(manualStats.mean, predefinedStats.mean));
+            row.put("sdDifference", difference(manualStats.standardDeviation, predefinedStats.standardDeviation));
+            row.put("percentageDifference", percentageDifference(manualStats.mean, predefinedStats.mean));
             rows.add(row);
         }
         return rows;
@@ -223,10 +223,10 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
         int manualId = findIdentifierIndex(manual, identifier);
         int predefinedId = findIdentifierIndex(predefined, identifier);
         List<String> metrics = commonNumericMetrics(dataset, manual, predefined);
-        Map<String, List<String>> left = rowsByIdentifier(manual, manualId);
-        Map<String, List<String>> right = rowsByIdentifier(predefined, predefinedId);
-        Set<String> identifiers = new LinkedHashSet<>(left.keySet());
-        identifiers.addAll(right.keySet());
+        Map<String, List<String>> manualRowsByIdentifier = rowsByIdentifier(manual, manualId);
+        Map<String, List<String>> predefinedRowsByIdentifier = rowsByIdentifier(predefined, predefinedId);
+        Set<String> identifiers = new LinkedHashSet<>(manualRowsByIdentifier.keySet());
+        identifiers.addAll(predefinedRowsByIdentifier.keySet());
         double absolute = doubleValue(config.get("absoluteTolerance"), 0.0001);
         double relative = doubleValue(config.get("relativeTolerance"), 0.01);
 
@@ -239,8 +239,8 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
         List<String> manualOnly = new ArrayList<>();
         List<String> predefinedOnly = new ArrayList<>();
         for (String normalized : identifiers) {
-            List<String> leftRow = left.get(normalized);
-            List<String> rightRow = right.get(normalized);
+            List<String> leftRow = manualRowsByIdentifier.get(normalized);
+            List<String> rightRow = predefinedRowsByIdentifier.get(normalized);
             if (leftRow == null) {
                 predefinedOnly.add(cell(rightRow, predefinedId));
                 continue;
@@ -452,23 +452,23 @@ public class ComparisonInteractor implements ExecuteComparisonUseCase, ListCompa
         }
 
         Set<Long> emittedComparisonIds = result.stream()
-                .map(m -> (Long) m.get("comparisonId"))
+                .map(pairMap -> (Long) pairMap.get("comparisonId"))
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toSet());
-        for (MetricComparison comp : saved) {
-            if (emittedComparisonIds.contains(comp.getId())) continue;
-            MetricDataset manual = byId.get(comp.getManualDatasetId());
-            MetricDataset target = byId.get(comp.getPredefinedDatasetId());
+        for (MetricComparison savedComparison : saved) {
+            if (emittedComparisonIds.contains(savedComparison.getId())) continue;
+            MetricDataset manual = byId.get(savedComparison.getManualDatasetId());
+            MetricDataset target = byId.get(savedComparison.getPredefinedDatasetId());
             if (manual == null || target == null) continue;
             Map<String, Object> pair = new LinkedHashMap<>();
-            pair.put("key", "saved-" + comp.getId());
+            pair.put("key", "saved-" + savedComparison.getId());
             pair.put("displayName", manual.getDisplayName() + " vs " + target.getDisplayName());
             pair.put("datasetFamily", manual.getDatasetFamily().name());
             pair.put("projectName", manual.getProjectName());
             pair.put("projectVersion", manual.getProjectVersion());
             pair.put("manualDatasetId", manual.getId());
             pair.put("predefinedDatasetId", target.getId());
-            pair.put("comparisonId", comp.getId());
+            pair.put("comparisonId", savedComparison.getId());
             pair.put("cached", true);
             result.add(pair);
         }

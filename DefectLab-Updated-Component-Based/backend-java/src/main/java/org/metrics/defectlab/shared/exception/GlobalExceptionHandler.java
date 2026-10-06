@@ -142,8 +142,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleAllExceptions(Exception e) {
-        LOGGER.error("Unhandled application failure", e);
+    public ResponseEntity<Map<String, String>> handleAllExceptions(Exception exception) {
+        LOGGER.error("Unhandled application failure", exception);
         return error(HttpStatus.INTERNAL_SERVER_ERROR,
                 "The server could not complete the request. Check the backend log for details.");
     }

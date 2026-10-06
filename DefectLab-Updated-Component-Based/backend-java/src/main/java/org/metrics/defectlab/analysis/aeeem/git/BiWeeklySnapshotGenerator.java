@@ -170,18 +170,6 @@ public final class BiWeeklySnapshotGenerator {
                 null);
     }
 
-    private boolean isAncestorOfLineage(
-            Path repository,
-            String commit,
-            String branch) throws IOException {
-        try {
-            GitCommandRunner.run(repository, "merge-base", "--is-ancestor", commit, branch);
-            return true;
-        } catch (IOException exception) {
-            return false;
-        }
-    }
-
     private boolean containsJavaSource(
             Path repository,
             String commit,
@@ -220,17 +208,6 @@ public final class BiWeeklySnapshotGenerator {
             commit = allCommits.split("\\R")[0].trim();
         }
         return commit;
-    }
-
-    private LocalDate commitDate(Path repository, String commit) throws IOException {
-        String timestamp = GitCommandRunner.run(
-                repository, "show", "-s", "--format=%ct", commit);
-        try {
-            return Instant.ofEpochSecond(Long.parseLong(timestamp.trim()))
-                    .atZone(ZoneOffset.UTC).toLocalDate();
-        } catch (NumberFormatException exception) {
-            throw new IOException("Git returned an invalid release timestamp.", exception);
-        }
     }
 
     private CommitPoint firstSample(

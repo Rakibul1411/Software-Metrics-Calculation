@@ -599,28 +599,28 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
         }
         final Map<String, Integer> finalRowOrder = rowOrder;
         List<Map<String, Object>> sorted = new ArrayList<>(predictions);
-        sorted.sort((a, b) -> {
-            String idA = a != null ? normalizeIdentifier(a.get("classIdentifier")) : "";
-            String idB = b != null ? normalizeIdentifier(b.get("classIdentifier")) : "";
+        sorted.sort((firstRecord, secondRecord) -> {
+            String idFirst = firstRecord != null ? normalizeIdentifier(firstRecord.get("classIdentifier")) : "";
+            String idSecond = secondRecord != null ? normalizeIdentifier(secondRecord.get("classIdentifier")) : "";
             if (finalRowOrder != null) {
-                Integer orderA = finalRowOrder.get(idA);
-                Integer orderB = finalRowOrder.get(idB);
-                if (orderA != null && orderB != null) {
-                    int cmp = Integer.compare(orderA, orderB);
-                    if (cmp != 0) {
-                        return cmp;
+                Integer orderFirst = finalRowOrder.get(idFirst);
+                Integer orderSecond = finalRowOrder.get(idSecond);
+                if (orderFirst != null && orderSecond != null) {
+                    int comparison = Integer.compare(orderFirst, orderSecond);
+                    if (comparison != 0) {
+                        return comparison;
                     }
-                } else if (orderA != null) {
+                } else if (orderFirst != null) {
                     return -1;
-                } else if (orderB != null) {
+                } else if (orderSecond != null) {
                     return 1;
                 }
             }
-            int cmp = naturalCompare(idA, idB);
-            if (cmp != 0) {
-                return cmp;
+            int naturalComparison = naturalCompare(idFirst, idSecond);
+            if (naturalComparison != 0) {
+                return naturalComparison;
             }
-            return idA.compareTo(idB);
+            return idFirst.compareTo(idSecond);
         });
         return sorted;
     }
@@ -629,89 +629,97 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
         if (value == null) {
             return "";
         }
-        String s = String.valueOf(value).trim();
-        if ((s.startsWith("\"") && s.endsWith("\"")) || (s.startsWith("'") && s.endsWith("'"))) {
-            s = s.substring(1, s.length() - 1).trim();
+        String text = String.valueOf(value).trim();
+        if ((text.startsWith("\"") && text.endsWith("\"")) || (text.startsWith("'") && text.endsWith("'"))) {
+            text = text.substring(1, text.length() - 1).trim();
         }
-        return s;
+        return text;
     }
 
     private static int findIdentifierColumn(DatasetTable table) {
-        if (table == null) return -1;
+        if (table == null) {
+            return -1;
+        }
         for (String candidate : List.of("name", "classname", "class_name", "file", "classidentifier", "identifier")) {
-            int idx = table.indexOf(candidate);
-            if (idx >= 0) return idx;
+            int columnIndex = table.indexOf(candidate);
+            if (columnIndex >= 0) {
+                return columnIndex;
+            }
         }
         return -1;
     }
 
-    private static int naturalCompare(String s1, String s2) {
-        if (s1 == null && s2 == null) return 0;
-        if (s1 == null) return -1;
-        if (s2 == null) return 1;
-        if (s1.equals(s2)) return 0;
+    private static int naturalCompare(String first, String second) {
+        if (first == null && second == null) return 0;
+        if (first == null) return -1;
+        if (second == null) return 1;
+        if (first.equals(second)) return 0;
 
-        int len1 = s1.length();
-        int len2 = s2.length();
-        int i = 0, j = 0;
+        int lenFirst = first.length();
+        int lenSecond = second.length();
+        int idxFirst = 0;
+        int idxSecond = 0;
 
-        while (i < len1 && j < len2) {
-            char c1 = s1.charAt(i);
-            char c2 = s2.charAt(j);
+        while (idxFirst < lenFirst && idxSecond < lenSecond) {
+            char charFirst = first.charAt(idxFirst);
+            char charSecond = second.charAt(idxSecond);
 
-            if (Character.isDigit(c1) && Character.isDigit(c2)) {
-                int start1 = i;
-                while (i < len1 && Character.isDigit(s1.charAt(i))) i++;
-                int start2 = j;
-                while (j < len2 && Character.isDigit(s2.charAt(j))) j++;
-
-                int nonZero1 = start1;
-                while (nonZero1 < i && s1.charAt(nonZero1) == '0') nonZero1++;
-                int nonZero2 = start2;
-                while (nonZero2 < j && s2.charAt(nonZero2) == '0') nonZero2++;
-
-                int countDigits1 = i - nonZero1;
-                int countDigits2 = j - nonZero2;
-
-                if (countDigits1 != countDigits2) {
-                    return Integer.compare(countDigits1, countDigits2);
+            if (Character.isDigit(charFirst) && Character.isDigit(charSecond)) {
+                int startFirst = idxFirst;
+                while (idxFirst < lenFirst && Character.isDigit(first.charAt(idxFirst))) {
+                    idxFirst++;
+                }
+                int startSecond = idxSecond;
+                while (idxSecond < lenSecond && Character.isDigit(second.charAt(idxSecond))) {
+                    idxSecond++;
                 }
 
-                while (nonZero1 < i && nonZero2 < j) {
-                    char d1 = s1.charAt(nonZero1);
-                    char d2 = s2.charAt(nonZero2);
-                    if (d1 != d2) {
-                        return Character.compare(d1, d2);
+                int nonZeroFirst = startFirst;
+                while (nonZeroFirst < idxFirst && first.charAt(nonZeroFirst) == '0') {
+                    nonZeroFirst++;
+                }
+                int nonZeroSecond = startSecond;
+                while (nonZeroSecond < idxSecond && second.charAt(nonZeroSecond) == '0') {
+                    nonZeroSecond++;
+                }
+
+                int countDigitsFirst = idxFirst - nonZeroFirst;
+                int countDigitsSecond = idxSecond - nonZeroSecond;
+
+                if (countDigitsFirst != countDigitsSecond) {
+                    return Integer.compare(countDigitsFirst, countDigitsSecond);
+                }
+
+                while (nonZeroFirst < idxFirst && nonZeroSecond < idxSecond) {
+                    char digitFirst = first.charAt(nonZeroFirst);
+                    char digitSecond = second.charAt(nonZeroSecond);
+                    if (digitFirst != digitSecond) {
+                        return Character.compare(digitFirst, digitSecond);
                     }
-                    nonZero1++;
-                    nonZero2++;
+                    nonZeroFirst++;
+                    nonZeroSecond++;
                 }
 
-                int tokenLen1 = i - start1;
-                int tokenLen2 = j - start2;
-                if (tokenLen1 != tokenLen2) {
-                    return Integer.compare(tokenLen1, tokenLen2);
+                int tokenLengthFirst = idxFirst - startFirst;
+                int tokenLengthSecond = idxSecond - startSecond;
+                if (tokenLengthFirst != tokenLengthSecond) {
+                    return Integer.compare(tokenLengthFirst, tokenLengthSecond);
                 }
             } else {
-                char lower1 = Character.toLowerCase(c1);
-                char lower2 = Character.toLowerCase(c2);
-                if (lower1 != lower2) {
-                    return Character.compare(lower1, lower2);
+                char lowerFirst = Character.toLowerCase(charFirst);
+                char lowerSecond = Character.toLowerCase(charSecond);
+                if (lowerFirst != lowerSecond) {
+                    return Character.compare(lowerFirst, lowerSecond);
                 }
-                i++;
-                j++;
+                idxFirst++;
+                idxSecond++;
             }
         }
 
-        if (i < len1) return 1;
-        if (j < len2) return -1;
+        if (idxFirst < lenFirst) return 1;
+        if (idxSecond < lenSecond) return -1;
 
-        return s1.compareTo(s2);
-    }
-
-    private List<Map<String, Object>> limitPredictions(
-            Map<String, Object> metadata, int limit) {
-        return predictionRows(metadata).stream().limit(limit).toList();
+        return first.compareTo(second);
     }
 
     @SuppressWarnings("unchecked")

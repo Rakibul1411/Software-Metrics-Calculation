@@ -140,16 +140,16 @@ public final class AeeemJavaSourceParser {
                             diagnosticCounts);
                     results.addAll(batchResults);
                     if (cache != null) {
-                        Map<Path, List<AeeemMetricResult>> byFile = new HashMap<>();
-                        for (AeeemMetricResult r : batchResults) {
-                            if (r.getSourcePath() != null) {
-                                Path filePath = normalizedRoot.resolve(r.getSourcePath()).normalize();
-                                byFile.computeIfAbsent(filePath, k -> new ArrayList<>()).add(r);
+                        Map<Path, List<AeeemMetricResult>> metricsByFilePath = new HashMap<>();
+                        for (AeeemMetricResult metricResult : batchResults) {
+                            if (metricResult.getSourcePath() != null) {
+                                Path filePath = normalizedRoot.resolve(metricResult.getSourcePath()).normalize();
+                                metricsByFilePath.computeIfAbsent(filePath, key -> new ArrayList<>()).add(metricResult);
                             }
                         }
-                        for (Path f : batch) {
-                            List<AeeemMetricResult> fResults = byFile.getOrDefault(f, Collections.emptyList());
-                            cache.put(f, fResults);
+                        for (Path sourceFile : batch) {
+                            List<AeeemMetricResult> fileMetrics = metricsByFilePath.getOrDefault(sourceFile, Collections.emptyList());
+                            cache.put(sourceFile, fileMetrics);
                         }
                     }
                 }

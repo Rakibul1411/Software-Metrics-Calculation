@@ -114,7 +114,7 @@ public class ZipExtractionService implements SourceArchiveExtractor {
                      ? new GzipCompressorInputStream(input) : input;
              TarArchiveInputStream tarInput = new TarArchiveInputStream(archiveInput)) {
             TarArchiveEntry entry;
-            while ((entry = tarInput.getNextTarEntry()) != null) {
+            while ((entry = tarInput.getNextEntry()) != null) {
                 entryCount++;
                 if (entryCount > MAX_ENTRIES) {
                     throw new IOException("The " + archiveType + " contains too many files.");
