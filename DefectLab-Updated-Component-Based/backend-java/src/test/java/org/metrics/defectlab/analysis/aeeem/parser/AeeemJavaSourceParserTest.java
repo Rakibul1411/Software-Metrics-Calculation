@@ -176,6 +176,30 @@ class AeeemJavaSourceParserTest {
                 benchmark.get(0).getFullyQualifiedName());
     }
 
+    @Test
+    void parsesProjectWithPreExistingCacheWithoutNullPointerException() throws Exception {
+        Path source1 = project.resolve("src/main/java/demo/ServiceA.java");
+        Path source2 = project.resolve("src/main/java/demo/ServiceB.java");
+        Files.createDirectories(source1.getParent());
+        Files.write(source1, "package demo; public class ServiceA { public void run() {} }".getBytes(StandardCharsets.UTF_8));
+        Files.write(source2, "package demo; public class ServiceB { public void test() {} }".getBytes(StandardCharsets.UTF_8));
+
+        AeeemJavaSourceParser.SourceFileCache cache = new AeeemJavaSourceParser.SourceFileCache();
+        // Snapshot 1 parses both files and caches them
+        List<AeeemMetricResult> snapshot1 = AeeemJavaSourceParser.parseProject(
+                project, project, AeeemBenchmarkProfile.CURRENT, cache);
+        assertEquals(2, snapshot1.size());
+
+        // Snapshot 2: ServiceB is modified, ServiceA remains cached and untouched
+        Thread.sleep(100);
+        Files.write(source2, "package demo; public class ServiceB { public void test() {} public void extra() {} }".getBytes(StandardCharsets.UTF_8));
+
+        // This would throw NullPointerException before the fix because ServiceA was not in filesToParse
+        List<AeeemMetricResult> snapshot2 = AeeemJavaSourceParser.parseProject(
+                project, project, AeeemBenchmarkProfile.CURRENT, cache);
+        assertEquals(2, snapshot2.size());
+    }
+
     private static AeeemMetricResult byName(List<AeeemMetricResult> metrics, String name) {
         return metrics.stream()
                 .filter(metric -> name.equals(metric.getFullyQualifiedName()))

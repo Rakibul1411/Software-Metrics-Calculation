@@ -35,7 +35,15 @@ public final class ResolvedJavaProject {
     }
 
     public JavaLanguageConfiguration configurationFor(Path file) {
+        if (file == null) {
+            return null;
+        }
         return configurationByFile.get(file.toAbsolutePath().normalize());
+    }
+
+    public JavaLanguageConfiguration configurationFor(Path file, JavaLanguageConfiguration fallback) {
+        JavaLanguageConfiguration configuration = configurationFor(file);
+        return configuration != null ? configuration : fallback;
     }
 
     public List<String> getDiagnostics() {

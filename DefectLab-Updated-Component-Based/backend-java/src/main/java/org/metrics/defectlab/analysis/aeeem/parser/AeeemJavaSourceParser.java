@@ -1,6 +1,7 @@
 package org.metrics.defectlab.analysis.aeeem.parser;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,6 +11,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -109,8 +111,9 @@ public final class AeeemJavaSourceParser {
         }
 
         if (!filesToParse.isEmpty()) {
+            JavaLanguageConfiguration fallbackLanguageConfig = languageFallback(effectiveProfile);
             ResolvedJavaProject configuration = JavaParserConfigurationResolver.resolve(
-                    normalizedRoot, filesToParse, languageFallback(effectiveProfile));
+                    normalizedRoot, filesToParse, fallbackLanguageConfig);
             for (String diagnostic : configuration.getDiagnostics()) {
                 LOGGER.warn("AEEEM JDT configuration warning: {}", diagnostic);
             }
@@ -118,7 +121,7 @@ public final class AeeemJavaSourceParser {
                     normalizedRoot,
                     path -> !ProductionSourceSelector.isExcludedPath(
                             normalizedRoot, path));
-            String[] sourceRoots = inferSourceRoots(javaFiles, configuration)
+            String[] sourceRoots = inferSourceRoots(javaFiles, configuration, fallbackLanguageConfig)
                     .toArray(new String[0]);
             int[] diagnosticCounts = new int[2];
             int batchSize = configuredBatchSize();
@@ -258,14 +261,26 @@ public final class AeeemJavaSourceParser {
 
     private static List<String> inferSourceRoots(
             Collection<Path> files,
-            ResolvedJavaProject configuration) throws IOException {
+            ResolvedJavaProject configuration,
+            JavaLanguageConfiguration fallback) throws IOException {
         Set<String> roots = new LinkedHashSet<>();
+        Set<Path> visitedDirectories = new HashSet<>();
         for (Path file : files) {
+            Path parent = file.getParent();
+            if (parent != null && visitedDirectories.contains(parent)) {
+                continue;
+            }
+            JavaLanguageConfiguration config = configuration != null
+                    ? configuration.configurationFor(file, fallback)
+                    : fallback;
             Path root = sourceRootFromPackage(
                     file,
-                    readSource(file, configuration.configurationFor(file)));
+                    readSource(file, config));
             if (root != null) {
                 roots.add(root.toString());
+                if (parent != null) {
+                    visitedDirectories.add(parent);
+                }
             }
         }
         return new ArrayList<>(roots);
@@ -326,7 +341,18 @@ public final class AeeemJavaSourceParser {
     private static String readSource(
             Path path,
             JavaLanguageConfiguration configuration) throws IOException {
-        return new String(Files.readAllBytes(path), configuration.getCharset());
+        Charset charset = (configuration != null && configuration.getCharset() != null)
+                ? configuration.getCharset()
+                : StandardCharsets.UTF_8;
+        try {
+            return Files.readString(path, charset);
+        } catch (Exception exception) {
+            try {
+                return Files.readString(path, StandardCharsets.ISO_8859_1);
+            } catch (Exception ignored) {
+                return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+            }
+        }
     }
 
     private static JavaLanguageConfiguration languageFallback(
