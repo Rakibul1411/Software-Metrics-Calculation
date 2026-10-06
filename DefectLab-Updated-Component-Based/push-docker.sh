@@ -19,28 +19,27 @@ echo "Target: $TARGET"
 echo "Docker Hub User: $DOCKER_USER"
 echo "=========================================================="
 
+PLATFORMS="linux/amd64,linux/arm64"
+
 build_and_push_frontend() {
     echo ""
-    echo "📦 [1/3] Building & Pushing Frontend (Angular)..."
-    docker compose build frontend
-    docker push ${DOCKER_USER}/defectlab-frontend:latest
-    echo "✅ Frontend published successfully!"
+    echo "📦 [1/3] Building & Pushing Frontend (Angular) for $PLATFORMS..."
+    docker buildx build --platform "$PLATFORMS" -f frontend-angular/Dockerfile -t ${DOCKER_USER}/defectlab-frontend:latest --push .
+    echo "✅ Frontend published successfully for all platforms!"
 }
 
 build_and_push_backend() {
     echo ""
-    echo "📦 [2/3] Building & Pushing Backend (Java Spring Boot)..."
-    docker compose build backend
-    docker push ${DOCKER_USER}/defectlab-backend:latest
-    echo "✅ Backend published successfully!"
+    echo "📦 [2/3] Building & Pushing Backend (Java Spring Boot) for $PLATFORMS..."
+    docker buildx build --platform "$PLATFORMS" -f backend-java/Dockerfile -t ${DOCKER_USER}/defectlab-backend:latest --push .
+    echo "✅ Backend published successfully for all platforms!"
 }
 
 build_and_push_ml() {
     echo ""
-    echo "📦 [3/3] Building & Pushing ML Service (Python FastAPI)..."
-    docker compose build ml
-    docker push ${DOCKER_USER}/defectlab-ml:latest
-    echo "✅ ML Service published successfully!"
+    echo "📦 [3/3] Building & Pushing ML Service (Python FastAPI) for $PLATFORMS..."
+    docker buildx build --platform "$PLATFORMS" -f ml-service-python/Dockerfile -t ${DOCKER_USER}/defectlab-ml:latest --push .
+    echo "✅ ML Service published successfully for all platforms!"
 }
 
 case "$TARGET" in
