@@ -401,7 +401,7 @@
             {{ s.name }}
           </span>
         </div>
-        <div class="dl-tt-footer">Click class to inspect architecture &amp; blast radius</div>
+        <div class="dl-tt-footer">Click class to inspect details</div>
       </div>
     </div>
 
@@ -409,7 +409,7 @@
     <div *ngIf="selectedCell" class="dl-treemap-inspector" [class.inspector-expanded]="inspectorTab === 'butterfly'">
       <div class="dl-inspector-header">
         <div class="dl-inspector-title-area">
-          <span class="dl-inspector-tag">Class Architecture Inspector</span>
+          <span class="dl-inspector-tag">Class Inspector</span>
           <h5 class="dl-inspector-name" [title]="selectedCell.name">{{ selectedCell.simpleName }}</h5>
           <span class="dl-inspector-package">{{ selectedCell.packageName || selectedCell.name }}</span>
         </div>
@@ -441,137 +441,171 @@
           (click)="setInspectorTab('butterfly')"
         >
           <ui-icon name="view" [size]="13"></ui-icon>
-          Butterfly Dependency Graph
+          Dependency Graph
         </button>
       </div>
 
       <!-- Tab 1: Architecture & Metrics -->
       <div class="dl-inspector-content" *ngIf="inspectorTab === 'metrics'">
-        <!-- Defect & Risk Assessment Status -->
-        <div
-          class="dl-assessment-card"
-          [class.assessment-critical]="selectedCell.riskScore >= 0.6 || selectedCell.smells.length > 0"
-          [class.assessment-clean]="selectedCell.riskScore < 0.4 && selectedCell.smells.length === 0"
-        >
-          <div class="dl-assessment-left">
-            <span class="dl-assessment-status">
-              {{ selectedCell.predictedLabel === 1 || selectedCell.riskScore >= 0.5 ? 'Hotspot Detected' : 'Reliable Class' }}
-            </span>
-            <span class="dl-assessment-score">
-              Defect Risk: <strong>{{ (selectedCell.riskScore * 100) | number:'1.0-1' }}%</strong>
-            </span>
+        <!-- Health Summary Ribbon (Risk, Maintainability, Instability) -->
+        <div class="dl-inspector-summary-ribbon">
+          <div
+            class="dl-summary-card"
+            [class.card-critical]="selectedCell.predictedLabel === 1 || selectedCell.riskScore >= 0.5"
+            [class.card-clean]="selectedCell.riskScore < 0.35 && selectedCell.predictedLabel !== 1"
+          >
+            <span class="dl-sc-label">Defect Risk</span>
+            <div class="dl-sc-body">
+              <strong class="dl-sc-value">{{ (selectedCell.riskScore * 100) | number:'1.0-0' }}%</strong>
+              <span class="dl-sc-badge" [class.badge-defective]="selectedCell.predictedLabel === 1 || selectedCell.riskScore >= 0.5">
+                {{ selectedCell.predictedLabel === 1 || selectedCell.riskScore >= 0.5 ? 'Hotspot' : 'Clean' }}
+              </span>
+            </div>
           </div>
-          <div class="dl-assessment-badge" [class.badge-defective]="selectedCell.predictedLabel === 1">
-            {{ selectedCell.predictedLabel === 1 ? 'Defect Prone' : 'Clean' }}
+
+          <div
+            class="dl-summary-card"
+            [class.card-warning]="selectedCell.data.maintainabilityIndex < 60"
+            [class.card-clean]="selectedCell.data.maintainabilityIndex >= 75"
+          >
+            <span class="dl-sc-label">Maintainability</span>
+            <div class="dl-sc-body">
+              <strong class="dl-sc-value">{{ selectedCell.data.maintainabilityIndex }}<small>/100</small></strong>
+              <span class="dl-sc-badge badge-mi" [class.badge-warn]="selectedCell.data.maintainabilityIndex < 60">
+                {{ selectedCell.data.maintainabilityRating }}
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="dl-summary-card"
+            [class.card-warning]="selectedCell.data.instability > 0.7"
+          >
+            <span class="dl-sc-label">Instability</span>
+            <div class="dl-sc-body">
+              <strong class="dl-sc-value">{{ selectedCell.data.instability | number:'1.2-2' }}</strong>
+              <span class="dl-sc-badge badge-instability" [class.badge-warn]="selectedCell.data.instability > 0.7">
+                {{ selectedCell.data.instability > 0.7 ? 'Fragile' : (selectedCell.data.instability < 0.3 ? 'Stable' : 'Balanced') }}
+              </span>
+            </div>
           </div>
         </div>
 
-        <!-- Multi-Metric Dimensional Grid (Size, Coupling, Instability, Maintainability) -->
-        <div class="dl-inspector-metrics-grid">
-          <!-- Maintainability Index -->
-          <div class="dl-metric-tile dl-tile-highlight">
-            <span class="dl-mt-label">Maintainability (MI)</span>
-            <strong class="dl-mt-value">{{ selectedCell.data.maintainabilityIndex }}/100</strong>
-            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.maintainabilityIndex < 60">
-              {{ selectedCell.data.maintainabilityRating }} Maintainability
-            </span>
+        <!-- Object-Oriented Metrics Grid -->
+        <div class="dl-metrics-section">
+          <div class="dl-section-header">
+            <span class="dl-section-title">Object-Oriented Metrics</span>
           </div>
 
-          <!-- Instability Index -->
-          <div class="dl-metric-tile dl-tile-highlight">
-            <span class="dl-mt-label">Instability (I = Ce/Total)</span>
-            <strong class="dl-mt-value">{{ selectedCell.data.instability | number:'1.2-2' }}</strong>
-            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.instability > 0.7">
-              {{ selectedCell.data.instability > 0.7 ? 'Fragile Interface' : (selectedCell.data.instability < 0.3 ? 'Stable Core' : 'Balanced') }}
-            </span>
-          </div>
+          <div class="dl-inspector-metrics-grid">
+            <!-- Lines of Code -->
+            <div class="dl-metric-tile">
+              <div class="dl-mt-row">
+                <span class="dl-mt-label">Lines of Code (LOC)</span>
+                <span class="dl-mt-status" [class.status-warn]="selectedCell.data.loc > 500">
+                  {{ selectedCell.data.loc > 500 ? 'High' : 'Normal' }}
+                </span>
+              </div>
+              <strong class="dl-mt-value">{{ selectedCell.data.loc | number }}</strong>
+            </div>
 
-          <!-- Lines of Code -->
-          <div class="dl-metric-tile">
-            <span class="dl-mt-label">Lines of Code (LOC)</span>
-            <strong class="dl-mt-value">{{ selectedCell.data.loc }}</strong>
-            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.loc > 500">
-              {{ selectedCell.data.loc > 500 ? 'Excessive Size' : 'Normal' }}
-            </span>
-          </div>
+            <!-- Complexity (WMC) -->
+            <div class="dl-metric-tile">
+              <div class="dl-mt-row">
+                <span class="dl-mt-label">Complexity (WMC)</span>
+                <span class="dl-mt-status" [class.status-warn]="selectedCell.data.wmc > 40">
+                  {{ selectedCell.data.wmc > 40 ? 'High' : 'Normal' }}
+                </span>
+              </div>
+              <strong class="dl-mt-value">{{ selectedCell.data.wmc }}</strong>
+            </div>
 
-          <!-- Complexity (WMC) -->
-          <div class="dl-metric-tile">
-            <span class="dl-mt-label">Complexity (WMC)</span>
-            <strong class="dl-mt-value">{{ selectedCell.data.wmc }}</strong>
-            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.wmc > 40">
-              {{ selectedCell.data.wmc > 40 ? 'High Complexity' : 'Normal' }}
-            </span>
-          </div>
+            <!-- Coupling Between Objects (CBO) -->
+            <div class="dl-metric-tile">
+              <div class="dl-mt-row">
+                <span class="dl-mt-label">Coupling (CBO)</span>
+                <span class="dl-mt-status" [class.status-warn]="selectedCell.data.cbo > 20">
+                  {{ selectedCell.data.cbo > 20 ? 'High' : 'Normal' }}
+                </span>
+              </div>
+              <strong class="dl-mt-value">{{ selectedCell.data.cbo }}</strong>
+            </div>
 
-          <!-- Inbound Afferent Callers (Blast Radius) -->
-          <div class="dl-metric-tile">
-            <span class="dl-mt-label">Inbound Callers (Ca)</span>
-            <strong class="dl-mt-value">{{ selectedCell.data.ca }}</strong>
-            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.ca >= 8">
-              {{ selectedCell.data.ca >= 8 ? 'High Blast Radius' : 'Low Impact' }}
-            </span>
-          </div>
+            <!-- Response for Class (RFC) -->
+            <div class="dl-metric-tile">
+              <div class="dl-mt-row">
+                <span class="dl-mt-label">Response Set (RFC)</span>
+                <span class="dl-mt-status" [class.status-warn]="selectedCell.data.rfc > 50">
+                  {{ selectedCell.data.rfc > 50 ? 'High' : 'Normal' }}
+                </span>
+              </div>
+              <strong class="dl-mt-value">{{ selectedCell.data.rfc }}</strong>
+            </div>
 
-          <!-- Outbound Efferent Dependencies (Ce) -->
-          <div class="dl-metric-tile">
-            <span class="dl-mt-label">Outbound Callees (Ce)</span>
-            <strong class="dl-mt-value">{{ selectedCell.data.ce }}</strong>
-            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.ce > 15">
-              {{ selectedCell.data.ce > 15 ? 'Excessive Dependencies' : 'Normal' }}
-            </span>
-          </div>
+            <!-- Inbound Callers (Ca) -->
+            <div class="dl-metric-tile">
+              <div class="dl-mt-row">
+                <span class="dl-mt-label">Inbound (Ca)</span>
+                <span class="dl-mt-status" [class.status-warn]="selectedCell.data.ca >= 8">
+                  {{ selectedCell.data.ca >= 8 ? 'High' : 'Normal' }}
+                </span>
+              </div>
+              <strong class="dl-mt-value">{{ selectedCell.data.ca }}</strong>
+            </div>
 
-          <!-- Coupling Between Objects (CBO) -->
-          <div class="dl-metric-tile">
-            <span class="dl-mt-label">Coupling (CBO)</span>
-            <strong class="dl-mt-value">{{ selectedCell.data.cbo }}</strong>
-            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.cbo > 20">
-              {{ selectedCell.data.cbo > 20 ? 'Tightly Coupled' : 'Normal' }}
-            </span>
-          </div>
+            <!-- Outbound Callees (Ce) -->
+            <div class="dl-metric-tile">
+              <div class="dl-mt-row">
+                <span class="dl-mt-label">Outbound (Ce)</span>
+                <span class="dl-mt-status" [class.status-warn]="selectedCell.data.ce > 15">
+                  {{ selectedCell.data.ce > 15 ? 'High' : 'Normal' }}
+                </span>
+              </div>
+              <strong class="dl-mt-value">{{ selectedCell.data.ce }}</strong>
+            </div>
 
-          <!-- Lack of Cohesion (LCOM) -->
-          <div class="dl-metric-tile">
-            <span class="dl-mt-label">Lack of Cohesion (LCOM)</span>
-            <strong class="dl-mt-value">{{ selectedCell.data.lcom }}</strong>
-            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.lcom >= 0.8">
-              {{ selectedCell.data.lcom >= 0.8 ? 'Poor Cohesion' : 'Normal' }}
-            </span>
-          </div>
+            <!-- Lack of Cohesion (LCOM) -->
+            <div class="dl-metric-tile">
+              <div class="dl-mt-row">
+                <span class="dl-mt-label">Lack of Cohesion (LCOM)</span>
+                <span class="dl-mt-status" [class.status-warn]="selectedCell.data.lcom >= 0.8">
+                  {{ selectedCell.data.lcom >= 0.8 ? 'Poor' : 'Normal' }}
+                </span>
+              </div>
+              <strong class="dl-mt-value">{{ selectedCell.data.lcom }}</strong>
+            </div>
 
-          <!-- Response for Class (RFC) -->
-          <div class="dl-metric-tile">
-            <span class="dl-mt-label">Response for Class (RFC)</span>
-            <strong class="dl-mt-value">{{ selectedCell.data.rfc }}</strong>
-            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.rfc > 50">
-              {{ selectedCell.data.rfc > 50 ? 'High Response' : 'Normal' }}
-            </span>
-          </div>
-
-          <!-- Inheritance Depth (DIT) -->
-          <div class="dl-metric-tile">
-            <span class="dl-mt-label">Inheritance Depth (DIT)</span>
-            <strong class="dl-mt-value">{{ selectedCell.data.dit }}</strong>
-            <span class="dl-mt-hint" [class.hint-warn]="selectedCell.data.dit > 5">
-              {{ selectedCell.data.dit > 5 ? 'Deep Hierarchy' : 'Normal' }}
-            </span>
+            <!-- Inheritance Depth (DIT) -->
+            <div class="dl-metric-tile">
+              <div class="dl-mt-row">
+                <span class="dl-mt-label">Depth of Inheritance (DIT)</span>
+                <span class="dl-mt-status" [class.status-warn]="selectedCell.data.dit > 5">
+                  {{ selectedCell.data.dit > 5 ? 'Deep' : 'Normal' }}
+                </span>
+              </div>
+              <strong class="dl-mt-value">{{ selectedCell.data.dit }}</strong>
+            </div>
           </div>
         </div>
 
-        <!-- Anti-Pattern & Fowler Refactoring Recommendations -->
+        <!-- Code Smells Section -->
         <div class="dl-inspector-smells-section">
-          <h6 class="dl-smells-section-title">
-            <ui-icon name="warning" class="dl-icon-sm"></ui-icon>
-            Architectural Anti-Patterns &amp; Recommendations
-          </h6>
+          <div class="dl-section-header">
+            <span class="dl-section-title">
+              <ui-icon name="warning" class="dl-icon-sm"></ui-icon>
+              Code Smells &amp; Issues
+            </span>
+            <span *ngIf="selectedCell.smells.length > 0" class="dl-badge-smell-count">
+              {{ selectedCell.smells.length }}
+            </span>
+          </div>
 
-          <!-- No smells clean state -->
+          <!-- Clean state when 0 smells -->
           <div *ngIf="selectedCell.smells.length === 0" class="dl-smell-clean-state">
             <ui-icon name="check" class="dl-clean-icon"></ui-icon>
             <div class="dl-clean-body">
-              <strong>Well-Structured Architecture</strong>
-              <p>No structural code smells or anti-patterns detected across dimensions. Metric thresholds comply with Fowler's design principles.</p>
+              <strong>No Code Smells Detected</strong>
+              <p>All metrics are within normal architectural thresholds.</p>
             </div>
           </div>
 
@@ -589,12 +623,9 @@
 
             <p class="dl-smell-desc">{{ smell.summary || smell.description }}</p>
 
-            <div class="dl-recommendation-box">
-              <span class="dl-rec-header">
-                <ui-icon name="info" class="dl-rec-icon"></ui-icon>
-                Refactoring Action (Martin Fowler Pattern)
-              </span>
-              <p class="dl-rec-text">{{ smell.recommendation }}</p>
+            <div class="dl-smell-action">
+              <span class="dl-action-label">Refactor:</span>
+              <span class="dl-action-text">{{ smell.recommendation }}</span>
             </div>
           </div>
         </div>
