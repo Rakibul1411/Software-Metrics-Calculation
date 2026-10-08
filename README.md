@@ -40,7 +40,7 @@ DefectLab is built following **Clean Architecture** principles and a decoupled 4
 ### 1. Architectural Context & 4-Tier Archetype
 
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph Presentation_Tier["Presentation Tier (Port 4200)"]
         UI["Angular 19 SPA<br/>(Vite / Vanilla CSS Design System)"]
         DESKTOP["Electron Desktop Client<br/>(.dmg for macOS / .exe for Windows)"]
@@ -174,6 +174,7 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
+    direction LR
     [*] --> FormConfigured : Select Source, Target, K, Threshold
     FormConfigured --> Validating : Click "Run Prediction"
     Validating --> Rejected : Metric Family Mismatch / Missing Labels
@@ -197,7 +198,7 @@ stateDiagram-v2
 ### Data Preparation Pipeline
 
 ```mermaid
-flowchart TD
+flowchart LR
     S["Source Dataset<br/>(Labeled Instances)"] --> P1["1. Schema Normalization<br/>(Alias resolution & column mapping)"]
     T["Target Dataset<br/>(Unlabeled Instances)"] --> P1
 
