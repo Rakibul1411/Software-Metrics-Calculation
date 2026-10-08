@@ -22,14 +22,14 @@ DefectLab was designed and developed as a final software engineering degree defe
 
 ## Key Capabilities
 
-- **Automated AST Metric Extraction**: Parses Java source archives (`.zip`) or clones public GitHub repositories to extract 20 PROMISE object-oriented metrics using Eclipse JDT 3.37 and Apache BCEL.
-- **Git History & Change Mining**: Mines commit logs, author dynamics, and code churn across 14-day development snapshots to calculate 56 AEEEM static, change, entropy, and historical metrics.
+- **Automated AST Metric Extraction**: Parses Java source archives (`.zip`) to extract 20 PROMISE object-oriented metrics using Eclipse JDT 3.37 and Apache BCEL.
+- **Git History & Change Mining**: Clones and mines public GitHub repository commit histories, author dynamics, and code churn across 14-day snapshots to calculate 56 AEEEM static, change, entropy, and historical metrics.
 - **Domain Adaptation via Shallow CORAL**: Regularizes source and target covariance matrices and applies whitening/recoloring transformations to align feature spaces without target label supervision.
 - **Supervised KNN Defect Prediction**: Configurable K-Nearest Neighbors ($K \in [1, 5]$) classifier with calibrated defect probability scoring and descending risk prioritization.
 - **Scientific Evaluation Suite**: Evaluates predictions against ground truth labels, computing ROC-AUC, PR-AUC, Matthews Correlation Coefficient (MCC), Recall@20% LOC, Precision, Recall, Specificity, and Confusion Matrix.
-- **Interactive Defect Hotspot Visualization**: Squarified Treemap visualization (Bruls et al. algorithm) mapping software classes sized by Lines of Code (LOC) and color-coded by defect risk probability.
-- **Benchmark Metric Verification**: Class-wise and distribution-level verification comparing user-extracted metrics against canonical benchmarks under configurable tolerance thresholds ($\pm 5\%$, exact).
-- **Cryptographic Artifact Generation**: Produces reproducible PDF evaluation reports via Apache PDFBox and labeled CSV datasets containing predictions for CI/CD integration.
+- **Interactive Defect Hotspot Visualization**: Squarified Treemap visualization mapping software classes sized by Lines of Code (LOC) and color-coded by defect risk probability.
+- **Benchmark Metric Verification**: Class-wise and distribution-level verification comparing user-extracted metrics against canonical benchmarks under configurable tolerance thresholds.
+- **Evaluation Report & CSV Export**: Produces comprehensive PDF evaluation reports via Apache PDFBox and exports labeled CSV datasets containing predictions and risk rankings.
 
 ---
 
