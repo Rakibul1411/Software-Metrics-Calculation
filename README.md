@@ -40,7 +40,7 @@ DefectLab is built following **Clean Architecture** principles and a decoupled 4
 ### 1. Architectural Context & 4-Tier Archetype
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph Presentation_Tier["Presentation Tier (Port 4200)"]
         UI["Angular 19 SPA<br/>(Vite / Vanilla CSS Design System)"]
         DESKTOP["Electron Desktop Client<br/>(.dmg for macOS / .exe for Windows)"]
@@ -101,27 +101,27 @@ flowchart LR
 The backend is structured into five domain-driven bounded contexts under `org.metrics.defectlab`. Domain models and business invariants remain free from framework dependencies:
 
 ```mermaid
-flowchart LR
-    subgraph Core_Domain["Core Business Domain"]
-        D1["analysis<br/>• PromiseMetricResult (20 OO)<br/>• AeeemMetricResult (56 Multi)<br/>• Eclipse JDT Parser"]
-        D2["dataset<br/>• MetricDataset<br/>• DatasetTable<br/>• Quality Guard"]
-        D3["prediction<br/>• PredictionRun<br/>• ConfusionMatrix<br/>• Risk Stratification"]
-        D4["comparison<br/>• MetricComparison<br/>• ToleranceRule<br/>• Distribution Bounds"]
-        D5["auth<br/>• User Entity<br/>• BCrypt Password Policy"]
+flowchart TD
+    subgraph Infrastructure_Adapters["Infrastructure & External Adapters"]
+        A_REST["Spring MVC Controllers (/api/* REST API)"]
+        A_DB["Spring Data JPA (PostgreSQL 16)"]
+        A_ML["HTTP Client (FastAPI ML Bridge Port 8000)"]
+        A_FILE["Durable File Storage (ArtifactStorage)"]
     end
 
-    subgraph UseCases["Application Use Cases (Ports)"]
+    subgraph UseCases["Application Use Cases (Inbound Ports)"]
         UC1["AnalysisInteractor"]
         UC2["DatasetInteractor"]
         UC3["PredictionInteractor"]
         UC4["ComparisonInteractor"]
     end
 
-    subgraph Infrastructure_Adapters["Infrastructure Adapters"]
-        A_REST["Spring MVC Controllers<br/>(/api/* REST API)"]
-        A_DB["Spring Data JPA<br/>(PostgreSQL 16)"]
-        A_ML["HTTP Client Adapter<br/>(FastAPI ML Bridge)"]
-        A_FILE["Durable File Storage<br/>(ArtifactStorage)"]
+    subgraph Core_Domain["Core Business Domain"]
+        D1["Analysis Domain (20 CK/PROMISE & 56 AEEEM Metrics)"]
+        D2["Dataset Domain (Dataset Catalog & Quality Guard)"]
+        D3["Prediction Domain (PredictionRun, Confusion Matrix, Risk)"]
+        D4["Comparison Domain (Metric Tolerances & Distribution Bounds)"]
+        D5["Auth Domain (User Entity & BCrypt Password Policy)"]
     end
 
     A_REST --> UseCases
@@ -140,32 +140,24 @@ The execution pipeline decouples client requests from prediction computation, en
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Developer / Researcher
-    participant UI as Angular Frontend
-    participant Ctrl as PredictionController
-    participant Interactor as PredictionInteractor
-    participant TargetDS as DatasetRepository / Storage
-    participant ML as FastAPI ML Microservice
-    participant Storage as ArtifactStorage
-    participant DB as PostgreSQL Database
+    actor User as Researcher
+    participant UI as Angular SPA (Port 4200)
+    participant Backend as Spring Boot API (Port 8080)
+    participant ML as FastAPI ML Engine (Port 8000)
+    participant Storage as PostgreSQL & Artifact Storage
 
-    User->>UI: Select Source, Target Dataset, K=3, Enable CORAL
-    UI->>Ctrl: POST /api/predictions {sourceId, targetId, k: 3, coral: true}
-    Ctrl->>Interactor: execute(userId, command)
-    Interactor->>TargetDS: Load Source & Target Features (Shield Target Labels)
-    Interactor->>ML: POST /ml/predict (Source Features, Target Features, K=3, CORAL=true)
-    
+    User->>UI: Configure Run (Source, Target, K=3, CORAL)
+    UI->>Backend: POST /api/predictions
+    activate Backend
+    Backend->>ML: POST /ml/predict (Source & Target Features)
     activate ML
-    Note over ML: 1. Source-median imputation<br/>2. Independent StandardScaler<br/>3. Shallow CORAL covariance alignment<br/>4. Fit KNN & compute P(bug)
-    ML-->>Interactor: Return Probabilities, Predicted Labels, Risk Bands, Evaluation Metrics
+    Note over ML: 1. Imputation & Scaling<br/>2. Shallow CORAL Alignment<br/>3. KNN Classification
+    ML-->>Backend: Probabilities, Labels & Risk Bands
     deactivate ML
-
-    Interactor->>Storage: Write Annotated CSV & PDF Evaluation Report
-    Interactor->>DB: Save PredictionRunJpaEntity (Metadata + Metrics)
-    DB-->>Interactor: Saved Entity Record (ID: #runId)
-    Interactor-->>Ctrl: Canonical Prediction Execution DTO
-    Ctrl-->>UI: 200 OK Response
-    UI-->>User: Render Ranked Class Table, Confusion Matrix, and Treemap Hotspots
+    Backend->>Storage: Persist PredictionRun & Generate PDF/CSV Reports
+    Backend-->>UI: 200 OK (Ranked Classes & Hotspot Treemap)
+    deactivate Backend
+    UI-->>User: Render Interactive Visualizations & Download Report
 ```
 
 ---
@@ -173,22 +165,20 @@ sequenceDiagram
 ### 4. Prediction Execution State Lifecycle
 
 ```mermaid
-stateDiagram-v2
-    direction LR
-    [*] --> FormConfigured : Select Source, Target, K, Threshold
-    FormConfigured --> Validating : Click "Run Prediction"
-    Validating --> Rejected : Metric Family Mismatch / Missing Labels
-    Rejected --> FormConfigured : Display Validation Error Toast
-    Validating --> Preprocessing : Schema & Features Validated
-    Preprocessing --> CovarianceAligning : CORAL Enabled (coral = true)
-    Preprocessing --> ModelTraining : CORAL Disabled (coral = false)
-    CovarianceAligning --> ModelTraining : Feature Covariances Aligned
-    ModelTraining --> Inferring : Fit KNN (K=1..5, Euclidean)
-    Inferring --> Evaluating : Calibrate Probabilities & Classify
-    Evaluating --> ArtifactGeneration : Generate Labeled CSV & PDF Report
-    ArtifactGeneration --> Persisted : Save Metadata to PostgreSQL
-    Persisted --> Completed : View Ranked Results & Hotspots
-    Completed --> [*]
+flowchart TD
+    S0(["1. Configure Run<br/>(Source, Target, K, Threshold)"]) --> S1{"Input & Schema<br/>Validation"}
+    S1 -->|Invalid / Missing Labels| S_ERR["Show Validation Error Toast"]
+    S_ERR --> S0
+    S1 -->|Valid| S2["Data Sanitization & Median Imputation"]
+    S2 --> S3{"CORAL Alignment<br/>Enabled?"}
+    S3 -->|Yes| S4["Shallow CORAL Covariance Alignment"]
+    S3 -->|No| S5["Direct Scaled Feature Space"]
+    S4 --> S6["Train KNN Classifier (K=1..5, Euclidean)"]
+    S5 --> S6
+    S6 --> S7["Risk Calibration & Defect Thresholding"]
+    S7 --> S8["Generate Annotated CSV & PDFBox Report"]
+    S8 --> S9["Persist Run Record to PostgreSQL"]
+    S9 --> S10(["Completed: Explore Results & Treemap Hotspots"])
 ```
 
 ---
@@ -198,7 +188,7 @@ stateDiagram-v2
 ### Data Preparation Pipeline
 
 ```mermaid
-flowchart LR
+flowchart TD
     S["Source Dataset<br/>(Labeled Instances)"] --> P1["1. Schema Normalization<br/>(Alias resolution & column mapping)"]
     T["Target Dataset<br/>(Unlabeled Instances)"] --> P1
 
