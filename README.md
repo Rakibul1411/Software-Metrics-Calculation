@@ -1,111 +1,65 @@
-# 🔬 DefectLab — Enterprise Cross-Project Software Defect Prediction & Metrics Intelligence Platform
+# DefectLab: Cross-Project Software Defect Prediction System
 
-[![Java 17](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-2.7.18-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-[![Angular 19](https://img.shields.io/badge/Angular-19-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.dev/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.12-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Docker Hub](https://img.shields.io/badge/Docker_Hub-rakibalnatiq%2Fdefectlab-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://hub.docker.com/u/rakibalnatiq)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
-
----
-
-## 🌟 Executive Summary
-
-**DefectLab** is an enterprise-grade, end-to-end **Cross-Project Defect Prediction (CPDP)** and software metrics intelligence platform engineered for Java applications. In modern software engineering, debugging and late-stage defect remediation consume **50% to 80%** of total project maintenance budgets. DefectLab solves this bottleneck by analyzing Java source code ASTs, mining Git repository change histories, eliminating cross-project domain shift using **CORAL (Correlation Alignment)**, and predicting class-level defect probabilities with a calibrated **K-Nearest Neighbors (KNN)** model before testing or deployment even begins.
-
-With DefectLab, engineering teams and QA leads can:
-1. **Analyze Java codebases** (.zip archives or public GitHub repositories) to automatically extract **20 PROMISE Object-Oriented metrics** or **56 AEEEM static/historical change metrics**.
-2. **Transfer defect intelligence across projects** by training supervised models on established benchmark datasets (e.g., Apache Ant, Lucene, Eclipse JDT, PDE, Equinox) to predict bugs in new, unreleased, or unlabeled repositories.
-3. **Mitigate domain shift** via Shallow CORAL covariance alignment, preventing feature distribution mismatches between different software ecosystems without target-label leakage.
-4. **Prioritize testing efforts** using ranked defect probability tables and interactive **Squarified Treemap visualizations** sizing classes by LOC and coloring them by defect probability.
-5. **Generate reproducible, audit-ready artifacts**, including cryptographic PDF evaluation reports (via Apache PDFBox) and labeled CSV datasets for automated CI/CD integration.
+[![Java](https://img.shields.io/badge/Java-17-007396?logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-2.7.18-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Angular](https://img.shields.io/badge/Angular-19-DD0031?logo=angular&logoColor=white)](https://angular.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.12-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker Hub](https://img.shields.io/badge/Docker_Hub-rakibalnatiq%2Fdefectlab-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/u/rakibalnatiq)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
-## 📋 Table of Contents
+## Overview
 
-- [Key Features & Capabilities](#-key-features--capabilities)
-- [System Architecture](#-system-architecture)
-- [🚀 Quick Start for End Users (Docker)](#-quick-start-for-end-users-docker)
-  - [Prerequisites](#prerequisites)
-  - [Method 1: Instant Launch with Pre-built Docker Hub Images (Recommended)](#method-1-instant-launch-with-pre-built-docker-hub-images-recommended)
-  - [Method 2: Native Desktop Application (.dmg / .exe)](#method-2-native-desktop-application-dmg--exe)
-  - [Method 3: Build & Run from Source with Docker](#method-3-build--run-from-source-with-docker)
-  - [Managing Containers & Data Lifecycle](#managing-containers--data-lifecycle)
-- [🛠️ Local Development Setup (Host Machine)](#️-local-development-setup-host-machine)
-  - [System Requirements](#system-requirements)
-  - [Automated Setup Script](#automated-setup-script)
-  - [Concurrent Hot-Reload Server](#concurrent-hot-reload-server)
-  - [Running Services Independently](#running-services-independently)
-- [⚙️ Configuration & Environment Variables](#️-configuration--environment-variables)
-  - [Connecting to Cloud Neon PostgreSQL](#connecting-to-cloud-neon-postgresql)
-- [📐 Metric Families Specification](#-metric-families-specification)
-  - [1. PROMISE Metric Family (20 Predictors)](#1-promise-metric-family-20-predictors)
-  - [2. AEEEM Metric Family (56 Predictors)](#2-aeeem-metric-family-56-predictors)
-- [🧠 Machine Learning & Domain Adaptation Pipeline](#-machine-learning--domain-adaptation-pipeline)
-  - [Standard Deterministic Pipeline Flow](#standard-deterministic-pipeline-flow)
-  - [Mathematical Foundation of Shallow CORAL](#mathematical-foundation-of-shallow-coral)
-  - [Supervised KNN Model & Risk Bands](#supervised-knn-model--risk-bands)
-  - [Comprehensive Evaluation Metrics](#comprehensive-evaluation-metrics)
-- [📘 End-to-End User Walkthrough Tutorial](#-end-to-end-user-walkthrough-tutorial)
-- [🌐 REST API Specification](#-rest-api-specification)
-- [💾 Database & Storage Architecture](#-database--storage-architecture)
-- [🧪 Testing & Quality Assurance](#-testing--quality-assurance)
-- [🔒 Security & Ownership Model](#-security--ownership-model)
-- [❓ Troubleshooting & FAQ](#-troubleshooting--faq)
-- [📚 Academic Attribution & References](#-academic-attribution--references)
+**DefectLab** is a cross-project software defect prediction (CPDP) and software metric analysis platform designed for Java codebases. The system provides automated static Abstract Syntax Tree (AST) analysis, Git repository change mining, domain adaptation via Shallow CORAL (Correlation Alignment), and supervised defect prediction using K-Nearest Neighbors (KNN).
+
+In cross-project defect prediction, models are trained on historical, labeled defect datasets from one project (or release) and deployed to predict fault-prone components in another project that lacks historical defect labels. DefectLab addresses the primary technical challenge in CPDP—**domain shift** (discrepancy in feature distributions and covariances across disparate software systems)—by applying covariance matrix alignment to the source feature space while strictly preventing target-label leakage.
+
+### Key Capabilities
+
+- **Static AST Metric Extraction**: Automated calculation of 20 PROMISE object-oriented metrics from Java source archives (`.zip`) or public GitHub repositories using Eclipse JDT 3.37 and Apache BCEL.
+- **Historical Git Mining**: Extraction of 56 AEEEM static, change, entropy, and churn metrics across 14-day commit snapshots from Git version control history.
+- **Domain Adaptation (Shallow CORAL)**: Covariance whitening and recoloring to align source and target feature distributions prior to classification.
+- **Supervised Defect Prediction**: Configurable K-Nearest Neighbors ($K \in [1, 5]$) classifier with calibrated defect probability scoring and descending risk prioritization.
+- **Empirical Benchmark Evaluation**: Performance assessment against ground-truth labels computing ROC-AUC, PR-AUC, Matthews Correlation Coefficient (MCC), Precision, Recall, Specificity, F1-Score, and Recall@20% LOC.
+- **Interactive Defect Hotspot Visualization**: Squarified Treemap visualization (Bruls et al. algorithm) mapping class hierarchies sized by Lines of Code (LOC) and colored by predicted defect probability.
+- **Metric Verification & Comparison**: Class-wise and distribution-level verification comparing user-extracted metrics against canonical benchmarks under configurable tolerance thresholds ($\pm 5\%$, exact).
+- **Automated Artifact Generation**: Cryptographically reproducible evaluation reports in PDF format (Apache PDFBox) and annotated CSV datasets for CI/CD integration.
 
 ---
 
-## 💎 Key Features & Capabilities
+## System Architecture
 
-| Module | Core Functionality | Value Proposition |
-|---|---|---|
-| **AST Source Analysis** | Parses Java syntax trees via **Eclipse JDT 3.37** and bytecode via **Apache BCEL** from ZIP archives or public GitHub repositories. | Eliminates manual metric extraction; extracts 20 PROMISE OO metrics in seconds. |
-| **Git History Mining** | Mines commit logs and file churn across 14-day development snapshots for public GitHub repositories. | Extracts 56 AEEEM change, entropy, and churn metrics capturing developer dynamics. |
-| **Dataset Catalog** | Ingests, validates, previews (first 25 rows), and stores CSV/ARFF datasets with schema validation and quality guards. | Built-in repository of canonical benchmarks (Ant, Lucene, JDT, PDE, EQ, LC, ML). |
-| **Cross-Project ML** | Executes cross-project defect prediction using K-Nearest Neighbors (KNN, $K \in [1, 5]$) with Euclidean distance. | Predicts bugs for target projects that lack historical labeled defect data. |
-| **Domain Adaptation (CORAL)** | Minimizes cross-domain covariance divergence using Shallow CORAL without leaking target labels. | Substantially improves CPDP classification accuracy and metric transferability. |
-| **Hotspot Treemaps** | Visualizes codebase risk via **Squarified Treemaps** (Bruls et al. algorithm) with color-coded risk bands. | Identifies defect hotspots instantly; enables effort-aware QA prioritization. |
-| **Benchmark Evaluation** | Computes ROC-AUC, PR-AUC, MCC, Recall@20% LOC, Balanced Accuracy, Specificity, and Confusion Matrix. | Rigorous empirical validation against established software engineering benchmarks. |
-| **Metric Comparison** | Compares extracted metrics against canonical benchmark datasets with configurable tolerance thresholds ($\pm 5\%$, exact). | Detects AST extraction drift and validates toolchain accuracy against literature. |
-| **Automated Reports** | Generates high-fidelity PDF evaluation reports (Apache PDFBox) and labeled CSV datasets with cryptographic run hashes. | Audit-ready, reproducible artifacts suitable for thesis defense and CI/CD pipelines. |
-| **Multi-Tier Security** | Session-based authentication with BCrypt hashing, HTTP-only SameSite cookies, and token-isolated internal ML microservice. | Enterprise-ready tenant isolation and role-safe dataset access control. |
-
----
-
-## 🏗️ System Architecture
-
-DefectLab is built following **Clean Architecture** principles and a loosely coupled 4-tier archetype:
+DefectLab is structured according to Clean Architecture and a 4-tier archetype:
 
 ```mermaid
 flowchart TD
     subgraph Presentation_Layer["Presentation Layer (Port 4200)"]
-        UI["Angular 19 SPA (Vite / Vanilla CSS Design System)"]
-        DESKTOP["Electron Desktop Client (.dmg / .exe)"]
+        UI["Angular 19 SPA (Vite / Vanilla CSS)"]
+        DESKTOP["Electron Desktop Wrapper (.dmg / .exe)"]
     end
 
-    subgraph Business_Layer["Application & Business Layer (Port 8080)"]
+    subgraph Application_Layer["Application & Business Layer (Port 8080)"]
         API["Spring Boot 2.7.18 REST API"]
-        AUTH["Authentication & BCrypt Manager"]
+        AUTH["Authentication & Session Manager"]
         ANALYSIS["AST Analyzer (Eclipse JDT + Git Miner)"]
-        DATASET["Dataset Catalog & Quality Guard"]
+        DATASET["Dataset Catalog & Quality Validator"]
         PREDICT["CPDP Prediction Orchestrator"]
-        COMPARE["Benchmark Metric Comparison Interactor"]
+        COMPARE["Metric Comparison Interactor"]
         REPORT["Apache PDFBox Report Generator"]
     end
 
-    subgraph Utility_Layer["Utility & ML Layer (Port 8000 - Internal Bridge)"]
+    subgraph ML_Microservice["ML & Analytics Microservice (Port 8000 - Internal)"]
         ML["FastAPI Python 3.12 Engine"]
         PREP["Data Sanitizer & Median Imputer"]
         CORAL["Shallow CORAL Covariance Alignment"]
         KNN["Scikit-Learn KNN Classifier (K=1..5)"]
-        EVAL["Scientific Evaluation Engine (ROC, PR, MCC)"]
+        EVAL["Evaluation Engine (ROC-AUC, PR-AUC, MCC)"]
     end
 
     subgraph Persistence_Layer["Persistence Layer"]
-        DB[("PostgreSQL 16 / Neon Cloud DB")]
+        DB[("PostgreSQL 16 / Neon DB")]
         STORAGE[("Durable File Storage (Metrics & PDF Artifacts)")]
     end
 
@@ -118,8 +72,8 @@ flowchart TD
     API --> COMPARE
     API --> REPORT
 
-    PREDICT -->|Authenticated REST (X-DefectLab-Service-Token)| ML
-    COMPARE -->|Authenticated REST| ML
+    PREDICT -->|REST (X-DefectLab-Service-Token)| ML
+    COMPARE -->|REST| ML
 
     ML --> PREP --> CORAL --> KNN --> EVAL
 
@@ -134,77 +88,93 @@ flowchart TD
     COMPARE --> STORAGE
 ```
 
-### Security & Microservice Boundary
-- **Browser Isolation**: The web browser and Electron desktop client communicate **exclusively** with the Spring Boot backend on port `8080` (or through the frontend Nginx reverse proxy on port `4200`).
-- **Internal ML Isolation**: The Python FastAPI service operates entirely on an isolated Docker bridge network (`defectlab-net`). It requires the internal `X-DefectLab-Service-Token` header for all prediction routes and has no direct database access or public exposure.
-- **Durable Immutability**: Predictions and metric comparisons never overwrite original source files. Every run is assigned an immutable UUID, producing isolated CSV, PDF, and JSON sidecar artifacts.
+### Architectural Boundaries & Security
+
+1. **Client Isolation**: The browser and desktop client interact exclusively with the Spring Boot backend on port `8080` (or through the frontend Nginx reverse proxy on port `4200`).
+2. **Internal ML Isolation**: The Python FastAPI service operates inside an isolated Docker bridge network (`defectlab-net`). It is never exposed directly to public traffic and validates all requests using the internal `X-DefectLab-Service-Token` header.
+3. **Artifact Immutability**: Executions never overwrite original dataset files. Every prediction run generates immutable database records and unique filesystem artifacts referenced by UUIDs.
 
 ---
 
-## 🚀 Quick Start for End Users (Docker)
+## Repository Structure
 
-DefectLab is packaged as a ready-to-run containerized platform. **End users do not need to install Java, Maven, Node.js, Python, or configure databases.**
+```text
+.
+├── docker-compose.yml              # Root Docker Compose specification (pre-built images)
+├── README.md                       # Canonical project documentation
+├── DefectLab-Updated-Component-Based/
+│   ├── backend-java/               # Spring Boot 2.7 REST API (Java 17, Eclipse JDT)
+│   ├── frontend-angular/           # Angular 19 SPA (TypeScript, Vanilla CSS Design System)
+│   ├── ml-service-python/          # FastAPI ML service (Python 3.12, scikit-learn, CORAL)
+│   ├── desktop-electron/           # Native Electron application wrapper (.dmg / .exe)
+│   ├── sample-data/
+│   │   ├── predefined/             # Canonical benchmark datasets (Ant, Lucene, JDT, PDE, etc.)
+│   │   └── manual-examples/        # Sample datasets for testing manual workflows
+│   ├── scripts/
+│   │   ├── setup.sh                # Local environment dependency installation script
+│   │   ├── run-dev.sh              # Concurrent multi-service development launcher
+│   │   └── run-tests.sh            # Automated verification across Java, Python, and Angular
+│   ├── docker-compose.yml          # Source-build Docker Compose file
+│   ├── docker-compose.prod.yml     # Production Docker Compose file
+│   ├── push-docker.sh              # Multi-arch Docker Hub publication script
+│   └── USER-MANUAL.md              # Operational guide for desktop packaging and updates
+```
+
+---
+
+## Quick Start with Docker
+
+Pre-built multi-architecture Docker images (`linux/amd64` and `linux/arm64`) are published on Docker Hub under `rakibalnatiq/defectlab-*`. You do not need Java, Maven, Node.js, or Python installed locally.
 
 ### Prerequisites
-Before running DefectLab, ensure you have container management installed and running:
-- **macOS**: Install [OrbStack](https://orbstack.dev/) (recommended for speed and low memory) or [Docker Desktop](https://www.docker.com/products/docker-desktop/).
-- **Windows**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (ensure WSL2 backend is enabled).
-- **Linux**: Install `docker` and `docker-compose-plugin`.
 
-Verify Docker is running:
-```bash
-docker info
-```
+- [Docker Engine](https://docs.docker.com/engine/install/) with Docker Compose v2, or [Docker Desktop](https://www.docker.com/products/docker-desktop/) / [OrbStack](https://orbstack.dev/).
+- Ensure the Docker daemon is active:
+  ```bash
+  docker info
+  ```
 
 ---
 
-### Method 1: Instant Launch with Pre-built Docker Hub Images (Recommended)
+### Method 1: Instant Launch (Recommended)
 
-All DefectLab microservices are published to Docker Hub under `rakibalnatiq/defectlab-*` for both `linux/amd64` and `linux/arm64` (Apple Silicon M1/M2/M3/M4).
+Run the following command directly from the cloned repository root:
 
-#### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/Rakibul1411/Software-Metrics-Calculation.git
-cd Software-Metrics-Calculation/DefectLab-Updated-Component-Based
+docker compose up -d
 ```
 
-#### Step 2: Launch All 4 Services with a Single Command
-```bash
-docker compose -f docker-compose.prod.yml up -d
-```
+Docker will pull the images and launch the four required containers:
 
-Docker will pull the pre-compiled images and start the services in their required dependency order:
-1. `postgres:16-alpine` — Relational database with automatic healthchecks.
-2. `rakibalnatiq/defectlab-ml:latest` — FastAPI machine learning engine.
-3. `rakibalnatiq/defectlab-backend:latest` — Spring Boot application server.
-4. `rakibalnatiq/defectlab-frontend:latest` — Angular 19 web interface served by Nginx.
+| Container | Image | Port | Description |
+|---|---|---|---|
+| `postgres` | `postgres:16-alpine` | `5432` | Relational database with automated healthcheck |
+| `ml` | `rakibalnatiq/defectlab-ml:latest` | `8000` (internal) | FastAPI Python ML service |
+| `backend` | `rakibalnatiq/defectlab-backend:latest` | `8080` | Spring Boot REST API |
+| `frontend` | `rakibalnatiq/defectlab-frontend:latest` | `4200` | Angular 19 client served via Nginx |
 
-#### Step 3: Access DefectLab
-Once the containers are running (typically ~20-30 seconds on the first run):
-- 🌐 **Web Interface**: Open **[http://localhost:4200](http://localhost:4200)** in your browser.
-- 🔌 **Backend REST API**: **[http://localhost:8080/api](http://localhost:8080/api)**.
-- 🩺 **ML Health Check**: **[http://localhost:8000/ml/health](http://localhost:8000/ml/health)**.
+#### Access Endpoints
 
-#### Step 4: Create Your Account & Start
-Navigate to `http://localhost:4200/login`, switch to the **Sign Up** tab, enter your name, email, and password, and click **Create Account**. Pre-loaded benchmark datasets (Ant, Lucene, JDT, PDE, EQ, LC, ML) will be immediately available in your catalog!
+- **Web Application**: Open [http://localhost:4200](http://localhost:4200) in your web browser.
+- **Backend API**: [http://localhost:8080/api](http://localhost:8080/api)
+- **ML Health Check**: [http://localhost:8000/ml/health](http://localhost:8000/ml/health)
 
 ---
 
 ### Method 2: Native Desktop Application (.dmg / .exe)
 
-If you prefer a native desktop experience without opening a web browser:
-1. Ensure Docker or OrbStack is running on your machine.
-2. Run the platform containers via Docker Compose (Method 1).
-3. Download or launch the native Electron wrapper located in `desktop-electron/`:
-   - **macOS**: `DefectLab-mac-arm64.dmg` or `DefectLab-mac-x64.dmg`
-   - **Windows**: `DefectLab Setup.exe`
-4. The desktop application features automatic Docker daemon detection, a custom splash screen, native OS window controls, and seamless offline reporting. For complete packaging instructions, see [USER-MANUAL.md](DefectLab-Updated-Component-Based/USER-MANUAL.md).
+DefectLab includes an Electron desktop wrapper for macOS and Windows:
+1. Ensure the platform containers are active via `docker compose up -d`.
+2. Launch the desktop application installer located in `DefectLab-Updated-Component-Based/desktop-electron/`:
+   - macOS: `DefectLab-mac-arm64.dmg` or `DefectLab-mac-x64.dmg`
+   - Windows: `DefectLab Setup.exe`
+3. The desktop app provides automatic Docker daemon detection, an integrated splash screen, and offline local operations.
 
 ---
 
-### Method 3: Build & Run from Source with Docker
+### Method 3: Build from Source with Docker
 
-To build the Docker images directly from source code on your machine:
+To compile and assemble Docker containers from local source code:
 
 ```bash
 cd DefectLab-Updated-Component-Based
@@ -212,64 +182,49 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-This compiles the Java backend with Maven, bundles the Angular frontend with Vite, and configures the Python virtual environment inside multi-stage Dockerfiles.
-
 ---
 
-### Managing Containers & Data Lifecycle
+### Container Lifecycle Management
 
-#### Check Service Status
 ```bash
-docker compose -f docker-compose.prod.yml ps
-```
+# Check service health and status
+docker compose ps
 
-#### View Live Logs
-```bash
-# Follow logs for all services
-docker compose -f docker-compose.prod.yml logs -f
+# Follow container logs
+docker compose logs -f
 
-# Follow logs for a specific service
-docker compose -f docker-compose.prod.yml logs -f backend
-```
+# Follow logs for the backend container only
+docker compose logs -f backend
 
-#### Pull Latest Updates from Docker Hub
-Whenever new features or bug fixes are published to Docker Hub:
-```bash
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
-```
+# Pull the latest published images from Docker Hub
+docker compose pull && docker compose up -d
 
-#### Stop Services (Preserving All Data)
-```bash
-docker compose -f docker-compose.prod.yml down
-```
-*Your datasets, predictions, and account credentials remain intact in persistent Docker volumes (`postgres_data` and `metric_storage`).*
+# Stop all containers (preserving persistent database and storage volumes)
+docker compose down
 
-#### Complete System Reset (Clean Slate)
-To permanently wipe all local database records and uploaded files:
-```bash
-docker compose -f docker-compose.prod.yml down -v
+# Stop all containers and remove persistent volumes (full data wipe)
+docker compose down -v
 ```
 
 ---
 
-## 🛠️ Local Development Setup (Host Machine)
+## Local Development Setup
 
-For developers and researchers who want to contribute code, debug, or modify algorithms directly on their local machine without Docker:
+To run DefectLab directly on your host machine without Docker:
 
-### System Requirements
-- **Java**: JDK 17 (Eclipse Temurin or OpenJDK recommended)
-- **Build Tool**: Apache Maven 3.9+
-- **Node.js**: Node 20 LTS or 22 LTS with `npm`
-- **Python**: Python 3.11 or 3.12 (with `venv` and `pip`)
-- **Database**: PostgreSQL 14+ running locally OR cloud [Neon DB](https://neon.tech/)
-- **Git**: Installed and accessible in PATH
+### Prerequisites
+
+- **Java**: OpenJDK 17 (or Eclipse Temurin 17)
+- **Maven**: 3.9+
+- **Node.js**: 20 LTS or 22 LTS with `npm`
+- **Python**: 3.11 or 3.12 with `venv` and `pip`
+- **Database**: PostgreSQL 14+ running locally or cloud [Neon DB](https://neon.tech/)
 
 ---
 
-### Automated Setup Script
+### 1. Automated Setup
 
-Run the automated setup script from the project root:
+Run the setup script to configure dependencies across all three layers:
 
 ```bash
 cd DefectLab-Updated-Component-Based
@@ -277,397 +232,272 @@ chmod +x scripts/*.sh
 ./scripts/setup.sh
 ```
 
-The script automatically:
-1. Configures Python virtual environment in `ml-service-python/venv` and installs PyTorch/Scikit-Learn/FastAPI dependencies.
+The script:
+1. Creates `ml-service-python/venv` and installs required packages (`fastapi`, `uvicorn`, `scikit-learn`, `pandas`, `numpy`, `pytest`).
 2. Installs Angular dependencies via `npm ci` in `frontend-angular`.
-3. Pre-compiles the Spring Boot backend using Maven.
+3. Compiles the Java backend using Maven.
 
 ---
 
-### Concurrent Hot-Reload Server
+### 2. Configure Environment
 
-Start all three application tiers simultaneously in development watch mode:
+Start a local PostgreSQL instance (or launch the Docker database container):
 
 ```bash
-cd DefectLab-Updated-Component-Based
-./scripts/run-dev.sh
+docker compose up -d postgres
 ```
 
-**What happens during development:**
-- **Spring Boot**: Listens on port `8080`. Incremental Java changes trigger rapid application restart via Spring Boot DevTools.
-- **Angular 19**: Listens on port `4200` with hot-module replacement (HMR). API calls are seamlessly routed to Spring Boot through `proxy.conf.json`.
-- **FastAPI**: Listens on port `8000` with Uvicorn `--reload` active for instant Python algorithm modifications.
+Export configuration variables in your shell:
 
-Press `Ctrl+C` in your terminal to cleanly terminate all background child processes.
-
----
-
-### Running Services Independently
-
-If you prefer running each tier in dedicated terminal tabs:
-
-#### 1. Start PostgreSQL Database
 ```bash
-# Start just the database container
-cd DefectLab-Updated-Component-Based
-docker compose up -d postgres
-
-# Export database environment variables
 export DEFECTLAB_DB_URL='jdbc:postgresql://localhost:5432/defectlab'
 export DEFECTLAB_DB_USER='defectlab'
 export DEFECTLAB_DB_PASSWORD='defectlab'
 export ML_SERVICE_TOKEN='local-development-token'
 ```
 
-#### 2. Start Python FastAPI ML Service
+---
+
+### 3. Concurrent Development Mode
+
+Start all services simultaneously with live reload:
+
 ```bash
+./scripts/run-dev.sh
+```
+
+- **Spring Boot** (`:8080`): Watches Java source code; recompiles and reloads context via Spring Boot DevTools.
+- **FastAPI** (`:8000`): Auto-reloads through Uvicorn on changes in `ml-service-python/app`.
+- **Angular** (`:4200`): Vite development server with Hot Module Replacement (HMR).
+
+---
+
+### 4. Running Services Individually
+
+```bash
+# Terminal 1: Python FastAPI ML Service
 cd DefectLab-Updated-Component-Based/ml-service-python
 source venv/bin/activate
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
 
-#### 3. Start Spring Boot Java Backend
-```bash
+# Terminal 2: Spring Boot Backend
 cd DefectLab-Updated-Component-Based/backend-java
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx2g"
-```
 
-#### 4. Start Angular Frontend
-```bash
+# Terminal 3: Angular Frontend
 cd DefectLab-Updated-Component-Based/frontend-angular
 npm start
 ```
 
 ---
 
-## ⚙️ Configuration & Environment Variables
+## Configuration Reference
 
-| Variable | Target Component | Default Value | Description |
+| Environment Variable | Affected Service | Default Value | Description |
 |---|---|---|---|
-| `DEFECTLAB_DB_URL` | Backend | `jdbc:postgresql://postgres:5432/defectlab` | JDBC connection URL for PostgreSQL/Neon |
-| `DEFECTLAB_DB_USER` | Backend | `defectlab` | Database authentication username |
-| `DEFECTLAB_DB_PASSWORD` | Backend | `defectlab` | Database authentication password |
-| `ML_SERVICE_BASE_URL` | Backend | `http://ml:8000` (Docker) / `http://localhost:8000` (Local) | Location of internal FastAPI microservice |
+| `DEFECTLAB_DB_URL` | Backend | `jdbc:postgresql://postgres:5432/defectlab` | JDBC database URL |
+| `DEFECTLAB_DB_USER` | Backend | `defectlab` | PostgreSQL username |
+| `DEFECTLAB_DB_PASSWORD` | Backend | `defectlab` | PostgreSQL password |
+| `ML_SERVICE_BASE_URL` | Backend | `http://ml:8000` | URL of the internal FastAPI microservice |
 | `ML_SERVICE_TOKEN` | Backend & ML | `local-development-token` | Shared secret header (`X-DefectLab-Service-Token`) |
-| `PREDEFINED_DATA_DIR` | Backend | `/app/sample-data/predefined` | Directory containing benchmark manifest CSV |
-| `STORAGE_ROOT` | Backend | `storage` | Directory where uploaded datasets and PDF reports are persisted |
-| `DEFECTLAB_SESSION_SECURE` | Backend | `false` (Local) / `true` (Production) | Enforces HTTPS-only cookies in production environments |
-| `SPRING_PROFILES_ACTIVE` | Backend | `docker` or `local` | Active Spring configuration profile |
-| `POSTGRES_DB` | PostgreSQL | `defectlab` | PostgreSQL database name |
-| `POSTGRES_USER` | PostgreSQL | `defectlab` | PostgreSQL administrative user |
-| `POSTGRES_PASSWORD` | PostgreSQL | `defectlab` | PostgreSQL administrative password |
-
-### Connecting to Cloud Neon PostgreSQL
-To use cloud-hosted serverless PostgreSQL ([Neon](https://neon.tech/)) instead of a local Docker container:
-1. Create a Neon database project and copy the connection string.
-2. In `DefectLab-Updated-Component-Based/.env`, specify:
-   ```env
-   DEFECTLAB_DB_URL=jdbc:postgresql://ep-your-subdomain.us-east-2.aws.neon.tech/neondb?sslmode=require
-   DEFECTLAB_DB_USER=your_neon_username
-   DEFECTLAB_DB_PASSWORD=your_neon_password
-   ```
-3. Restart containers: `docker compose -f docker-compose.prod.yml up -d`. Spring Boot's idempotent `schema.sql` will automatically construct all necessary relational tables upon first connection.
+| `PREDEFINED_DATA_DIR` | Backend | `/app/sample-data/predefined` | Directory containing canonical benchmark files |
+| `STORAGE_ROOT` | Backend | `storage` | Filesystem root for uploads and PDF reports |
+| `DEFECTLAB_SESSION_SECURE` | Backend | `false` | When `true`, enforces `Secure` attribute on cookies |
+| `SPRING_PROFILES_ACTIVE` | Backend | `docker` | Active Spring profile (`docker` or `local`) |
 
 ---
 
-## 📐 Metric Families Specification
+## Metric Families Specification
 
-DefectLab strictly categorizes software metrics into two standardized empirical families. **Metrics from different families cannot be mixed in the same prediction or comparison run.**
+DefectLab supports two standard empirical defect prediction metric families. Features across different families cannot be combined within a single run.
 
 ### 1. PROMISE Metric Family (20 Predictors)
-Derived from the seminal Chidamber & Kemerer (CK) suite, Lorenz & Kidd metrics, and procedural McCabe complexity metrics:
 
-| Metric | Full Name | Measurement Scope | Defect Vulnerability Correlation |
-|---|---|---|---|
-| `WMC` | Weighted Methods per Class | Sum of cyclomatic complexities of all class methods | High WMC indicates bloated classes prone to logical errors. |
-| `DIT` | Depth of Inheritance Tree | Maximum length from node to root in inheritance tree | Deeper hierarchies inherit subtle unintended side effects. |
-| `NOC` | Number of Children | Immediate subclasses subordinate to a class | Modifications in parent break extensive descendant contracts. |
-| `CBO` | Coupling Between Object Classes | Number of other classes coupled to this class | High coupling hampers testability, refactoring, and isolation. |
-| `RFC` | Response for a Class | Methods in class + methods invoked across other classes | Larger response sets increase execution path defect probabilities. |
-| `LCOM` | Lack of Cohesion in Methods | Difference between disjoint and shared method-field pairs | Poor cohesion violates Single Responsibility Principle. |
-| `Ca` | Afferent Couplings | Number of external classes that depend on this class | Reflects architectural centrality and incoming responsibilities. |
-| `Ce` | Efferent Couplings | Number of external classes this class depends on | Reflects external vulnerability; changes elsewhere trigger faults here. |
-| `NPM` | Number of Public Methods | Total methods declared with public visibility | Larger public interfaces expand API exposure and misuse potential. |
-| `LCOM3` | Normalized Lack of Cohesion | Henderson-Sellers normalized cohesion index [0, 2] | Higher values indicate fragmented, uncohesive responsibilities. |
-| `LOC` | Lines of Code | Total non-comment, non-blank source lines | Higher size directly correlates with human cognitive oversight. |
-| `DAM` | Data Access Metric | Ratio of private/protected fields to total fields | Encapsulation quality metric. |
-| `MOA` | Measure of Aggregation | Count of complex user-defined object types as fields | Measures architectural composition density. |
-| `MFA` | Measure of Functional Abstraction | Ratio of inherited methods to total accessible methods | Measures inheritance reliance versus local definition. |
-| `CAM` | Cohesion Among Methods | Parameter-type similarity between methods [0, 1] | Lower CAM indicates arbitrary method grouping. |
-| `IC` | Inheritance Coupling | Number of parent classes where methods are invoked | Inter-hierarchical coupling risk indicator. |
-| `CBM` | Coupling Between Methods | Total method calls directed at parent classes | Deep coupling to superclasses. |
-| `AMC` | Average Method Complexity | Average size of member method declarations | Long, convoluted methods are primary defect carriers. |
-| `Max_CC` | Maximum Cyclomatic Complexity | Highest McCabe decision complexity across all methods | Identifies the single most hazardous method in the class. |
-| `Avg_CC` | Average Cyclomatic Complexity | Mean McCabe complexity across all member methods | Baseline control flow complexity. |
+Static object-oriented and structural code metrics extracted directly from Java source code:
+
+| Metric | Name | Definition & Measurement Scope |
+|---|---|---|
+| `WMC` | Weighted Methods per Class | Sum of McCabe cyclomatic complexities across all methods in the class. |
+| `DIT` | Depth of Inheritance Tree | Maximum length of inheritance path from the class to the root object. |
+| `NOC` | Number of Children | Count of direct subclasses inheriting from this class. |
+| `CBO` | Coupling Between Object Classes | Count of other classes to which this class is coupled. |
+| `RFC` | Response for a Class | Number of methods in the class plus methods called by those methods. |
+| `LCOM` | Lack of Cohesion in Methods | Difference between method pairs sharing no instance fields and those that do. |
+| `Ca` | Afferent Couplings | Number of external classes that depend on this class. |
+| `Ce` | Efferent Couplings | Number of external classes on which this class depends. |
+| `NPM` | Number of Public Methods | Total methods declared with public visibility in the class. |
+| `LCOM3` | Normalized Lack of Cohesion | Henderson-Sellers normalized cohesion metric, scaled between 0 and 2. |
+| `LOC` | Lines of Code | Total non-blank, non-comment source lines in the class. |
+| `DAM` | Data Access Metric | Ratio of private and protected attributes to total attributes. |
+| `MOA` | Measure of Aggregation | Count of complex user-defined object types declared as member fields. |
+| `MFA` | Measure of Functional Abstraction | Ratio of inherited methods to total methods accessible by the class. |
+| `CAM` | Cohesion Among Methods | Parameter-type similarity across methods within the class [0, 1]. |
+| `IC` | Inheritance Coupling | Number of parent classes where methods are invoked. |
+| `CBM` | Coupling Between Methods | Total method calls directed at parent superclasses. |
+| `AMC` | Average Method Complexity | Average size and complexity of member method declarations. |
+| `Max_CC` | Maximum Cyclomatic Complexity | Highest McCabe decision complexity found in any method within the class. |
+| `Avg_CC` | Average Cyclomatic Complexity | Mean McCabe cyclomatic complexity across all member methods. |
 
 ---
 
 ### 2. AEEEM Metric Family (56 Predictors)
-Originating from D'Ambros, Lanza, and Robbes (IEEE TSE 2012), the AEEEM family integrates static source code metrics with historical change metadata mined across **14-day commit intervals**:
 
-1. **Static OO Suite (17 metrics)**: CK metrics, inheritance metrics, and public interface signatures.
-2. **Change Frequencies (15 metrics)**: Total commits touching the class, number of distinct modifying authors, cumulative churn.
-3. **Entropy of Changes (10 metrics)**: Shannon entropy measuring whether code changes were focused or dispersed across disparate components.
-4. **Code Churn & Delta Measures (8 metrics)**: Lines added, lines deleted, lines modified, and maximum churn burst.
-5. **Historical Defect Introductions (6 metrics)**: Bugs reported in prior 14-day snapshots, fixing commit frequency, and bug density history.
+Historical and change-based metrics mined from Git commit logs across 14-day snapshots (D'Ambros et al., 2012):
 
-> **Note on AEEEM Extraction**: Because AEEEM requires commit history logs, analyzing an AEEEM dataset requires providing a public Git repository URL rather than a source ZIP archive.
-
----
-
-## 🧠 Machine Learning & Domain Adaptation Pipeline
-
-Cross-Project Defect Prediction (CPDP) suffers inherently from **Domain Shift**: the source project (e.g., Apache Ant) and the target project (e.g., Apache Lucene) exhibit different coding conventions, class size distributions, and feature covariances. Directly applying a model trained on the source domain onto the target domain leads to high false-positive rates.
-
-DefectLab incorporates **Shallow CORAL (Correlation Alignment)** to align feature distributions without leaking target labels.
-
-```mermaid
-flowchart LR
-    subgraph Ingestion["1. Data Ingestion"]
-        S[Source Dataset: Labeled]
-        T[Target Dataset: Unlabeled]
-    end
-
-    subgraph Preprocessing["2. Preprocessing & Sanitization"]
-        P1["Normalize Header Aliases"]
-        P2["Source-Median Imputation"]
-        P3["Remove Zero-Variance Features"]
-        P4["Independent StandardScaler (Source & Target)"]
-    end
-
-    subgraph DomainAdaptation["3. Domain Adaptation (Optional)"]
-        C1["Compute Covariance Matrices CS & CT"]
-        C2["Covariance Whitening: CS^(-1/2)"]
-        C3["Covariance Recoloring: CT^(1/2)"]
-        C4["Aligned Source Features: X_hat"]
-    end
-
-    subgraph Inference["4. Classification & Prioritization"]
-        M1["Train KNN Classifier (K=1..5, Euclidean)"]
-        M2["Calibrate Defect Probability P(bug)"]
-        M3["Apply Threshold (default 0.5)"]
-        M4["Rank Classes Descending by Risk"]
-    end
-
-    S --> P1
-    T --> P1
-    P1 --> P2 --> P3 --> P4
-    P4 --> C1 --> C2 --> C3 --> C4
-    C4 --> M1 --> M2 --> M3 --> M4
-```
-
-### Mathematical Foundation of Shallow CORAL
-
-Let $D_S = \{x_S^i\}_{i=1}^{n_S}$ denote the source domain with $d$-dimensional features, and $D_T = \{x_T^j\}_{j=1}^{n_T}$ denote the target domain.
-
-1. **Domain Standardization**: Source and target features are independently standardized to have zero mean:
-   $$\bar{x}_S = 0, \quad \bar{x}_T = 0$$
-
-2. **Covariance Matrix Estimation**:
-   $$C_S = \frac{1}{n_S - 1} X_S^T X_S + \epsilon I_d$$
-   $$C_T = \frac{1}{n_T - 1} X_T^T X_T + \epsilon I_d$$
-   *(where $\epsilon = 10^{-5}$ is a regularization parameter ensuring positive semi-definiteness).*
-
-3. **Covariance Alignment Transformation**:
-   The source domain is whitened by its inverse covariance square root and recolored by the target covariance square root:
-   $$\hat{X}_S = X_S \cdot C_S^{-1/2} \cdot C_T^{1/2}$$
-
-4. **Zero Target Label Leakage**: The transformation utilizes **only the unlabelled feature vectors** $X_T$ of the target domain. Ground-truth target defect labels are strictly withheld during training and transformation.
+1. **Source Code Metrics (17 features)**: Chidamber-Kemerer (CK) metrics and class interface definitions.
+2. **Change Metrics (15 features)**: Commit frequencies, distinct author counts, and modification deltas.
+3. **Entropy of Changes (10 features)**: Shannon entropy measuring change dispersion across system components.
+4. **Code Churn Metrics (8 features)**: Lines added, lines deleted, and maximum churn bursts per interval.
+5. **Historical Defect Introductions (6 features)**: Defect-fixing commit frequency and previous bug introduction rates.
 
 ---
 
-### Supervised KNN Model & Risk Bands
+## Machine Learning & Domain Adaptation
 
-- **Model**: K-Nearest Neighbors Classifier (`KNeighborsClassifier` from scikit-learn).
-- **Hyperparameter K**: User-configurable from $K = 1$ to $K = 5$ (default $K = 3$).
-- **Distance Metric**: Euclidean distance with uniform neighbor weighting.
-- **Defect Probability Score**: Proportion of nearest neighbors carrying the defective label:
-  $$P(\text{buggy}) = \frac{1}{K} \sum_{k=1}^K y_k$$
-- **Risk Categorization**:
-  - 🔴 **HIGH RISK**: $P(\text{buggy}) \ge 0.70$
-  - 🟡 **MEDIUM RISK**: $0.40 \le P(\text{buggy}) < 0.70$
-  - 🟢 **LOW RISK**: $P(\text{buggy}) < 0.40$
-
----
-
-### Comprehensive Evaluation Metrics
-
-When evaluating against a labeled predefined target dataset, DefectLab computes:
-
-1. **ROC-AUC**: Area Under Receiver Operating Characteristic Curve (threshold-independent discriminant power).
-2. **PR-AUC**: Area Under Precision-Recall Curve (vital for imbalanced defect datasets where defective classes comprise 10-20% of data).
-3. **Matthews Correlation Coefficient (MCC)**:
-   $$MCC = \frac{TP \times TN - FP \times FN}{\sqrt{(TP+FP)(TP+FN)(TN+FP)(TN+FN)}}$$
-4. **Recall@20% LOC**: The percentage of defects caught when inspecting the top 20% most lines of code, validating effort-aware defect prediction.
-5. **Confusion Matrix**: Full breakdown of True Positives (TP), False Positives (FP), True Negatives (TN), and False Negatives (FN).
-
----
-
-## 📘 End-to-End User Walkthrough Tutorial
-
-### Scenario: Predicting Defects in Apache Ant 1.6 using Ant 1.3
-Follow this real-world walkthrough using bundled sample data:
+### Standard Preparation Pipeline
 
 ```text
-[Sign Up / Login]
-       │
-       ▼
-[Metric Storage Catalog] ───► Verify Ant-1.3 and Ant-1.7 benchmarks are registered
-       │
-       ▼
-[Upload Target] ────────────► Upload `ant-1.6-manual.csv` as MANUAL dataset
-       │
-       ▼
-[Configure Prediction] ────► Source: Ant-1.3 (Labeled Predefined)
-       │                      Manual Target: Ant-1.6 (Manual)
-       │                      Predefined Target: Ant-1.6 (Benchmark for Evaluation)
-       │                      Model: KNN (K=3), Enable CORAL: Checked, Threshold: 0.5
-       ▼
-[Execute Run] ─────────────► FastAPI transforms data -> Trains KNN -> Ranks target rows
-       │
-       ▼
-[Inspect Results] ──────────► 1. Interactive ranked class table
-                              2. Squarified Treemap defect hotspots
-                              3. Confusion matrix & ROC-AUC / MCC metrics
-       │
-       ▼
-[Download Artifacts] ───────► Authenticated PDF Evaluation Report & Labeled CSV
+Input Datasets (Source + Target)
+  └── Schema Normalization (Header alias mapping)
+  └── Source-Median Imputation (Missing values imputed strictly using source medians)
+  └── Zero-Variance Feature Removal (Constant columns pruned from both domains)
+  └── Independent Domain Standardization (Source and target independently scaled via StandardScaler)
+  └── Domain Adaptation via Shallow CORAL (Source covariance aligned to target covariance)
+  └── Supervised Model Training (K-Nearest Neighbors, K ∈ [1, 5])
+  └── Calibrated Probability Inference & Classification (P(bug) ≥ threshold)
+  └── Risk Prioritization (Rows ranked descending by defect probability)
 ```
 
-1. **Sign In**: Navigate to `http://localhost:4200` and authenticate.
-2. **Review Datasets**: Click **Datasets** in the sidebar. Notice global benchmarks (`Ant-1.3`, `Ant-1.7`, `Lucene-2.4`, `JDT`, `PDE`, `ML`, `EQ`, `LC`).
-3. **Upload Unlabeled Codebase**:
-   - Click **Add Dataset** $\rightarrow$ **Upload CSV/ARFF**.
-   - Select `sample-data/manual-examples/ant-1.6-manual.csv`.
-   - Name: `Ant`, Version: `1.6`, Family: `PROMISE`, Type: `MANUAL`.
-4. **Configure CPDP Run**:
-   - Go to **Predictions** $\rightarrow$ Click **New Prediction Run**.
-   - **Source Dataset**: Select `Ant 1.3 (PREDEFINED)`.
-   - **Manual Target**: Select `Ant 1.6 (MANUAL)`.
-   - **Predefined Target**: Select `Ant 1.6 (PREDEFINED)` *(enables ground truth validation)*.
-   - **Parameters**: Set $K = 3$, Check **Apply Dataset Alignment (CORAL)**, Threshold = `0.5`.
-   - Click **Run Prediction**.
-5. **Inspect Prioritized Report**:
-   - The results view displays ranked classes ordered by descending defect risk.
-   - Click **Treemap** to visually inspect large high-risk classes highlighted in crimson red.
-   - Review empirical classification statistics: ROC-AUC, PR-AUC, MCC, and F1 score.
-6. **Export Artifacts**:
-   - Download the generated **PDF Evaluation Report** for presentation or thesis defense.
-   - Download the **Labeled CSV** containing the original 20 metrics plus `predicted_label` and `defect_probability`.
+### Mathematical Formulation of Shallow CORAL
+
+To minimize the distance between source and target feature distributions without using target labels, DefectLab implements the CORAL algorithm (Sun et al., 2016):
+
+Given source feature matrix $X_S \in \mathbb{R}^{n_S \times d}$ and target feature matrix $X_T \in \mathbb{R}^{n_T \times d}$, both zero-centered:
+
+1. **Covariance Calculation**:
+   $$C_S = \frac{1}{n_S - 1} X_S^T X_S + \epsilon I_d$$
+   $$C_T = \frac{1}{n_T - 1} X_T^T X_T + \epsilon I_d$$
+   where $\epsilon = 10^{-5}$ is a regularization constant guaranteeing positive definiteness.
+
+2. **Covariance Whitening & Recoloring**:
+   $$\hat{X}_S = X_S \cdot C_S^{-1/2} \cdot C_T^{1/2}$$
+
+3. **Classification**:
+   The KNN classifier is trained on aligned source representations $\hat{X}_S$ with source labels $y_S$, and evaluated directly on normalized target representations $X_T$. Target labels $y_T$ are never exposed during preprocessing or transformation.
+
+### Empirical Evaluation Metrics
+
+When predicting against labeled benchmark datasets, the evaluation engine calculates:
+
+- **ROC-AUC**: Area Under the Receiver Operating Characteristic Curve.
+- **PR-AUC**: Area Under the Precision-Recall Curve.
+- **Matthews Correlation Coefficient (MCC)**:
+  $$MCC = \frac{TP \times TN - FP \times FN}{\sqrt{(TP+FP)(TP+FN)(TN+FP)(TN+FN)}}$$
+- **Recall@20% LOC**: Proportion of defective classes identified within the top 20% of the codebase ranked by LOC.
+- **Confusion Matrix**: True Positives (TP), False Positives (FP), True Negatives (TN), and False Negatives (FN).
 
 ---
 
-## 🌐 REST API Specification
+## Step-by-Step Workflow Walkthrough
 
-All application operations are exposed via a structured REST API on `http://localhost:8080`. Public routes do not require authentication; all internal endpoints require the active HTTP-only session cookie (`DEFECTLAB_SESSION`).
+### Example: Predicting Defect Risk in Apache Ant 1.6 using Ant 1.3
 
-### Authentication & Account
+1. **Sign In**: Navigate to `http://localhost:4200` and authenticate.
+2. **Review Catalog**: Open **Datasets** to verify registered benchmark datasets (`Ant-1.3`, `Ant-1.7`, `Lucene-2.4`, `JDT`, `PDE`, `EQ`, etc.).
+3. **Add Target Codebase**:
+   - Navigate to **Datasets** $\rightarrow$ **Add Dataset**.
+   - Upload `sample-data/manual-examples/ant-1.6-manual.csv`.
+   - Set Project: `Ant`, Version: `1.6`, Family: `PROMISE`, Type: `MANUAL`.
+4. **Configure CPDP Execution**:
+   - Navigate to **Predictions** $\rightarrow$ **New Prediction Run**.
+   - Source: `Ant 1.3 (PREDEFINED)`
+   - Manual Target: `Ant 1.6 (MANUAL)`
+   - Predefined Target: `Ant 1.6 (PREDEFINED)` *(optional; enables benchmark evaluation)*
+   - Parameters: Set $K = 3$, Check **Apply Dataset Alignment (CORAL)**, Threshold = `0.5`.
+   - Click **Run Prediction**.
+5. **Analyze Results**:
+   - Review ranked classes sorted by descending defect probability.
+   - Inspect the **Squarified Treemap** to identify defect hotspots sized by LOC.
+   - Review the empirical evaluation metrics (ROC-AUC, PR-AUC, MCC, Confusion Matrix).
+6. **Export Artifacts**:
+   - Download the generated **PDF Evaluation Report** for documentation and audit purposes.
+   - Download the annotated **Target CSV** containing predicted labels and risk bands.
+
+---
+
+## REST API Specification
+
+Base URL: `http://localhost:8080`
+
+### Authentication
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/auth/register` | Register a new user account and establish session |
-| `POST` | `/api/auth/login` | Authenticate existing credentials |
-| `GET` | `/api/auth/me` | Fetch active user profile and session state |
-| `POST` | `/api/auth/password` | Update account password |
-| `POST` | `/api/auth/logout` | Terminate session and invalidate cookie |
+| `POST` | `/api/auth/register` | Register a new user account |
+| `POST` | `/api/auth/login` | Authenticate and create session |
+| `GET` | `/api/auth/me` | Fetch active session profile |
+| `POST` | `/api/auth/logout` | Terminate active session |
 
-### Source Code Analysis
+### Source Analysis
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/analysis` | Multipart upload of Java ZIP archive or public GitHub repository URL to extract PROMISE/AEEEM metrics |
+| `POST` | `/api/analysis` | Extract metrics from Java ZIP archive or public GitHub repository |
 
-### Dataset Management
+### Datasets
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/datasets` | List all visible datasets (user-owned + shared predefined benchmarks) |
-| `POST` | `/api/datasets` | Upload and register a new CSV or ARFF metric file |
-| `GET` | `/api/datasets/{id}` | Inspect dataset schema, row count, and quality flags |
-| `GET` | `/api/datasets/{id}/preview` | Preview the first 25 rows in JSON tabular format |
-| `GET` | `/api/datasets/{id}/download` | Stream the original uploaded/extracted metric file |
-| `DELETE` | `/api/datasets/{id}` | Safely delete a user-owned dataset (blocked if referenced by runs) |
+| `GET` | `/api/datasets` | List visible datasets |
+| `POST` | `/api/datasets` | Upload and register CSV/ARFF metric dataset |
+| `GET` | `/api/datasets/{id}` | Inspect dataset schema and quality metadata |
+| `GET` | `/api/datasets/{id}/preview` | Preview initial 25 rows |
+| `GET` | `/api/datasets/{id}/download` | Stream the original metric file |
+| `DELETE` | `/api/datasets/{id}` | Delete user-owned dataset (if unreferenced) |
 
 ### Predictions & Machine Learning
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/predictions` | Execute CPDP run (supports single target or dual manual/predefined targets) |
+| `POST` | `/api/predictions` | Execute CPDP prediction run (single or dual target) |
 | `GET` | `/api/predictions` | List individual target prediction runs |
-| `GET` | `/api/predictions/groups` | List grouped runs sharing a comparison group ID |
-| `GET` | `/api/predictions/{id}` | Retrieve run metadata, evaluation metrics, and model config |
-| `GET` | `/api/predictions/{id}/predictions` | Retrieve ranked class predictions with scores and risk bands |
+| `GET` | `/api/predictions/groups` | List grouped dual-target runs |
+| `GET` | `/api/predictions/{id}` | Get run summary and evaluation metrics |
+| `GET` | `/api/predictions/{id}/predictions` | Get ranked class predictions |
 | `GET` | `/api/predictions/{id}/prediction.csv` | Download labeled target CSV |
-| `GET` | `/api/predictions/{id}/report.pdf` | Download formal PDF evaluation report |
-| `DELETE` | `/api/predictions/{id}` | Delete prediction run and purge on-disk artifacts |
+| `GET` | `/api/predictions/{id}/report.pdf` | Download formal evaluation report PDF |
+| `DELETE` | `/api/predictions/{id}` | Delete prediction run and purge filesystem artifacts |
 
-### Metric Benchmark Comparison
+### Metric Comparison
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/metric-comparisons` | Execute tolerance comparison between a MANUAL and PREDEFINED dataset |
-| `GET` | `/api/metric-comparisons` | List saved benchmark comparison runs |
-| `GET` | `/api/metric-comparisons/eligible-pairs` | List compatible datasets sharing the same metric family |
-| `GET` | `/api/metric-comparisons/{id}` | Retrieve metric delta table and distribution statistics |
-| `GET` | `/api/metric-comparisons/{id}/report.pdf` | Download comparison summary PDF |
+| `POST` | `/api/metric-comparisons` | Run metric tolerance comparison between MANUAL and PREDEFINED datasets |
+| `GET` | `/api/metric-comparisons` | List saved metric comparisons |
+| `GET` | `/api/metric-comparisons/{id}` | Retrieve metric deltas and distribution statistics |
+| `GET` | `/api/metric-comparisons/{id}/report.pdf` | Download comparison report PDF |
 | `DELETE` | `/api/metric-comparisons/{id}` | Delete comparison run and associated artifacts |
 
 ---
 
-## 💾 Database & Storage Architecture
+## Database Schema & Storage
 
-### Relational Database Schema (PostgreSQL)
-The backend enforces clean relational modeling with 4 core tables:
+### Relational Schema (PostgreSQL)
 
-```text
-users
-├── id (BIGSERIAL, PRIMARY KEY)
-├── email (VARCHAR, UNIQUE)
-├── password_hash (VARCHAR, BCrypt)
-├── full_name (VARCHAR)
-└── created_at (TIMESTAMP)
+The application manages four primary relational tables:
 
-metric_datasets
-├── id (BIGSERIAL, PRIMARY KEY)
-├── user_id (BIGINT, NULLABLE -> references users.id; NULL for global predefined)
-├── project_name (VARCHAR)
-├── project_version (VARCHAR)
-├── dataset_family (VARCHAR: 'PROMISE' | 'AEEEM')
-├── dataset_type (VARCHAR: 'PREDEFINED' | 'MANUAL')
-├── row_count, feature_count (INT)
-├── has_labels (BOOLEAN)
-└── file_path (VARCHAR -> internal storage pointer)
+- **`users`**: User identities, authentication records, and BCrypt password hashes.
+- **`metric_datasets`**: Dataset catalog records, ownership (`user_id = NULL` for global benchmarks), file paths, and schema validation flags.
+- **`prediction_runs`**: Executed prediction records, model hyperparameters (JSONB), evaluation metrics (JSONB), and artifact paths.
+- **`metric_comparisons`**: Comparison runs between manual and predefined datasets, tolerance configurations (JSONB), and comparison results (JSONB).
 
-prediction_runs
-├── id (BIGSERIAL, PRIMARY KEY)
-├── user_id (BIGINT -> references users.id)
-├── source_dataset_id (BIGINT -> references metric_datasets.id)
-├── target_dataset_id (BIGINT -> references metric_datasets.id)
-├── comparison_group_id (VARCHAR, UUID grouping dual-target runs)
-├── model_name (VARCHAR: 'KNN')
-├── model_config (JSONB: k, coral, threshold, seed)
-├── evaluation_metrics (JSONB: roc_auc, pr_auc, mcc, f1, confusion_matrix)
-├── prediction_csv_path (VARCHAR)
-└── report_pdf_path (VARCHAR)
-
-metric_comparisons
-├── id (BIGSERIAL, PRIMARY KEY)
-├── user_id (BIGINT -> references users.id)
-├── manual_dataset_id (BIGINT -> references metric_datasets.id)
-├── predefined_dataset_id (BIGINT -> references metric_datasets.id)
-├── comparison_config (JSONB: tolerances, matching rules)
-├── comparison_results (JSONB: metric deltas, match percentages)
-└── report_pdf_path (VARCHAR)
-```
-
-### Durable File Storage Organization
-To avoid database bloat from large CSV datasets and binary PDF documents, row-level data is stored in the filesystem:
+### Durable Storage Layout
 
 ```text
 backend-java/storage/
 ├── metrics/
-│   ├── predefined/          # Global bundled benchmark CSVs
-│   └── {userId}/            # User-uploaded or extracted metric files
+│   ├── predefined/          # Bundled benchmark datasets
+│   └── {userId}/            # User uploads and AST extraction outputs
 ├── predictions/
 │   └── {userId}/
-│       ├── {uuid}-labeled.csv         # Output dataset with predicted labels
-│       ├── {uuid}-report.pdf          # Apache PDFBox report
-│       └── {uuid}-report.pdf.json     # Metadata sidecar for reproducibility
+│       ├── {uuid}-labeled.csv         # Labeled prediction dataset
+│       ├── {uuid}-report.pdf          # Apache PDFBox evaluation report
+│       └── {uuid}-report.pdf.json     # Metadata sidecar
 └── comparisons/
     └── {userId}/
         ├── {uuid}-metric-comparison.pdf
@@ -676,75 +506,40 @@ backend-java/storage/
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## Verification & Testing
 
-DefectLab incorporates an automated test suite spanning all three tiers:
+To execute automated tests across all tiers:
 
 ```bash
 cd DefectLab-Updated-Component-Based
 ./scripts/run-tests.sh
 ```
 
-### Automated Test Breakdown
-- **Java Backend (154 Tests)**: Unit tests, Mockito service mocks, Spring MVC MockMvc integration tests, and architecture boundary contracts. Run via `mvn test` in `backend-java`.
-- **Python ML Microservice (37 Tests)**: PyTest suite verifying CORAL covariance math, KNN classification, median imputation, label preservation, and FastAPI route security. Run via `pytest tests/` in `ml-service-python`.
-- **Angular Frontend**: TypeScript compilation, strict null checking, and production AOT build verification via `npm run build` in `frontend-angular`.
+- **Backend (Java)**: 154 automated unit, integration, and architecture contract tests (`mvn test`).
+- **ML Microservice (Python)**: 37 automated tests verifying CORAL covariance transformations, KNN classification, median imputation, and route security (`pytest tests/`).
+- **Frontend (Angular)**: Production AOT compilation and TypeScript strict type checking (`npm run build`).
 
 ---
 
-## 🔒 Security & Ownership Model
+## Academic & Research Attribution
 
-1. **Authentication**: Passwords are encrypted with salted BCrypt hashing. Plaintext credentials are never stored or logged.
-2. **Session Integrity**: Handled via `DEFECTLAB_SESSION` cookie with `HttpOnly`, `SameSite=Lax`, and configurable `Secure` flag for HTTPS.
-3. **Data Boundary**: Users can only inspect, predict, or delete their own datasets and runs. Global predefined benchmarks are read-only (`user_id = NULL`) and protected from modification or deletion.
-4. **No Path Traversal**: Ingested ZIP archives and file download endpoints utilize strict filename sanitization, resolving files exclusively inside canonical sandbox directories.
-5. **Private Microservice Network**: The Python FastAPI service is not exposed to the public internet or browser clients. It accepts connections strictly from the Spring Boot container authenticated with a shared secret token.
+DefectLab is developed as a final Software Engineering degree project (**SPL-3 / SE801 Project Defense**) at the **Institute of Information Technology (IIT), University of Dhaka**.
 
----
+### Core Citations
 
-## ❓ Troubleshooting & FAQ
-
-### Q: Why do I see "Docker daemon is not running"?
-**A**: Ensure Docker Desktop or OrbStack is started on your host system before executing `docker compose`. Run `docker info` to verify.
-
-### Q: Port 8080 or 4200 is already in use on my machine. What should I do?
-**A**: In `DefectLab-Updated-Component-Based/docker-compose.prod.yml`, change the host port mapping:
-```yaml
-ports:
-  - "8081:8080" # Maps host port 8081 to backend
-  - "4201:80"   # Maps host port 4201 to frontend
-```
-Then access the web interface at `http://localhost:4201`.
-
-### Q: Can I run DefectLab completely offline?
-**A**: Yes! Once the Docker images are downloaded via `docker compose pull`, all AST parsing, metric calculation, ML training, and report generation execute 100% locally on your machine without requiring internet access.
-
-### Q: Why is AEEEM analysis taking longer than PROMISE?
-**A**: PROMISE performs static AST parsing on Java source files. AEEEM mines entire Git commit histories across 14-day snapshots, computing change churn and author dispersion metrics. For large repositories, this historical mining may take several minutes.
-
-### Q: How do I export results into my CI/CD pipeline?
-**A**: Use the REST endpoint `GET /api/predictions/{id}/prediction.csv` with your session cookie to retrieve the annotated CSV with `predicted_label` (0 = Clean, 1 = Buggy) and `defect_probability`.
+1. **BugMaps & Defect Hotspot Visualization**:
+   Hora, A., Anquetil, N., Ducasse, S., Bhatti, M. U., Couto, C., Valente, M. T., & Martins, J. (2012). *BugMaps: A Tool for the Visual Exploration and Analysis of Bugs*. In *Proceedings of the 16th European Conference on Software Maintenance and Reengineering (CSMR)*.
+2. **Squarified Treemap Layout Algorithm**:
+   Bruls, M., Huizing, K., & van Wijk, J. J. (2000). *Squarified Treemaps*. In *Joint Eurographics and IEEE TCVG Symposium on Visualization (VisSym)*.
+3. **AEEEM Dataset & Empirical Benchmark**:
+   D'Ambros, M., Lanza, M., & Robbes, R. (2012). *Evaluating Defect Prediction Approaches: A Benchmark and an Extensive Comparison*. *IEEE Transactions on Software Engineering (TSE)*, 38(3), 531–544.
+4. **Correlation Alignment (CORAL)**:
+   Sun, B., Feng, J., & Saenko, K. (2016). *Return of Frustratingly Easy Domain Adaptation*. In *Proceedings of the AAAI Conference on Human Computation and Crowdsourcing*.
+5. **PROMISE Repository of Empirical Software Engineering**:
+   Menzies, T., Turhan, B., Bener, A., Gay, G., Cukic, B., & Jiang, Y. (2012). *Metrics Data from the PROMISE Repository of Empirical Software Engineering Data*. West Virginia University.
 
 ---
 
-## 📚 Academic Attribution & References
+## License
 
-DefectLab is built upon foundational research in empirical software engineering:
-
-1. **BugMaps & Defect Hotspot Treemaps**:
-   André Hora, Nicolas Anquetil, Stéphane Ducasse, Muhammad Usman Bhatti, César Couto, Marco Tulio Valente, Júlio Martins. *"BugMaps: A Tool for the Visual Exploration and Analysis of Bugs."* 16th European Conference on Software Maintenance and Reengineering (CSMR), 2012.
-2. **Squarified Treemaps Layout**:
-   Mark Bruls, Kees Huizing, Jarke J. van Wijk. *"Squarified Treemaps."* Joint Eurographics and IEEE TCVG Symposium on Visualization (VisSym), 2000.
-3. **AEEEM Benchmark Suite**:
-   Marco D'Ambros, Michele Lanza, Romain Robbes. *"Evaluating Defect Prediction Approaches: A Benchmark and an Extensive Comparison."* IEEE Transactions on Software Engineering (TSE), Vol. 38, No. 3, 2012.
-4. **CORAL (Correlation Alignment)**:
-   Baochen Sun, Jiashi Feng, Kate Saenko. *"Return of Frustratingly Easy Domain Adaptation."* AAAI Conference on Human Computation and Crowdsourcing, 2016.
-5. **PROMISE Software Engineering Repository**:
-   Tim Menzies, Burak Turhan, Ayşe Bener, Gregory Gay, Bojan Cukic, Yue Jiang. *"Metrics Data from the PROMISE Repository of Empirical Software Engineering Data."* West Virginia University, 2012.
-
----
-
-<p align="center">
-  <b>Developed for IIT Software Engineering Degree Research & Enterprise Software Quality Assurance.</b><br/>
-  <sub>Licensed under the MIT License. Copyright © 2026 DefectLab Contributors.</sub>
-</p>
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
