@@ -11,6 +11,12 @@
 
 ---
 
+| **Presented by** | **Supervised by** |
+| :--- | :--- |
+| **Md. Rakibul Islam**<br/>Roll: **BSSE-1411**<br/>*Institute of Information Technology (IIT)*<br/>*University of Dhaka* | **Dr. Mohammad Shoyaib**<br/>Professor<br/>*Institute of Information Technology (IIT)*<br/>*University of Dhaka* |
+
+---
+
 > **Live Cloud Deployment**: Access the live, hosted instance of DefectLab on Railway: **[https://spl3-defectlab.up.railway.app](https://spl3-defectlab.up.railway.app/login)**
 
 ## Overview
@@ -732,10 +738,10 @@ cd DefectLab-Updated-Component-Based
 
 DefectLab was developed as a final software engineering degree project (**SPL-3 / SE801 Project Defense**) at the **Institute of Information Technology (IIT), University of Dhaka**.
 
-### Author
-- **Md. Rakibul Islam** (Roll: BSSE1411)
-- Degree: Bachelor of Science in Software Engineering (BSSE)
-- Institute of Information Technology (IIT), University of Dhaka
+| Role | Details |
+| :--- | :--- |
+| **Author / Presented by** | **Md. Rakibul Islam** (Roll: BSSE-1411)<br/>Bachelor of Science in Software Engineering (BSSE)<br/>Institute of Information Technology (IIT), University of Dhaka |
+| **Supervised by** | **Dr. Mohammad Shoyaib**<br/>Professor, Institute of Information Technology (IIT)<br/>University of Dhaka |
 
 ### Core Citations
 
