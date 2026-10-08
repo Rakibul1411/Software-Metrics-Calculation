@@ -315,27 +315,72 @@ Pre-built multi-architecture Docker images (`linux/amd64` and `linux/arm64`) are
 
 ### Method 1: Instant Launch with Pre-built Images (Recommended)
 
-Run the following command from the project directory:
+Users **do not need** Java, Maven, Node.js, or Python installed. You only need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or [OrbStack](https://orbstack.dev/) on macOS) running on your computer.
 
-```bash
-cd DefectLab-Updated-Component-Based
-docker compose -f docker-compose.prod.yml up -d
-```
+Choose either **Option A** (zero clone, single-file download) or **Option B** (if you cloned this repository):
 
-Docker will pull the images and launch the four required containers:
+#### Option A: Quick Run Without Cloning the Repository (Easiest for Non-Technical Users)
+
+You only need a single file (`docker-compose.prod.yml`) to run the entire system:
+
+1. **Create an empty folder** on your computer (e.g., on Desktop or Documents named `defectlab`).
+2. **Download the compose file into that folder:**
+   - **Via Terminal (1 step):**
+     ```bash
+     mkdir -p defectlab && cd defectlab
+     curl -o docker-compose.yml https://raw.githubusercontent.com/Rakibul1411/Software-Metrics-Calculation/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml
+     ```
+   - **Or via Web Browser:**
+     - Right-click this link: [Download docker-compose.prod.yml](https://raw.githubusercontent.com/Rakibul1411/Software-Metrics-Calculation/master/DefectLab-Updated-Component-Based/docker-compose.prod.yml) -> click **"Save Link As..."**
+     - Save it inside your `defectlab` folder and rename it to `docker-compose.yml`.
+3. **Open Terminal / PowerShell in that folder and launch:**
+   ```bash
+   docker compose up -d
+   ```
+
+---
+
+#### Option B: If You Already Cloned or Downloaded the Repository
+
+If you downloaded the repository as a ZIP or ran `git clone`:
+
+1. The production compose file is already located inside `DefectLab-Updated-Component-Based/docker-compose.prod.yml`.
+2. Open your Terminal inside the root project directory and navigate to the component folder:
+   ```bash
+   cd DefectLab-Updated-Component-Based
+   ```
+3. Start the pre-built multi-tier services:
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d
+   ```
+
+---
+
+Docker will pull the pre-built images from Docker Hub and start the containers:
 
 | Container | Image | Port | Description |
 |---|---|---|---|
-| `postgres` | `postgres:16-alpine` | `5432` | Relational database with automated healthcheck |
-| `ml` | `rakibalnatiq/defectlab-ml:latest` | `8000` (internal) | FastAPI Python ML service |
-| `backend` | `rakibalnatiq/defectlab-backend:latest` | `8080` | Spring Boot REST API |
-| `frontend` | `rakibalnatiq/defectlab-frontend:latest` | `4200` | Angular 19 client served via Nginx |
+| `postgres` | `postgres:16-alpine` | `5432` | Relational database pre-seeded with PROMISE & AEEEM benchmarks |
+| `ml` | `rakibalnatiq/defectlab-ml:latest` | `8000` (internal) | FastAPI Python 3.12 ML service (CORAL + KNN) |
+| `backend` | `rakibalnatiq/defectlab-backend:latest` | `8080` | Spring Boot 2.7.18 REST API & AST Parser |
+| `frontend` | `rakibalnatiq/defectlab-frontend:latest` | `4200` | Angular 19 SPA client served via Nginx |
 
 #### Access Endpoints
 
-- **Web Application**: Open [http://localhost:4200](http://localhost:4200) in your web browser.
+- **Web Application UI**: Open [http://localhost:4200](http://localhost:4200) in any web browser.
 - **Backend API**: [http://localhost:8080/api](http://localhost:8080/api)
 - **ML Health Check**: [http://localhost:8000/ml/health](http://localhost:8000/ml/health)
+
+#### Stopping the Application
+
+To stop all services:
+```bash
+# If using Option A (named docker-compose.yml):
+docker compose down
+
+# If using Option B (from DefectLab-Updated-Component-Based/):
+docker compose -f docker-compose.prod.yml down
+```
 
 ---
 
