@@ -78,7 +78,7 @@ flowchart TD
     API --> COMPARE
     API --> REPORT
 
-    PREDICT -->|REST (X-DefectLab-Service-Token)| ML
+    PREDICT -->|"REST (X-DefectLab-Service-Token)"| ML
     COMPARE -->|REST| ML
 
     ML --> PREP --> CORAL --> KNN --> EVAL
