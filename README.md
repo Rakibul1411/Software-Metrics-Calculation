@@ -13,7 +13,7 @@
 
 | **Presented by** | **Supervised by** |
 | :--- | :--- |
-| **Md. Rakibul Islam**<br/>BSSE-1411<br/>Exam Roll: 2322112<br/>*Institute of Information Technology (IIT)*<br/>*University of Dhaka* | **Dr. Mohammad Shoyaib**<br/>Professor<br/>*Institute of Information Technology (IIT)*<br/>*University of Dhaka* |
+| **Md. Rakibul Islam**<br/>Roll: **BSSE-1411**<br/>*Institute of Information Technology (IIT)*<br/>*University of Dhaka* | **Dr. Mohammad Shoyaib**<br/>Professor<br/>*Institute of Information Technology (IIT)*<br/>*University of Dhaka* |
 
 ---
 
@@ -740,7 +740,7 @@ DefectLab was developed as a final software engineering degree project (**SPL-3 
 
 | Role | Details |
 | :--- | :--- |
-| **Author / Presented by** | **Md. Rakibul Islam** (BSSE-1411, Exam Roll: 2322112)<br/>Bachelor of Science in Software Engineering (BSSE)<br/>Institute of Information Technology (IIT), University of Dhaka |
+| **Author / Presented by** | **Md. Rakibul Islam** (Roll: BSSE-1411)<br/>Bachelor of Science in Software Engineering (BSSE)<br/>Institute of Information Technology (IIT), University of Dhaka |
 | **Supervised by** | **Dr. Mohammad Shoyaib**<br/>Professor, Institute of Information Technology (IIT)<br/>University of Dhaka |
 
 ### Core Citations
