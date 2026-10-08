@@ -6,9 +6,12 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.12-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker Hub](https://img.shields.io/badge/Docker_Hub-rakibalnatiq%2Fdefectlab-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/u/rakibalnatiq)
+[![Live Demo](https://img.shields.io/badge/Live_Deployment-Railway-0B0D0E?logo=railway&logoColor=white)](https://spl3-defectlab.up.railway.app/login)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
+
+> **Live Cloud Deployment**: Access the live, hosted instance of DefectLab on Railway: **[https://spl3-defectlab.up.railway.app](https://spl3-defectlab.up.railway.app/login)**
 
 ## Overview
 
@@ -367,9 +370,10 @@ Docker will pull the pre-built images from Docker Hub and start the containers:
 
 #### Access Endpoints
 
-- **Web Application UI**: Open [http://localhost:4200](http://localhost:4200) in any web browser.
-- **Backend API**: [http://localhost:8080/api](http://localhost:8080/api)
-- **ML Health Check**: [http://localhost:8000/ml/health](http://localhost:8000/ml/health)
+- **Live Cloud Deployment**: **[https://spl3-defectlab.up.railway.app](https://spl3-defectlab.up.railway.app/login)** (Instant online access without running local containers)
+- **Local Web Application UI**: [http://localhost:4200](http://localhost:4200) (when running locally via Docker)
+- **Local Backend API**: [http://localhost:8080/api](http://localhost:8080/api)
+- **Local ML Health Check**: [http://localhost:8000/ml/health](http://localhost:8000/ml/health)
 
 #### Stopping the Application
 
