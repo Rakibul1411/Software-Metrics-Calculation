@@ -431,6 +431,82 @@ docker compose -f docker-compose.prod.yml down -v
 
 ---
 
+## Developer Guide: Building & Publishing to Docker Hub
+
+This guide is for project owners and maintainers who want to build, tag, and publish updated Docker images to [Docker Hub](https://hub.docker.com/u/rakibalnatiq) (`rakibalnatiq/defectlab-*`).
+
+Because DefectLab utilizes containerized delivery, **you never need to recompile desktop `.dmg` or `.exe` installer packages** when updating application logic. Once updated images are pushed to Docker Hub, desktop clients and Docker Compose users automatically download the new images on launch.
+
+### Prerequisites
+
+1. Authenticate with Docker Hub using your credentials:
+   ```bash
+   docker login
+   ```
+2. Ensure Docker Buildx is available (included by default in modern Docker Desktop and Engine) for cross-platform image builds (`linux/amd64` and `linux/arm64`).
+
+---
+
+### Method A: Automated Multi-Platform Publication Script (Recommended)
+
+DefectLab includes an automated publisher script (`push-docker.sh`) that compiles and pushes multi-architecture images for both **Intel/AMD64** and **Apple Silicon (ARM64)** using `docker buildx`:
+
+```bash
+cd DefectLab-Updated-Component-Based
+chmod +x push-docker.sh
+```
+
+#### 1. Build & Push All Services
+Builds and pushes frontend, backend, and ML microservices in a single run:
+```bash
+./push-docker.sh
+# or
+./push-docker.sh all
+```
+
+#### 2. Build & Push a Specific Service
+If you only modified one tier (e.g., a Python algorithm or Java AST rule), publish only that service to save build time:
+
+```bash
+# Publish Java Spring Boot Backend only:
+./push-docker.sh backend
+
+# Publish Angular Frontend UI only:
+./push-docker.sh frontend
+
+# Publish FastAPI Python ML Service only:
+./push-docker.sh ml
+```
+
+---
+
+### Method B: Standard Docker Compose Build & Push
+
+For building and pushing single-platform images directly using Docker Compose:
+
+```bash
+cd DefectLab-Updated-Component-Based
+
+# 1. Build updated local images using configured tags
+docker compose build
+
+# 2. Push all built services to Docker Hub
+docker compose push
+```
+
+---
+
+### Verifying Published Images
+
+Once published, your updated tags will be immediately live on Docker Hub:
+- Frontend: [`rakibalnatiq/defectlab-frontend:latest`](https://hub.docker.com/r/rakibalnatiq/defectlab-frontend)
+- Backend: [`rakibalnatiq/defectlab-backend:latest`](https://hub.docker.com/r/rakibalnatiq/defectlab-backend)
+- ML Microservice: [`rakibalnatiq/defectlab-ml:latest`](https://hub.docker.com/r/rakibalnatiq/defectlab-ml)
+
+End users and desktop clients will automatically fetch these updated containers upon their next restart via `docker compose pull`.
+
+---
+
 ## Local Development Setup
 
 To run DefectLab directly on your host machine without Docker:
