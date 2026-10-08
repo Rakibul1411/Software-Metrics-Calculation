@@ -36,11 +36,12 @@ ml-service-python/.env
 .env.local
 
 # Large local datasets and backups
-sample-data/
+sample-data/*
+!sample-data/predefined/
 tmp/
 PROMISE-backup-copy/frontend-angular.zip
-Final dataset list/
-Aeeem/
+/Final dataset list/
+/Aeeem/
 research-and-docs/Final dataset list/
 research-and-docs/Aeeem/
 research-and-docs/

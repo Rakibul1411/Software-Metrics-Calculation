@@ -185,7 +185,7 @@ public final class GitChangeHistoryMiner {
                         attempt, maxAttempts, previous, current, (attempt * 1500));
                 try {
                     Thread.sleep(attempt * 1500L);
-                } catch (InterruptedException e) {
+                } catch (InterruptedException interruptedException) {
                     Thread.currentThread().interrupt();
                     return result;
                 }

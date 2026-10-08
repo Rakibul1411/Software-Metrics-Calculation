@@ -211,29 +211,6 @@ final class ProductionSourceSelector {
         return true;
     }
 
-    private boolean containsSequence(List<String> segments, String... sequence) {
-        if (segments.size() < sequence.length) {
-            return false;
-        }
-        for (int offset = 0; offset <= segments.size() - sequence.length; offset++) {
-            boolean matches = true;
-            for (int index = 0; index < sequence.length; index++) {
-                if (!sequence[index].equals(segments.get(offset + index))) {
-                    matches = false;
-                    break;
-                }
-            }
-            if (matches) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private String lastSegment(List<String> segments) {
-        return segments.isEmpty() ? "" : segments.get(segments.size() - 1);
-    }
-
     private List<String> segments(Path path) {
         List<String> result = new ArrayList<>();
         for (Path segment : path.toAbsolutePath().normalize()) {

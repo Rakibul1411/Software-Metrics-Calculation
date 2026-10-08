@@ -53,13 +53,13 @@ export class CodeSmellService {
         severity: 'CRITICAL',
         metricTrigger: `WMC: ${wmc} (>40), LOC: ${loc} (>500)`,
         heuristic: `WMC: ${wmc} (>40), LOC: ${loc} (>500)`,
-        summary: 'Excessive size and complexity. This class centralizes too much project intelligence.',
-        description: 'Excessive size and complexity. This class centralizes too much project intelligence.',
-        recommendation: 'Decompose this class using the Extract Class refactoring.'
+        summary: 'High size and complexity. The class handles too many responsibilities.',
+        description: 'High size and complexity. The class handles too many responsibilities.',
+        recommendation: 'Split into smaller, focused classes using Extract Class.'
       });
     }
 
-    // --- Heuristic Rule 2: Spaghetti Coupling (CBO > 20 or RFC > 50 or Ce > 20) ---
+    // --- Heuristic Rule 2: High Coupling (CBO > 20 or RFC > 50 or Ce > 20) ---
     const isExtremeCoupling = (cbo > 30) || (cbo > 20 && wmc > 25);
     const hasCouplingSmell = cbo > 20 || fanOut > 50 || ce > 20;
 
@@ -67,94 +67,96 @@ export class CodeSmellService {
       const trigger = cbo > 20 ? `CBO: ${cbo} (>20)` : (ce > 20 ? `Ce: ${ce} (>20)` : `RFC: ${fanOut} (>50)`);
       smells.push({
         type: 'SPAGHETTI_COUPLING',
-        title: 'Spaghetti Coupling',
-        name: 'Spaghetti Coupling',
+        title: 'High Coupling',
+        name: 'High Coupling',
         severity: isExtremeCoupling ? 'CRITICAL' : 'WARNING',
         metricTrigger: trigger,
         heuristic: trigger,
-        summary: 'Tightly coupled with excessive external entities. High regression blast radius.',
-        description: 'Tightly coupled with excessive external entities. High regression blast radius.',
-        recommendation: 'Introduce facade or mediator interfaces to decouple dependencies.'
+        summary: 'Tightly coupled with external dependencies. Changes carry high regression risk.',
+        description: 'Tightly coupled with external dependencies. Changes carry high regression risk.',
+        recommendation: 'Extract interfaces or introduce a facade to decouple dependencies.'
       });
     }
 
-    // --- Heuristic Rule 3: Incoherent Module (LCOM >= 0.8) ---
-    if (lcom >= 0.8) {
-      const trigger = `LCOM: ${lcom.toFixed(2)} (≥0.8)`;
+    // --- Heuristic Rule 3: Low Cohesion (LCOM: Normalized LCOM5 >= 0.8 or Raw CK LCOM > 50) ---
+    const isNormalizedLcom = lcom <= 1.0;
+    const hasLcomSmell = isNormalizedLcom ? lcom >= 0.8 : lcom > 50;
+    if (hasLcomSmell) {
+      const trigger = isNormalizedLcom ? `LCOM: ${lcom.toFixed(2)} (≥0.80)` : `LCOM: ${Math.round(lcom)} (>50)`;
       smells.push({
         type: 'INCOHERENT_MODULE',
-        title: 'Incoherent Module',
-        name: 'Incoherent Module',
+        title: 'Low Cohesion',
+        name: 'Low Cohesion',
         severity: 'WARNING',
         metricTrigger: trigger,
         heuristic: trigger,
-        summary: 'Low cohesiveness. Class methods operate on largely disjoint data field subsets.',
-        description: 'Low cohesiveness. Class methods operate on largely disjoint data field subsets.',
-        recommendation: 'Class methods operate on disjoint data fields; split into focused cohesive classes.'
+        summary: 'Class methods operate on largely unrelated subsets of fields.',
+        description: 'Class methods operate on largely unrelated subsets of fields.',
+        recommendation: 'Group related methods and state into separate cohesive classes.'
       });
     }
 
-    // --- Heuristic Rule 4: Deep Hierarchy Risk (DIT > 5) ---
+    // --- Heuristic Rule 4: Deep Inheritance (DIT > 5) ---
     if (dit > 5) {
       const trigger = `DIT: ${dit} (>5)`;
       smells.push({
         type: 'DEEP_HIERARCHY',
-        title: 'Deep Hierarchy Risk',
-        name: 'Deep Hierarchy Risk',
+        title: 'Deep Inheritance',
+        name: 'Deep Inheritance',
         severity: 'WARNING',
         metricTrigger: trigger,
         heuristic: trigger,
-        summary: 'Inheritance depth is excessively deep, leading to high fragile base class risk.',
-        description: 'Inheritance depth is excessively deep, leading to high fragile base class risk.',
-        recommendation: 'Excessive inheritance hierarchy increases fragility; favor composition over inheritance.'
+        summary: 'Inheritance tree is deep, increasing fragile base class risk.',
+        description: 'Inheritance tree is deep, increasing fragile base class risk.',
+        recommendation: 'Favor composition over deep inheritance hierarchies.'
       });
     }
 
-    // --- Heuristic Rule 5: Broad Hierarchy / God Ancestor (NOC > 10) ---
+    // --- Heuristic Rule 5: Excessive Subclasses (NOC > 10) ---
     if (noc > 10) {
       const trigger = `NOC: ${noc} (>10)`;
       smells.push({
         type: 'BROAD_HIERARCHY',
-        title: 'Broad Subclass Proliferation',
-        name: 'Broad Subclass Proliferation',
+        title: 'Excessive Subclasses',
+        name: 'Excessive Subclasses',
         severity: 'WARNING',
         metricTrigger: trigger,
         heuristic: trigger,
-        summary: `Excessive direct subclasses (${noc}). Any change to this base class will break dozens of children.`,
-        description: `Excessive direct subclasses (${noc}). Any change to this base class will break dozens of children.`,
-        recommendation: 'Apply Template Method or Strategy/Bridge patterns to reduce subclass explosion.'
+        summary: `Too many direct subclasses (${noc}). Modifying this class affects many descendants.`,
+        description: `Too many direct subclasses (${noc}). Modifying this class affects many descendants.`,
+        recommendation: 'Use composition or strategy patterns to reduce subclass sprawl.'
       });
     }
 
-    // --- Heuristic Rule 6: Leaky Encapsulation (DAM < 0.5 and NPM > 10) ---
+    // --- Heuristic Rule 6: Exposed Fields (DAM < 0.5 and NPM > 10) ---
     if (dam > 0 && dam < 0.5 && npm > 10) {
       const trigger = `DAM: ${dam.toFixed(2)} (<0.5), NPM: ${npm} (>10)`;
       smells.push({
         type: 'LEAKY_ENCAPSULATION',
-        title: 'Leaky Data Encapsulation',
-        name: 'Leaky Data Encapsulation',
+        title: 'Exposed Fields',
+        name: 'Exposed Fields',
         severity: 'INFO',
         metricTrigger: trigger,
         heuristic: trigger,
-        summary: 'Weak encapsulation. Majority of fields are non-private or exposed directly.',
-        description: 'Weak encapsulation. Majority of fields are non-private or exposed directly.',
-        recommendation: 'Enforce private visibility on class attributes with controlled accessor methods.'
+        summary: 'Most attributes are non-private or directly accessible.',
+        description: 'Most attributes are non-private or directly accessible.',
+        recommendation: 'Enforce private visibility and provide explicit accessors where needed.'
       });
     }
 
-    // --- Heuristic Rule 7: Volatile Churn Hazard (AEEEM Churn > 150 & Entropy > 0.6) ---
+    // --- Heuristic Rule 7: High Churn Rate (AEEEM Churn > 150 & Entropy > 0.6) ---
     if (churn > 150 && entropy > 0.6) {
       const trigger = `Churn: ${Math.round(churn)}, Entropy: ${entropy.toFixed(2)}`;
       smells.push({
         type: 'CHURN_VOLATILITY',
-        title: 'Volatile Churn Hazard',
-        name: 'Volatile Churn Hazard',
+        title: 'High Churn Rate',
+        name: 'High Churn Rate',
         severity: 'CRITICAL',
         metricTrigger: trigger,
         heuristic: trigger,
-        summary: 'Class undergoes frequent and widespread multi-author changes with high dispersion.',
-        description: 'Class undergoes frequent and widespread multi-author changes with high dispersion.',
-        recommendation: 'Stabilize public API contracts and establish automated regression test suite.'
+        summary: 'Frequent code churn and dispersion across multiple authors.',
+        description: 'Frequent code churn and dispersion across multiple authors.',
+        recommendation: 'Stabilize public interfaces and expand test coverage.'
       });
     }
 
@@ -173,13 +175,23 @@ export class CodeSmellService {
     const safeLoc = Math.max(5, loc);
     const safeWmc = Math.max(1, wmc);
 
-    // Standard Coleman-Oman formula (Oman & Hagemeister 1992, Coleman et al. 1994, SEI)
-    // Halstead volume approximated as LOC * 6
-    const approxVolume = safeLoc * 6;
-    const rawMI = 171 - (5.2 * Math.log(approxVolume)) - (0.23 * safeWmc) - (16.2 * Math.log(safeLoc));
+    // Standard SEI / Coleman-Oman Maintainability Index (Oman & Hagemeister 1992, Coleman et al. 1994)
+    // In Object-Oriented systems, effective volume scales with complexity density (WMC / LOC).
+    // Simple constant/lookup classes (WMC = 1) do not have the high volume of complex algorithms.
+    const complexityDensity = safeWmc / safeLoc;
+    const effectiveVolume = safeLoc * (1.5 + Math.min(4.5, complexityDensity * 15));
+    let rawMI = 171 - (5.2 * Math.log(effectiveVolume)) - (0.23 * safeWmc) - (16.2 * Math.log(safeLoc));
+
+    // SEI Structural / Simplicity Adjustment (Oman & Hagemeister 1992, Welker 2001):
+    // For large classes with very low cyclomatic complexity (e.g. constant pools, lookup tables, DTOs),
+    // prevent pure line count from driving the index down to an unrealistic 0.
+    if (complexityDensity < 0.05) {
+      const simplicityBonus = Math.min(30, (0.05 - complexityDensity) * 600);
+      rawMI += simplicityBonus;
+    }
 
     // Clamped SEI Maintainability Index [0..100]
-    const score = Math.max(0, Math.min(100, Math.round(rawMI)));
+    const score = Math.max(5, Math.min(100, Math.round(rawMI)));
 
     let rating: 'HIGH' | 'MODERATE' | 'LOW' = 'HIGH';
     if (score < 55) {

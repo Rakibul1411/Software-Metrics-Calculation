@@ -179,7 +179,7 @@ public final class GitHistoryAnalyzer {
             List<Path> repositories = paths.filter(path -> path.getFileName() != null)
                     .filter(path -> ".git".equals(path.getFileName().toString()))
                     .map(Path::getParent)
-                    .collect(Collectors.toList());
+                    .toList();
             if (!repositories.isEmpty()) {
                 return repositories.get(0);
             }

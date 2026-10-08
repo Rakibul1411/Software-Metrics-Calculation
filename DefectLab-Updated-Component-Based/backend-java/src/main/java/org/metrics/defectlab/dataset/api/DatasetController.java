@@ -43,8 +43,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/datasets")
 public class DatasetController {
 
-    private static final int PREVIEW_ROWS = 25;
-
     private final UploadDatasetUseCase uploadDatasetUseCase;
     private final ListDatasetsUseCase listDatasetsUseCase;
     private final GetDatasetUseCase getDatasetUseCase;
@@ -94,11 +92,10 @@ public class DatasetController {
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> list(HttpServletRequest request) {
         Long userId = currentUser.requireUserId(request);
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (MetricDataset dataset : listDatasetsUseCase.list(userId)) {
-            result.add(DatasetSummaryMapper.toSummary(dataset));
-        }
-        return ResponseEntity.ok(result);
+        List<Map<String, Object>> summaries = listDatasetsUseCase.list(userId).stream()
+                .map(DatasetSummaryMapper::toSummary)
+                .toList();
+        return ResponseEntity.ok(summaries);
     }
 
     @GetMapping("/{id}")

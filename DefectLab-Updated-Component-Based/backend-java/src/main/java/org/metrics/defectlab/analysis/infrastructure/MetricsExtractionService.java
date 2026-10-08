@@ -69,7 +69,7 @@ public class MetricsExtractionService implements MetricsExtractor {
             aeeemAnalysis = aeeemCalculation.summary;
             if (filterFile != null && !filterFile.trim().isEmpty()) {
                 Set<String> predefinedClasses = loadClassNamesFromCSV(filterFile);
-                allMetrics.removeIf(m -> !predefinedClasses.contains(m.getFullyQualifiedName()));
+                allMetrics.removeIf(metricResult -> !predefinedClasses.contains(metricResult.getFullyQualifiedName()));
             }
             AeeemCsvExporter.exportAeeemToCSV(allMetrics, csvOutput);
             AeeemArffExporter.exportAeeemToArff(allMetrics, arffOutput);
@@ -79,7 +79,7 @@ public class MetricsExtractionService implements MetricsExtractor {
             List<PromiseMetricResult> allMetrics = calculatePromiseMetricsForDirectories(sourceDirs);
             if (filterFile != null && !filterFile.trim().isEmpty()) {
                 Set<String> predefinedClasses = loadClassNamesFromCSV(filterFile);
-                allMetrics.removeIf(m -> !predefinedClasses.contains(m.getFullyQualifiedName()));
+                allMetrics.removeIf(metricResult -> !predefinedClasses.contains(metricResult.getFullyQualifiedName()));
             }
             PromiseCsvExporter.exportPromiseToCSV(allMetrics, csvOutput);
             PromiseArffExporter.exportPromiseToArff(allMetrics, arffOutput);

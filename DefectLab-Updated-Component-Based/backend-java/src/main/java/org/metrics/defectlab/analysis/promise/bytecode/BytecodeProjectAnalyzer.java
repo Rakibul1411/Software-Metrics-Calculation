@@ -207,7 +207,6 @@ public final class BytecodeProjectAnalyzer {
         argumentTypes.forEach(type -> addType(model.referencedTypes, type));
         addType(model.referencedTypes, describe(method.getReturnType()));
         declaredExceptions.forEach(type -> addType(model.referencedTypes, type));
-        method.getCode();
 
         if (instructions != null) {
             readInstructions(model, instructions, pool);

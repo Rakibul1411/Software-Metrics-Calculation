@@ -52,37 +52,50 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(
-            @RequestBody Map<String, String> body, HttpServletRequest request) {
-        User user = registerUserUseCase.register(
-                new RegisterUserCommand(body.get("name"), body.get("email"), body.get("password")));
-        currentUser.startSession(request, user.getId());
-        return ResponseEntity.ok(profile(user));
+            @RequestBody Map<String, String> requestPayload, HttpServletRequest request) {
+        String name = requestPayload.get("name");
+        String email = requestPayload.get("email");
+        String password = requestPayload.get("password");
+
+        User registeredUser = registerUserUseCase.register(new RegisterUserCommand(name, email, password));
+        currentUser.startSession(request, registeredUser.getId());
+        return ResponseEntity.ok(toUserProfile(registeredUser));
     }
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(
-            @RequestBody Map<String, String> body, HttpServletRequest request) {
-        User user = authenticateUserUseCase.authenticate(body.get("email"), body.get("password"));
-        currentUser.startSession(request, user.getId());
-        return ResponseEntity.ok(profile(user));
+            @RequestBody Map<String, String> requestPayload, HttpServletRequest request) {
+        String email = requestPayload.get("email");
+        String password = requestPayload.get("password");
+
+        User authenticatedUser = authenticateUserUseCase.authenticate(email, password);
+        currentUser.startSession(request, authenticatedUser.getId());
+        return ResponseEntity.ok(toUserProfile(authenticatedUser));
     }
 
-    /** Step 1: confirm the address belongs to an account. */
+    /**
+     * Initiates the password recovery workflow by verifying if the account exists.
+     */
     @PostMapping("/password/forgot")
     public ResponseEntity<Map<String, Object>> forgotPassword(
-            @RequestBody Map<String, String> body) {
-        String email = body.get("email");
+            @RequestBody Map<String, String> requestPayload) {
+        String email = requestPayload.get("email");
         if (!requestPasswordResetUseCase.isEmailRegistered(email)) {
             throw new IllegalArgumentException("No account uses that email address.");
         }
         return ResponseEntity.ok(Map.of("email", email, "registered", true));
     }
 
-    /** Step 2: set the new password for that address. */
+    /**
+     * Completes password reset for a verified user account.
+     */
     @PostMapping("/password/reset")
     public ResponseEntity<Map<String, Object>> resetPassword(
-            @RequestBody Map<String, String> body) {
-        resetPasswordUseCase.resetPassword(body.get("email"), body.get("newPassword"));
+            @RequestBody Map<String, String> requestPayload) {
+        String email = requestPayload.get("email");
+        String newPassword = requestPayload.get("newPassword");
+
+        resetPasswordUseCase.resetPassword(email, newPassword);
         return ResponseEntity.ok(Map.of("updated", true));
     }
 
@@ -98,24 +111,31 @@ public class AuthController {
         if (userId == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Sign in to continue."));
         }
-        return ResponseEntity.ok(profile(getCurrentUserUseCase.getById(userId)));
+        User existingUser = getCurrentUserUseCase.getById(userId);
+        return ResponseEntity.ok(toUserProfile(existingUser));
     }
 
     @PostMapping("/password")
     public ResponseEntity<Map<String, Object>> changePassword(
-            @RequestBody Map<String, String> body, HttpServletRequest request) {
-        changePasswordUseCase.changePassword(currentUser.requireUserId(request),
-                body.get("currentPassword"), body.get("newPassword"));
+            @RequestBody Map<String, String> requestPayload, HttpServletRequest request) {
+        Long currentUserId = currentUser.requireUserId(request);
+        String currentPassword = requestPayload.get("currentPassword");
+        String newPassword = requestPayload.get("newPassword");
+
+        changePasswordUseCase.changePassword(currentUserId, currentPassword, newPassword);
         return ResponseEntity.ok(Map.of("updated", true));
     }
 
-    /** Never exposes the password hash. */
-    private Map<String, Object> profile(User user) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("id", user.getId());
-        result.put("name", user.getName());
-        result.put("email", user.getEmail());
-        result.put("createdAt", user.getCreatedAt().toString());
-        return result;
+    /**
+     * Converts a domain User entity into a sanitized profile representation
+     * that never exposes sensitive credentials or password hashes.
+     */
+    private Map<String, Object> toUserProfile(User user) {
+        Map<String, Object> profile = new LinkedHashMap<>();
+        profile.put("id", user.getId());
+        profile.put("name", user.getName());
+        profile.put("email", user.getEmail());
+        profile.put("createdAt", user.getCreatedAt().toString());
+        return profile;
     }
 }

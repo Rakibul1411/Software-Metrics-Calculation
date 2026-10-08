@@ -274,7 +274,12 @@ public class DatasetInteractor implements UploadDatasetUseCase, RegisterExtracte
 
     @Override
     public DatasetTable load(MetricDataset dataset) throws IOException {
-        return datasetFileReader.parse(Paths.get(dataset.getMetricsFilePath()));
+        Path path = Paths.get(dataset.getMetricsFilePath());
+        if (!Files.exists(path)) {
+            throw new NotFoundException("The dataset file for " + dataset.getProjectName()
+                    + " (" + dataset.getProjectVersion() + ") was not found on disk.");
+        }
+        return datasetFileReader.parse(path);
     }
 
     @Override

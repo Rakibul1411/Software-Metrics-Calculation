@@ -132,6 +132,12 @@ public class GlobalExceptionHandler {
                 exception.getReason() != null ? exception.getReason() : exception.getStatus().getReasonPhrase());
     }
 
+    @ExceptionHandler(java.nio.file.NoSuchFileException.class)
+    public ResponseEntity<Map<String, String>> handleNoSuchFile(java.nio.file.NoSuchFileException exception) {
+        LOGGER.warn("Requested file not found on disk: {}", exception.getFile());
+        return error(HttpStatus.NOT_FOUND, "The requested dataset file is not available on server storage.");
+    }
+
     @ExceptionHandler(IOException.class)
     public ResponseEntity<Map<String, String>> handleInputFailure(IOException exception) {
         LOGGER.warn("I/O operation failure", exception);
@@ -142,8 +148,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleAllExceptions(Exception e) {
-        LOGGER.error("Unhandled application failure", e);
+    public ResponseEntity<Map<String, String>> handleAllExceptions(Exception exception) {
+        LOGGER.error("Unhandled application failure", exception);
         return error(HttpStatus.INTERNAL_SERVER_ERROR,
                 "The server could not complete the request. Check the backend log for details.");
     }

@@ -20,7 +20,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final String[] allowedOrigins;
 
-    public WebConfig(@Value("${app.cors.allowed-origins:http://localhost:4200,http://127.0.0.1:4200}") String allowedOrigins) {
+    public WebConfig(@Value("${app.cors.allowed-origins:*}") String allowedOrigins) {
         this.allowedOrigins = allowedOrigins.split("\\s*,\\s*");
     }
 
@@ -33,7 +33,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins(allowedOrigins)
+                .allowedOriginPatterns(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 // The dashboard authenticates with a session cookie, which the
