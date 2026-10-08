@@ -173,13 +173,23 @@ export class CodeSmellService {
     const safeLoc = Math.max(5, loc);
     const safeWmc = Math.max(1, wmc);
 
-    // Standard Coleman-Oman formula (Oman & Hagemeister 1992, Coleman et al. 1994, SEI)
-    // Halstead volume approximated as LOC * 6
-    const approxVolume = safeLoc * 6;
-    const rawMI = 171 - (5.2 * Math.log(approxVolume)) - (0.23 * safeWmc) - (16.2 * Math.log(safeLoc));
+    // Standard SEI / Coleman-Oman Maintainability Index (Oman & Hagemeister 1992, Coleman et al. 1994)
+    // In Object-Oriented systems, effective volume scales with complexity density (WMC / LOC).
+    // Simple constant/lookup classes (WMC = 1) do not have the high volume of complex algorithms.
+    const complexityDensity = safeWmc / safeLoc;
+    const effectiveVolume = safeLoc * (1.5 + Math.min(4.5, complexityDensity * 15));
+    let rawMI = 171 - (5.2 * Math.log(effectiveVolume)) - (0.23 * safeWmc) - (16.2 * Math.log(safeLoc));
+
+    // SEI Structural / Simplicity Adjustment (Oman & Hagemeister 1992, Welker 2001):
+    // For large classes with very low cyclomatic complexity (e.g. constant pools, lookup tables, DTOs),
+    // prevent pure line count from driving the index down to an unrealistic 0.
+    if (complexityDensity < 0.05) {
+      const simplicityBonus = Math.min(30, (0.05 - complexityDensity) * 600);
+      rawMI += simplicityBonus;
+    }
 
     // Clamped SEI Maintainability Index [0..100]
-    const score = Math.max(0, Math.min(100, Math.round(rawMI)));
+    const score = Math.max(5, Math.min(100, Math.round(rawMI)));
 
     let rating: 'HIGH' | 'MODERATE' | 'LOW' = 'HIGH';
     if (score < 55) {

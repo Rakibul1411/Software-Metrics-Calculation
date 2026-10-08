@@ -5,9 +5,6 @@
       <div class="dl-treemap-heading-row">
         <h4 class="dl-treemap-title">{{ title }}</h4>
         <span class="dl-treemap-badge">{{ items.length }} Classes</span>
-        <span class="dl-treemap-ref-tag" title="Methodology: SciTools Understand™ Metric Treemap Hierarchy &amp; BugMaps (Hora et al. 2012)">
-          SciTools Understand™ Standard · BugMaps
-        </span>
       </div>
       <p class="dl-treemap-subtitle">{{ subtitle }}</p>
     </div>
@@ -165,7 +162,7 @@
         class="dl-toggle-btn"
         [class.active]="layoutMode === 'package' && !selectedPackage"
         (click)="setLayoutMode('package'); selectedPackage = null; recompute()"
-        title="Group classes by Architectural Package (SciTools Understand™)"
+        title="Group classes by Architectural Package"
       >
         <ui-icon name="folder" [size]="13"></ui-icon>
         <span>Package Clusters</span>
