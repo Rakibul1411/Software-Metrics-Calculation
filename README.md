@@ -100,7 +100,6 @@ flowchart TD
 
 ```text
 .
-├── docker-compose.yml              # Root Docker Compose specification (pre-built images)
 ├── README.md                       # Canonical project documentation
 ├── DefectLab-Updated-Component-Based/
 │   ├── backend-java/               # Spring Boot 2.7 REST API (Java 17, Eclipse JDT)
@@ -115,7 +114,7 @@ flowchart TD
 │   │   ├── run-dev.sh              # Concurrent multi-service development launcher
 │   │   └── run-tests.sh            # Automated verification across Java, Python, and Angular
 │   ├── docker-compose.yml          # Source-build Docker Compose file
-│   ├── docker-compose.prod.yml     # Production Docker Compose file
+│   ├── docker-compose.prod.yml     # Production Docker Compose file (pre-built images)
 │   ├── push-docker.sh              # Multi-arch Docker Hub publication script
 │   └── USER-MANUAL.md              # Operational guide for desktop packaging and updates
 ```
@@ -138,10 +137,11 @@ Pre-built multi-architecture Docker images (`linux/amd64` and `linux/arm64`) are
 
 ### Method 1: Instant Launch (Recommended)
 
-Run the following command directly from the cloned repository root:
+Run the following command from the project directory:
 
 ```bash
-docker compose up -d
+cd DefectLab-Updated-Component-Based
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 Docker will pull the images and launch the four required containers:
@@ -164,7 +164,7 @@ Docker will pull the images and launch the four required containers:
 ### Method 2: Native Desktop Application (.dmg / .exe)
 
 DefectLab includes an Electron desktop wrapper for macOS and Windows:
-1. Ensure the platform containers are active via `docker compose up -d`.
+1. Ensure the platform containers are active via `docker compose -f docker-compose.prod.yml up -d`.
 2. Launch the desktop application installer located in `DefectLab-Updated-Component-Based/desktop-electron/`:
    - macOS: `DefectLab-mac-arm64.dmg` or `DefectLab-mac-x64.dmg`
    - Windows: `DefectLab Setup.exe`
@@ -188,22 +188,22 @@ docker compose up --build -d
 
 ```bash
 # Check service health and status
-docker compose ps
+docker compose -f docker-compose.prod.yml ps
 
 # Follow container logs
-docker compose logs -f
+docker compose -f docker-compose.prod.yml logs -f
 
 # Follow logs for the backend container only
-docker compose logs -f backend
+docker compose -f docker-compose.prod.yml logs -f backend
 
 # Pull the latest published images from Docker Hub
-docker compose pull && docker compose up -d
+docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
 
 # Stop all containers (preserving persistent database and storage volumes)
-docker compose down
+docker compose -f docker-compose.prod.yml down
 
 # Stop all containers and remove persistent volumes (full data wipe)
-docker compose down -v
+docker compose -f docker-compose.prod.yml down -v
 ```
 
 ---
@@ -244,7 +244,8 @@ The script:
 Start a local PostgreSQL instance (or launch the Docker database container):
 
 ```bash
-docker compose up -d postgres
+cd DefectLab-Updated-Component-Based
+docker compose -f docker-compose.prod.yml up -d postgres
 ```
 
 Export configuration variables in your shell:
