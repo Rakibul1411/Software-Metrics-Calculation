@@ -30,6 +30,7 @@ import { UiTableComponent } from './ui-table/ui-table.component';
 import { UiToastComponent } from './ui-toast/ui-toast.component';
 import { UiTreemapComponent } from './ui-treemap/ui-treemap.component';
 import { UiViewToggleComponent } from './ui-view-toggle/ui-view-toggle.component';
+import { UiCoralDistributionComponent } from './ui-coral-distribution/ui-coral-distribution.component';
 
 const SHARED_COMPONENTS = [
   UiIconComponent,
@@ -38,6 +39,7 @@ const SHARED_COMPONENTS = [
   UiBadgeComponent,
   UiBarChartComponent,
   UiTreemapComponent,
+  UiCoralDistributionComponent,
   UiButterflyGraphComponent,
   UiFilePickerComponent,
   UiMetricCardComponent,

@@ -41,9 +41,11 @@ export type UiIconName =
   | 'target'
   | 'database'
   | 'code'
-  | 'folder';
+  | 'folder'
+  | 'scatter';
 
 const PATHS: Record<UiIconName, string> = {
+  'scatter': 'M7.5 7.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm9 5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm-7 7a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm10 2a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM4 15a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
   'check': 'M4 12.5 9 17.5 20 6.5',
   'view': 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
   'download': 'M12 3v12m0 0 4-4m-4 4-4-4M4 20h16',

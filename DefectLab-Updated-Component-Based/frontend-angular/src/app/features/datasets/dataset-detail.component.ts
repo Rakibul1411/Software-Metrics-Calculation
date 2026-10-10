@@ -5,6 +5,7 @@ import { DatasetPreview, DatasetSummary } from '../../core/models/defectlab.mode
 import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
 import { TableColumn } from '../../shared/ui-table/ui-table.model';
 import { SelectOption } from '../../shared/ui-select/ui-select.model';
+import { ViewMode } from '../../shared/ui-view-toggle/ui-view-toggle.component';
 import { DatasetsFacade } from './datasets.facade';
 
 import { CodeSmellService } from '../../core/services/code-smell.service';
@@ -21,7 +22,7 @@ export class DatasetDetailComponent extends BaseDetailComponent<DatasetSummary> 
   preview: DatasetPreview | null = null;
   previewLoading = true;
   classAnalysisList: ClassAnalysisResult[] = [];
-  viewMode: 'table' | 'treemap' = 'table';
+  viewMode: ViewMode = 'table';
   classFilter: ClassFilterMode = 'all';
 
   protected readonly listRoute = ['/metric-storage'];
@@ -152,7 +153,7 @@ export class DatasetDetailComponent extends BaseDetailComponent<DatasetSummary> 
     });
   }
 
-  setViewMode(mode: 'table' | 'treemap'): void {
+  setViewMode(mode: ViewMode): void {
     this.viewMode = mode;
   }
 

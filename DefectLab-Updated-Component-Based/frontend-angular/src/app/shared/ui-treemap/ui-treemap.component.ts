@@ -15,6 +15,14 @@ import {
 import { ClassAnalysisResult } from '../../core/models/code-smell.model';
 import { TreemapCell, TreemapGroup } from './ui-treemap.model';
 
+export type TreemapColorPalette = 'soft' | 'pastel' | 'cool';
+
+export interface PaletteColors {
+  clean: string;
+  warning: string;
+  hotspot: string;
+}
+
 /**
  * Codebase Defect Hotspot Treemap visualizer.
  *
@@ -49,6 +57,25 @@ export class UiTreemapComponent implements OnChanges, AfterViewInit, OnDestroy {
 
   layoutMode: 'package' | 'flat' = 'package';
   packageGroups: TreemapGroup[] = [];
+
+  palette: TreemapColorPalette = 'soft';
+
+  get paletteColors(): PaletteColors {
+    switch (this.palette) {
+      case 'pastel':
+        return { clean: '#34d399', warning: '#fbbf24', hotspot: '#f87171' };
+      case 'cool':
+        return { clean: '#06b6d4', warning: '#818cf8', hotspot: '#f472b6' };
+      case 'soft':
+      default:
+        return { clean: '#10b981', warning: '#f59e0b', hotspot: '#f43f5e' };
+    }
+  }
+
+  setPalette(p: TreemapColorPalette): void {
+    this.palette = p;
+    this.recompute();
+  }
 
   cells: TreemapCell[] = [];
   selectedCell: TreemapCell | null = null;
@@ -487,15 +514,16 @@ export class UiTreemapComponent implements OnChanges, AfterViewInit, OnDestroy {
     const simpleName = parts[parts.length - 1] || data.className;
 
     let color: string;
-    const hasCriticalSmell = data.smells.some(s => s.severity === 'CRITICAL');
-    const isBuggy = data.predictedLabel === 1 || data.riskScore >= 0.5;
+    const isHotspot = data.predictedLabel === 1 || data.riskScore >= 0.6;
+    const isElevated = !isHotspot && (data.riskScore >= 0.35 || (data.smells.some(s => s.severity === 'CRITICAL') && data.riskScore >= 0.25));
 
-    if (isBuggy || data.riskScore >= 0.6 || hasCriticalSmell) {
-      color = '#991b1b'; // SciTools Understand Dark Ruby Crimson Hotspot
-    } else if (data.riskScore >= 0.35 || data.smells.length > 0) {
-      color = '#c2410c'; // SciTools Understand Burnt Amber / Warning
+    const p = this.paletteColors;
+    if (isHotspot) {
+      color = p.hotspot;
+    } else if (isElevated) {
+      color = p.warning;
     } else {
-      color = '#166534'; // SciTools Understand Deep Forest Green / Clean
+      color = p.clean;
     }
 
     return {

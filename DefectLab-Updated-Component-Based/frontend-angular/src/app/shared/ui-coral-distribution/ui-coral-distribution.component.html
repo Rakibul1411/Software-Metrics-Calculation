@@ -1,0 +1,747 @@
+<div class="dl-coral-container">
+  <!-- Loading State -->
+  <div class="dl-coral-loading" *ngIf="loading">
+    <div class="dl-loading-spinner"></div>
+    <div class="dl-loading-text">Computing t-SNE 2D manifold projection for CORAL domain adaptation…</div>
+    <div class="dl-loading-sub">Performing PCA initialization, gradient descent, and covariance alignment</div>
+  </div>
+
+  <!-- Empty / Not Available State -->
+  <div class="dl-coral-empty" *ngIf="!loading && !data">
+    <ui-icon name="warning" [size]="28"></ui-icon>
+    <div class="dl-empty-title">CORAL t-SNE Data Not Available</div>
+    <p class="dl-empty-desc">Domain adaptation projection coordinates have not been computed yet for this prediction run.</p>
+    <button type="button" class="dl-btn dl-btn-primary" (click)="reload.emit()">
+      <ui-icon name="refresh" [size]="14"></ui-icon>
+      Compute CORAL Projection
+    </button>
+  </div>
+
+  <!-- Data Displayed -->
+  <div class="dl-coral-content" *ngIf="!loading && data">
+    <!-- Summary Metrics -->
+    <div class="dl-grid dl-grid-4">
+      <ui-metric-card label="Initial Covariance Distance" [value]="data.covarianceDistanceBefore | number:'1.4-4'"></ui-metric-card>
+      <ui-metric-card label="Aligned Covariance Distance" [value]="data.covarianceDistanceAfter | number:'1.4-4'"></ui-metric-card>
+      <ui-metric-card label="Covariance Reduction" [value]="data.reductionPercent + '%'"></ui-metric-card>
+      <ui-metric-card label="Aligned Features" [value]="data.featuresAlignedCount"></ui-metric-card>
+    </div>
+
+    <!-- 2. Controls Toolbar -->
+    <div class="dl-coral-toolbar">
+      <div class="dl-coral-modes">
+        <span class="dl-toolbar-label">Visualization:</span>
+        <button
+          type="button"
+          class="dl-mode-btn"
+          [class.active]="displayMode === 'side-by-side'"
+          (click)="setDisplayMode('side-by-side')"
+        >
+          Dual Side-by-Side
+        </button>
+        <button
+          type="button"
+          class="dl-mode-btn"
+          [class.active]="displayMode === 'before'"
+          (click)="setDisplayMode('before')"
+        >
+          Before CORAL
+        </button>
+        <button
+          type="button"
+          class="dl-mode-btn"
+          [class.active]="displayMode === 'after'"
+          (click)="setDisplayMode('after')"
+        >
+          After CORAL
+        </button>
+        <button
+          type="button"
+          class="dl-mode-btn"
+          [class.active]="displayMode === 'overlay'"
+          (click)="setDisplayMode('overlay')"
+        >
+          Overlay Shift Vector
+        </button>
+      </div>
+
+      <div class="dl-coral-filters">
+        <span class="dl-toolbar-label">Filter Instances:</span>
+        <div class="dl-filter-pills">
+          <button
+            type="button"
+            class="dl-pill"
+            [class.active]="labelFilter === 'all'"
+            (click)="setLabelFilter('all')"
+          >
+            All Files
+          </button>
+          <button
+            type="button"
+            class="dl-pill pill-clean"
+            [class.active]="labelFilter === 'clean'"
+            (click)="setLabelFilter('clean')"
+          >
+            Clean Only
+          </button>
+          <button
+            type="button"
+            class="dl-pill pill-buggy"
+            [class.active]="labelFilter === 'buggy'"
+            (click)="setLabelFilter('buggy')"
+          >
+            Buggy Only
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Plot Section -->
+
+    <!-- A: Dual Side-by-Side Mode -->
+    <div class="dl-coral-dual-grid" *ngIf="displayMode === 'side-by-side'">
+      <!-- Left Plot: Before Alignment -->
+      <div class="dl-plot-card">
+        <div class="dl-plot-header">
+          <div class="dl-plot-title">
+            <span class="dl-plot-badge badge-before">Before Adaptation</span>
+            <h4>Source vs Target</h4>
+          </div>
+          <div class="dl-plot-dist-badge">
+            Distance: <strong>{{ data.covarianceDistanceBefore | number:'1.4-4' }}</strong>
+          </div>
+        </div>
+
+        <div class="dl-svg-wrapper">
+          <svg
+            [attr.viewBox]="'0 0 ' + dualWidth + ' ' + dualHeight"
+            class="dl-tsne-svg"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <!-- Grid Lines -->
+            <g class="dl-grid-lines">
+              <line
+                *ngFor="let xt of geomBefore.xTicks"
+                [attr.x1]="xt.svgX"
+                [attr.y1]="geomBefore.padTop"
+                [attr.x2]="xt.svgX"
+                [attr.y2]="dualHeight - geomBefore.padBottom"
+              />
+              <line
+                *ngFor="let yt of geomBefore.yTicks"
+                [attr.x1]="geomBefore.padLeft"
+                [attr.y1]="yt.svgY"
+                [attr.x2]="dualWidth - geomBefore.padRight"
+                [attr.y2]="yt.svgY"
+              />
+            </g>
+
+            <!-- Dispersion Ellipses -->
+            <ellipse
+              *ngIf="statsBeforeSource"
+              [attr.cx]="statsBeforeSource.cx"
+              [attr.cy]="statsBeforeSource.cy"
+              [attr.rx]="statsBeforeSource.rx"
+              [attr.ry]="statsBeforeSource.ry"
+              class="dl-ellipse dl-ellipse-source"
+            />
+            <ellipse
+              *ngIf="statsBeforeTarget"
+              [attr.cx]="statsBeforeTarget.cx"
+              [attr.cy]="statsBeforeTarget.cy"
+              [attr.rx]="statsBeforeTarget.rx"
+              [attr.ry]="statsBeforeTarget.ry"
+              class="dl-ellipse dl-ellipse-target"
+            />
+
+            <!-- Centroid Connection Line -->
+            <g *ngIf="statsBeforeSource && statsBeforeTarget" class="dl-centroid-line-group">
+              <line
+                [attr.x1]="statsBeforeSource.cx"
+                [attr.y1]="statsBeforeSource.cy"
+                [attr.x2]="statsBeforeTarget.cx"
+                [attr.y2]="statsBeforeTarget.cy"
+                class="dl-centroid-distance-line"
+              />
+              <rect
+                [attr.x]="midX(statsBeforeSource, statsBeforeTarget) - 34"
+                [attr.y]="midY(statsBeforeSource, statsBeforeTarget) - 10"
+                width="68"
+                height="18"
+                rx="4"
+                class="dl-centroid-tag-bg"
+              />
+              <text
+                [attr.x]="midX(statsBeforeSource, statsBeforeTarget)"
+                [attr.y]="midY(statsBeforeSource, statsBeforeTarget) + 3"
+                class="dl-centroid-tag-text"
+                text-anchor="middle"
+              >
+                d={{ centroidDistance(statsBeforeSource, statsBeforeTarget) | number:'1.2-2' }}
+              </text>
+            </g>
+
+            <!-- Centroid Markers -->
+            <g *ngIf="statsBeforeSource" class="dl-centroid-marker dl-marker-source">
+              <circle [attr.cx]="statsBeforeSource.cx" [attr.cy]="statsBeforeSource.cy" r="6" />
+              <circle [attr.cx]="statsBeforeSource.cx" [attr.cy]="statsBeforeSource.cy" r="2" />
+            </g>
+            <g *ngIf="statsBeforeTarget" class="dl-centroid-marker dl-marker-target">
+              <circle [attr.cx]="statsBeforeTarget.cx" [attr.cy]="statsBeforeTarget.cy" r="6" />
+              <circle [attr.cx]="statsBeforeTarget.cx" [attr.cy]="statsBeforeTarget.cy" r="2" />
+            </g>
+
+            <!-- Scatter Points -->
+            <g class="dl-points-group">
+              <circle
+                *ngFor="let p of scaledBeforePoints"
+                [attr.cx]="p.svgX"
+                [attr.cy]="p.svgY"
+                r="4.2"
+                [class.hidden]="!isPointVisible(p)"
+                [class.source-point]="p.domain === 'source'"
+                [class.target-clean]="p.domain === 'target' && p.label === 0"
+                [class.target-buggy]="p.domain === 'target' && p.label === 1"
+                [class.target-unknown]="p.domain === 'target' && p.label === null"
+                (mouseenter)="onPointHover($event, p)"
+                (mouseleave)="onPointLeave()"
+              />
+            </g>
+
+            <!-- Axis Ticks & Labels -->
+            <g class="dl-axis-ticks">
+              <text
+                *ngFor="let xt of geomBefore.xTicks"
+                [attr.x]="xt.svgX"
+                [attr.y]="dualHeight - geomBefore.padBottom + 14"
+                text-anchor="middle"
+              >{{ xt.value }}</text>
+              <text
+                *ngFor="let yt of geomBefore.yTicks"
+                [attr.x]="geomBefore.padLeft - 8"
+                [attr.y]="yt.svgY + 4"
+                text-anchor="end"
+              >{{ yt.value }}</text>
+            </g>
+
+            <text
+              [attr.x]="dualWidth / 2"
+              [attr.y]="dualHeight - 10"
+              class="dl-axis-label"
+              text-anchor="middle"
+            >t-SNE Dimension 1</text>
+            <text
+              [attr.x]="-(dualHeight / 2)"
+              [attr.y]="14"
+              class="dl-axis-label"
+              transform="rotate(-90)"
+              text-anchor="middle"
+            >t-SNE Dimension 2</text>
+          </svg>
+        </div>
+
+        <!-- Plot Legend -->
+        <div class="dl-plot-legend">
+          <div class="dl-legend-item">
+            <span class="dl-legend-dot dot-source"></span>
+            <span>Source ({{ sourceDatasetName }}): {{ sourceBeforeCount }}</span>
+          </div>
+          <div class="dl-legend-item" *ngIf="targetCleanCount > 0 || targetBuggyCount > 0">
+            <span class="dl-legend-dot dot-target-clean"></span>
+            <span>Target Clean: {{ targetCleanCount }}</span>
+          </div>
+          <div class="dl-legend-item" *ngIf="targetBuggyCount > 0">
+            <span class="dl-legend-dot dot-target-buggy"></span>
+            <span>Target Buggy: {{ targetBuggyCount }}</span>
+          </div>
+          <div class="dl-legend-item" *ngIf="targetUnknownCount > 0 && targetCleanCount === 0 && targetBuggyCount === 0">
+            <span class="dl-legend-dot dot-target-unknown"></span>
+            <span>Target Instances: {{ targetUnknownCount }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Plot: After Alignment -->
+      <div class="dl-plot-card">
+        <div class="dl-plot-header">
+          <div class="dl-plot-title">
+            <span class="dl-plot-badge badge-after">After CORAL Adaptation</span>
+            <h4>Aligned Source vs Target</h4>
+          </div>
+          <div class="dl-plot-dist-badge highlight-aligned">
+            Distance: <strong>{{ data.covarianceDistanceAfter | number:'1.4-4' }}</strong>
+            <span class="dl-dist-pct">(-{{ data.reductionPercent }}%)</span>
+          </div>
+        </div>
+
+        <div class="dl-svg-wrapper">
+          <svg
+            [attr.viewBox]="'0 0 ' + dualWidth + ' ' + dualHeight"
+            class="dl-tsne-svg"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <!-- Grid Lines -->
+            <g class="dl-grid-lines">
+              <line
+                *ngFor="let xt of geomAfter.xTicks"
+                [attr.x1]="xt.svgX"
+                [attr.y1]="geomAfter.padTop"
+                [attr.x2]="xt.svgX"
+                [attr.y2]="dualHeight - geomAfter.padBottom"
+              />
+              <line
+                *ngFor="let yt of geomAfter.yTicks"
+                [attr.x1]="geomAfter.padLeft"
+                [attr.y1]="yt.svgY"
+                [attr.x2]="dualWidth - geomAfter.padRight"
+                [attr.y2]="yt.svgY"
+              />
+            </g>
+
+            <!-- Dispersion Ellipses -->
+            <ellipse
+              *ngIf="statsAfterSource"
+              [attr.cx]="statsAfterSource.cx"
+              [attr.cy]="statsAfterSource.cy"
+              [attr.rx]="statsAfterSource.rx"
+              [attr.ry]="statsAfterSource.ry"
+              class="dl-ellipse dl-ellipse-aligned"
+            />
+            <ellipse
+              *ngIf="statsAfterTarget"
+              [attr.cx]="statsAfterTarget.cx"
+              [attr.cy]="statsAfterTarget.cy"
+              [attr.rx]="statsAfterTarget.rx"
+              [attr.ry]="statsAfterTarget.ry"
+              class="dl-ellipse dl-ellipse-target"
+            />
+
+            <!-- Centroid Connection Line -->
+            <g *ngIf="statsAfterSource && statsAfterTarget" class="dl-centroid-line-group">
+              <line
+                [attr.x1]="statsAfterSource.cx"
+                [attr.y1]="statsAfterSource.cy"
+                [attr.x2]="statsAfterTarget.cx"
+                [attr.y2]="statsAfterTarget.cy"
+                class="dl-centroid-distance-line aligned"
+              />
+              <rect
+                [attr.x]="midX(statsAfterSource, statsAfterTarget) - 34"
+                [attr.y]="midY(statsAfterSource, statsAfterTarget) - 10"
+                width="68"
+                height="18"
+                rx="4"
+                class="dl-centroid-tag-bg aligned"
+              />
+              <text
+                [attr.x]="midX(statsAfterSource, statsAfterTarget)"
+                [attr.y]="midY(statsAfterSource, statsAfterTarget) + 3"
+                class="dl-centroid-tag-text"
+                text-anchor="middle"
+              >
+                d={{ centroidDistance(statsAfterSource, statsAfterTarget) | number:'1.2-2' }}
+              </text>
+            </g>
+
+            <!-- Centroid Markers -->
+            <g *ngIf="statsAfterSource" class="dl-centroid-marker dl-marker-aligned">
+              <circle [attr.cx]="statsAfterSource.cx" [attr.cy]="statsAfterSource.cy" r="6" />
+              <circle [attr.cx]="statsAfterSource.cx" [attr.cy]="statsAfterSource.cy" r="2" />
+            </g>
+            <g *ngIf="statsAfterTarget" class="dl-centroid-marker dl-marker-target">
+              <circle [attr.cx]="statsAfterTarget.cx" [attr.cy]="statsAfterTarget.cy" r="6" />
+              <circle [attr.cx]="statsAfterTarget.cx" [attr.cy]="statsAfterTarget.cy" r="2" />
+            </g>
+
+            <!-- Scatter Points -->
+            <g class="dl-points-group">
+              <circle
+                *ngFor="let p of scaledAfterPoints"
+                [attr.cx]="p.svgX"
+                [attr.cy]="p.svgY"
+                r="4.2"
+                [class.hidden]="!isPointVisible(p)"
+                [class.aligned-point]="p.domain === 'source_aligned'"
+                [class.target-clean]="p.domain === 'target' && p.label === 0"
+                [class.target-buggy]="p.domain === 'target' && p.label === 1"
+                [class.target-unknown]="p.domain === 'target' && p.label === null"
+                (mouseenter)="onPointHover($event, p)"
+                (mouseleave)="onPointLeave()"
+              />
+            </g>
+
+            <!-- Axis Ticks & Labels -->
+            <g class="dl-axis-ticks">
+              <text
+                *ngFor="let xt of geomAfter.xTicks"
+                [attr.x]="xt.svgX"
+                [attr.y]="dualHeight - geomAfter.padBottom + 14"
+                text-anchor="middle"
+              >{{ xt.value }}</text>
+              <text
+                *ngFor="let yt of geomAfter.yTicks"
+                [attr.x]="geomAfter.padLeft - 8"
+                [attr.y]="yt.svgY + 4"
+                text-anchor="end"
+              >{{ yt.value }}</text>
+            </g>
+
+            <text
+              [attr.x]="dualWidth / 2"
+              [attr.y]="dualHeight - 10"
+              class="dl-axis-label"
+              text-anchor="middle"
+            >t-SNE Dimension 1</text>
+            <text
+              [attr.x]="-(dualHeight / 2)"
+              [attr.y]="14"
+              class="dl-axis-label"
+              transform="rotate(-90)"
+              text-anchor="middle"
+            >t-SNE Dimension 2</text>
+          </svg>
+        </div>
+
+        <!-- Plot Legend -->
+        <div class="dl-plot-legend">
+          <div class="dl-legend-item">
+            <span class="dl-legend-dot dot-aligned"></span>
+            <span>Aligned Source (Shifted): {{ sourceAlignedCount }}</span>
+          </div>
+          <div class="dl-legend-item" *ngIf="targetCleanCount > 0 || targetBuggyCount > 0">
+            <span class="dl-legend-dot dot-target-clean"></span>
+            <span>Target Clean: {{ targetCleanCount }}</span>
+          </div>
+          <div class="dl-legend-item" *ngIf="targetBuggyCount > 0">
+            <span class="dl-legend-dot dot-target-buggy"></span>
+            <span>Target Buggy: {{ targetBuggyCount }}</span>
+          </div>
+          <div class="dl-legend-item" *ngIf="targetUnknownCount > 0 && targetCleanCount === 0 && targetBuggyCount === 0">
+            <span class="dl-legend-dot dot-target-unknown"></span>
+            <span>Target Instances: {{ targetUnknownCount }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B: Full Single Plot (Before or After) -->
+    <div class="dl-plot-card dl-single-card" *ngIf="displayMode === 'before' || displayMode === 'after'">
+      <div class="dl-plot-header">
+        <div class="dl-plot-title">
+          <span class="dl-plot-badge" [ngClass]="displayMode === 'before' ? 'badge-before' : 'badge-after'">
+            {{ displayMode === 'before' ? 'Before Adaptation' : 'After CORAL Adaptation' }}
+          </span>
+          <h4>{{ displayMode === 'before' ? 'Original Source & Target Distribution' : 'CORAL-Aligned Source & Target Distribution' }}</h4>
+        </div>
+        <div class="dl-plot-dist-badge" [class.highlight-aligned]="displayMode === 'after'">
+          Frobenius Distance: <strong>{{ (displayMode === 'before' ? data.covarianceDistanceBefore : data.covarianceDistanceAfter) | number:'1.4-4' }}</strong>
+        </div>
+      </div>
+
+      <div class="dl-svg-wrapper">
+        <svg
+          [attr.viewBox]="'0 0 ' + singleWidth + ' ' + singleHeight"
+          class="dl-tsne-svg"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <!-- Current geometry -->
+          <ng-container *ngIf="(displayMode === 'before' ? geomBefore : geomAfter) as geom">
+            <g class="dl-grid-lines">
+              <line
+                *ngFor="let xt of geom.xTicks"
+                [attr.x1]="xt.svgX"
+                [attr.y1]="geom.padTop"
+                [attr.x2]="xt.svgX"
+                [attr.y2]="singleHeight - geom.padBottom"
+              />
+              <line
+                *ngFor="let yt of geom.yTicks"
+                [attr.x1]="geom.padLeft"
+                [attr.y1]="yt.svgY"
+                [attr.x2]="singleWidth - geom.padRight"
+                [attr.y2]="yt.svgY"
+              />
+            </g>
+
+            <!-- Ellipses -->
+            <ellipse
+              *ngIf="displayMode === 'before' && statsBeforeSource"
+              [attr.cx]="statsBeforeSource.cx"
+              [attr.cy]="statsBeforeSource.cy"
+              [attr.rx]="statsBeforeSource.rx"
+              [attr.ry]="statsBeforeSource.ry"
+              class="dl-ellipse dl-ellipse-source"
+            />
+            <ellipse
+              *ngIf="displayMode === 'after' && statsAfterSource"
+              [attr.cx]="statsAfterSource.cx"
+              [attr.cy]="statsAfterSource.cy"
+              [attr.rx]="statsAfterSource.rx"
+              [attr.ry]="statsAfterSource.ry"
+              class="dl-ellipse dl-ellipse-aligned"
+            />
+            <ellipse
+              *ngIf="(displayMode === 'before' ? statsBeforeTarget : statsAfterTarget) as st"
+              [attr.cx]="st.cx"
+              [attr.cy]="st.cy"
+              [attr.rx]="st.rx"
+              [attr.ry]="st.ry"
+              class="dl-ellipse dl-ellipse-target"
+            />
+
+            <!-- Points -->
+            <g class="dl-points-group">
+              <circle
+                *ngFor="let p of (displayMode === 'before' ? scaledBeforePoints : scaledAfterPoints)"
+                [attr.cx]="p.svgX"
+                [attr.cy]="p.svgY"
+                r="4.8"
+                [class.hidden]="!isPointVisible(p)"
+                [class.source-point]="p.domain === 'source'"
+                [class.aligned-point]="p.domain === 'source_aligned'"
+                [class.target-clean]="p.domain === 'target' && p.label === 0"
+                [class.target-buggy]="p.domain === 'target' && p.label === 1"
+                [class.target-unknown]="p.domain === 'target' && p.label === null"
+                (mouseenter)="onPointHover($event, p)"
+                (mouseleave)="onPointLeave()"
+              />
+            </g>
+
+            <!-- Ticks -->
+            <g class="dl-axis-ticks">
+              <text
+                *ngFor="let xt of geom.xTicks"
+                [attr.x]="xt.svgX"
+                [attr.y]="singleHeight - geom.padBottom + 16"
+                text-anchor="middle"
+              >{{ xt.value }}</text>
+              <text
+                *ngFor="let yt of geom.yTicks"
+                [attr.x]="geom.padLeft - 10"
+                [attr.y]="yt.svgY + 4"
+                text-anchor="end"
+              >{{ yt.value }}</text>
+            </g>
+
+            <text
+              [attr.x]="singleWidth / 2"
+              [attr.y]="singleHeight - 12"
+              class="dl-axis-label"
+              text-anchor="middle"
+            >t-SNE Dimension 1</text>
+            <text
+              [attr.x]="-(singleHeight / 2)"
+              [attr.y]="14"
+              class="dl-axis-label"
+              transform="rotate(-90)"
+              text-anchor="middle"
+            >t-SNE Dimension 2</text>
+          </ng-container>
+        </svg>
+      </div>
+    </div>
+
+    <!-- C: Overlay Shift Mode -->
+    <div class="dl-plot-card dl-single-card" *ngIf="displayMode === 'overlay'">
+      <div class="dl-plot-header">
+        <div class="dl-plot-title">
+          <span class="dl-plot-badge badge-overlay">Vector Overlay</span>
+          <h4>Shift Visualization: Original Source → Aligned Source → Target</h4>
+        </div>
+        <div class="dl-plot-dist-badge highlight-gain">
+          Reduction: <strong>-{{ data.reductionPercent }}% Divergence</strong>
+        </div>
+      </div>
+
+      <div class="dl-svg-wrapper">
+        <svg
+          [attr.viewBox]="'0 0 ' + singleWidth + ' ' + singleHeight"
+          class="dl-tsne-svg"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <defs>
+            <marker
+              id="vector-arrow"
+              viewBox="0 0 6 6"
+              refX="5"
+              refY="3"
+              markerWidth="4"
+              markerHeight="4"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 6 3 L 0 6 z" fill="#a855f7" />
+            </marker>
+            <marker
+              id="vector-arrow-active"
+              viewBox="0 0 6 6"
+              refX="5"
+              refY="3"
+              markerWidth="5"
+              markerHeight="5"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 6 3 L 0 6 z" fill="#c084fc" />
+            </marker>
+          </defs>
+
+          <g class="dl-grid-lines">
+            <line
+              *ngFor="let xt of geomOverlay.xTicks"
+              [attr.x1]="xt.svgX"
+              [attr.y1]="geomOverlay.padTop"
+              [attr.x2]="xt.svgX"
+              [attr.y2]="singleHeight - geomOverlay.padBottom"
+            />
+            <line
+              *ngFor="let yt of geomOverlay.yTicks"
+              [attr.x1]="geomOverlay.padLeft"
+              [attr.y1]="yt.svgY"
+              [attr.x2]="singleWidth - geomOverlay.padRight"
+              [attr.y2]="yt.svgY"
+            />
+          </g>
+
+          <!-- Shift Vectors (Connecting Original Source -> Aligned Source) -->
+          <g class="dl-shift-vectors" *ngIf="showShiftVectors">
+            <line
+              *ngFor="let vec of overlayShiftVectors"
+              [attr.x1]="vec.x1"
+              [attr.y1]="vec.y1"
+              [attr.x2]="vec.x2"
+              [attr.y2]="vec.y2"
+              class="dl-shift-vector-line"
+              [class.hidden]="!isVectorVisible(vec)"
+              [class.active]="hoveredPoint?.id === vec.id"
+              [attr.marker-end]="hoveredPoint?.id === vec.id ? 'url(#vector-arrow-active)' : 'url(#vector-arrow)'"
+            />
+          </g>
+
+          <!-- Original Source (Faded Blue) -->
+          <g class="dl-points-group source-ghost">
+            <circle
+              *ngFor="let p of scaledOverlaySourcePoints"
+              [attr.cx]="p.svgX"
+              [attr.cy]="p.svgY"
+              r="4.2"
+              class="source-point ghost"
+              [class.hidden]="!isPointVisible(p)"
+              (mouseenter)="onPointHover($event, p)"
+              (mouseleave)="onPointLeave()"
+            />
+          </g>
+
+          <!-- Aligned Source (Vibrant Purple) -->
+          <g class="dl-points-group">
+            <circle
+              *ngFor="let p of scaledOverlayAlignedPoints"
+              [attr.cx]="p.svgX"
+              [attr.cy]="p.svgY"
+              r="4.8"
+              class="aligned-point"
+              [class.hidden]="!isPointVisible(p)"
+              (mouseenter)="onPointHover($event, p)"
+              (mouseleave)="onPointLeave()"
+            />
+          </g>
+
+          <!-- Target Points -->
+          <g class="dl-points-group">
+            <circle
+              *ngFor="let p of scaledOverlayTargetPoints"
+              [attr.cx]="p.svgX"
+              [attr.cy]="p.svgY"
+              r="4.6"
+              [class.hidden]="!isPointVisible(p)"
+              [class.target-clean]="p.label === 0 || p.label === null || p.label === undefined"
+              [class.target-buggy]="p.label === 1"
+              (mouseenter)="onPointHover($event, p)"
+              (mouseleave)="onPointLeave()"
+            />
+          </g>
+
+          <!-- Ticks -->
+          <g class="dl-axis-ticks">
+            <text
+              *ngFor="let xt of geomOverlay.xTicks"
+              [attr.x]="xt.svgX"
+              [attr.y]="singleHeight - geomOverlay.padBottom + 16"
+              text-anchor="middle"
+            >{{ xt.value }}</text>
+            <text
+              *ngFor="let yt of geomOverlay.yTicks"
+              [attr.x]="geomOverlay.padLeft - 10"
+              [attr.y]="yt.svgY + 4"
+              text-anchor="end"
+            >{{ yt.value }}</text>
+          </g>
+
+          <text
+            [attr.x]="singleWidth / 2"
+            [attr.y]="singleHeight - 12"
+            class="dl-axis-label"
+            text-anchor="middle"
+          >t-SNE Dimension 1</text>
+          <text
+            [attr.x]="-(singleHeight / 2)"
+            [attr.y]="14"
+            class="dl-axis-label"
+            transform="rotate(-90)"
+            text-anchor="middle"
+          >t-SNE Dimension 2</text>
+        </svg>
+      </div>
+
+      <!-- Overlay Legend -->
+      <div class="dl-plot-legend">
+        <div class="dl-legend-item">
+          <span class="dl-legend-dot dot-source-faded"></span>
+          <span>Original Source (Before Alignment)</span>
+        </div>
+        <div class="dl-legend-item">
+          <span class="dl-legend-dot dot-aligned"></span>
+          <span>Aligned Source (After CORAL Shift)</span>
+        </div>
+        <div class="dl-legend-item">
+          <span class="dl-legend-dot dot-target-clean"></span>
+          <span>Target Distribution</span>
+        </div>
+        <div class="dl-legend-item" style="cursor: pointer;" (click)="toggleShiftVectors()" title="Click to toggle vector lines">
+          <span class="dl-legend-line-sample" [style.opacity]="showShiftVectors ? '1' : '0.3'"></span>
+          <span [style.color]="showShiftVectors ? 'var(--ink-heading)' : 'var(--muted)'">
+            Shift Vectors ({{ showShiftVectors ? 'Visible' : 'Hidden' }})
+          </span>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <!-- Floating Hover Tooltip -->
+  <div
+    class="dl-tsne-tooltip"
+    *ngIf="hoveredPoint"
+    [style.left.px]="tooltipPos.x"
+    [style.top.px]="tooltipPos.y"
+  >
+    <div class="dl-tooltip-title">{{ hoveredPoint.id }}</div>
+    <div class="dl-tooltip-row">
+      <span class="dl-tooltip-key">Domain:</span>
+      <span class="dl-tooltip-val" [ngSwitch]="hoveredPoint.domain">
+        <strong *ngSwitchCase="'source'">Source ({{ sourceDatasetName }})</strong>
+        <strong *ngSwitchCase="'source_aligned'" class="val-aligned">Aligned Source (CORAL)</strong>
+        <strong *ngSwitchCase="'target'">Target ({{ targetDatasetName }})</strong>
+      </span>
+    </div>
+    <div class="dl-tooltip-row" *ngIf="hoveredPoint.label !== null && hoveredPoint.label !== undefined">
+      <span class="dl-tooltip-key">Label:</span>
+      <span class="dl-tooltip-val" [class.val-buggy]="hoveredPoint.label === 1" [class.val-clean]="hoveredPoint.label === 0">
+        {{ hoveredPoint.label === 1 ? 'Buggy' : 'Clean' }}
+      </span>
+    </div>
+    <div class="dl-tooltip-row">
+      <span class="dl-tooltip-key">t-SNE Coordinates:</span>
+      <span class="dl-tooltip-val font-mono">({{ hoveredPoint.x | number:'1.2-2' }}, {{ hoveredPoint.y | number:'1.2-2' }})</span>
+    </div>
+  </div>
+</div>

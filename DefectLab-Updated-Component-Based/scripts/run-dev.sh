@@ -15,8 +15,20 @@ done
 cleanup() {
   echo "Shutting down DefectLab local services..."
   jobs -p | xargs kill 2>/dev/null || true
+  for port in 8000 8080 4200; do
+    lsof -ti :$port 2>/dev/null | xargs kill -9 2>/dev/null || true
+  done
 }
 trap cleanup EXIT INT TERM
+
+# Free ports before starting to prevent orphaned background processes from hijacking services
+for port in 8000 8080 4200; do
+  pids="$(lsof -ti :$port 2>/dev/null || true)"
+  if [[ -n "$pids" ]]; then
+    echo "Freeing port $port (terminating PID: $pids)..."
+    echo "$pids" | xargs kill -9 2>/dev/null || true
+  fi
+done
 
 # 1. Start Python FastAPI ML service on port 8000
 (

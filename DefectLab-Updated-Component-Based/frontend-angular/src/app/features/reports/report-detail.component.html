@@ -113,19 +113,19 @@
     <div class="dl-tabs" role="tablist" aria-label="Prediction inspection tabs">
       <button type="button" role="tab" [class.active]="activeTab === 'manual'"
               [attr.aria-selected]="activeTab === 'manual'"
-              (click)="activeTab = 'manual'" *ngIf="manualRun">
+              (click)="onTabChange('manual')" *ngIf="manualRun">
         Manual: {{ manualRun.targetDataset.displayName }}
         <span class="dl-tab-badge">{{ manualRows.length | number }}</span>
       </button>
       <button type="button" role="tab" [class.active]="activeTab === 'predefined'"
               [attr.aria-selected]="activeTab === 'predefined'"
-              (click)="activeTab = 'predefined'" *ngIf="predefinedRun">
+              (click)="onTabChange('predefined')" *ngIf="predefinedRun">
         Predefined: {{ predefinedRun.targetDataset.displayName }}
         <span class="dl-tab-badge">{{ predefinedRows.length | number }}</span>
       </button>
       <button type="button" role="tab" [class.active]="activeTab === 'matched'"
               [attr.aria-selected]="activeTab === 'matched'"
-              (click)="activeTab = 'matched'" *ngIf="showMatchedComparison">
+              (click)="onTabChange('matched')" *ngIf="showMatchedComparison">
         Target Agreement
         <span class="dl-tab-badge">{{ matchedRows.length | number }}</span>
       </button>
@@ -159,9 +159,21 @@
 
           <ui-view-toggle *ngIf="manualRows.length > 0"
                           [mode]="viewMode"
+                          [showCoralTsne]="isCoralEnabled"
                           (modeChange)="setViewMode($event)">
           </ui-view-toggle>
         </div>
+      </div>
+
+      <!-- CORAL t-SNE View -->
+      <div *ngIf="viewMode === 'tsne'">
+        <ui-coral-distribution
+          [data]="manualRun.coralTsne || coralTsneData"
+          [loading]="loadingCoralTsne && !manualRun.coralTsne"
+          [sourceDatasetName]="manualRun.sourceDataset.displayName"
+          [targetDatasetName]="manualRun.targetDataset.displayName"
+          (reload)="loadCoralTsne(true)">
+        </ui-coral-distribution>
       </div>
 
       <!-- Treemap View -->
@@ -246,9 +258,21 @@
 
           <ui-view-toggle *ngIf="predefinedRows.length > 0"
                           [mode]="viewMode"
+                          [showCoralTsne]="isCoralEnabled"
                           (modeChange)="setViewMode($event)">
           </ui-view-toggle>
         </div>
+      </div>
+
+      <!-- CORAL t-SNE View -->
+      <div *ngIf="viewMode === 'tsne'">
+        <ui-coral-distribution
+          [data]="predefinedRun.coralTsne || coralTsneData"
+          [loading]="loadingCoralTsne && !predefinedRun.coralTsne"
+          [sourceDatasetName]="predefinedRun.sourceDataset.displayName"
+          [targetDatasetName]="predefinedRun.targetDataset.displayName"
+          (reload)="loadCoralTsne(true)">
+        </ui-coral-distribution>
       </div>
 
       <!-- Treemap View -->
