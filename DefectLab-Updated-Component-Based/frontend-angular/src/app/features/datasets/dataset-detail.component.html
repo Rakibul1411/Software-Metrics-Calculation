@@ -33,11 +33,35 @@
 
   <div class="dl-detail-section" *ngIf="dataset">
     <div class="dl-view-toggle-bar">
-      <h3>Stored values</h3>
-      <ui-view-toggle *ngIf="preview && classAnalysisList.length > 0"
-                      [mode]="viewMode"
-                      (modeChange)="setViewMode($event)">
-      </ui-view-toggle>
+      <div class="dl-heading-with-stats">
+        <h3>Stored values</h3>
+        <div class="dl-label-summary-badges" *ngIf="preview && labelStats.hasLabels">
+          <span class="dl-badge-stat badge-stat-clean" title="Clean instances">
+            <span class="dl-status-dot"></span> Clean: <strong>{{ labelStats.clean | number }}</strong>
+          </span>
+          <span class="dl-badge-stat badge-stat-buggy" title="Buggy instances">
+            <span class="dl-status-dot"></span> Buggy: <strong>{{ labelStats.buggy | number }}</strong>
+          </span>
+          <span class="dl-badge-stat badge-stat-muted" title="Defect rate">
+            Defect rate: <strong>{{ labelStats.defectRate }}</strong>
+          </span>
+        </div>
+      </div>
+
+      <div class="dl-section-toolbar-actions">
+        <div class="dl-catalog-filter" *ngIf="preview && labelStats.hasLabels && viewMode === 'table'">
+          <span class="dl-filter-label">Filter:</span>
+          <ui-select [options]="classFilterOptions"
+                     [value]="classFilter"
+                     (valueChange)="onClassFilterChange($event)">
+          </ui-select>
+        </div>
+
+        <ui-view-toggle *ngIf="preview && classAnalysisList.length > 0"
+                        [mode]="viewMode"
+                        (modeChange)="setViewMode($event)">
+        </ui-view-toggle>
+      </div>
     </div>
 
     <ui-state *ngIf="previewLoading" kind="loading" message="Loading preview…"></ui-state>
@@ -45,6 +69,54 @@
     <!-- Table View -->
     <div class="dl-table-box" *ngIf="preview && viewMode === 'table'">
       <ui-table [columns]="previewColumns" [rows]="previewRows">
+        <ng-template uiTableCell="class" let-row>
+          <span class="dl-status-cell" [ngClass]="isCleanCell(row['class']) ? 'clean' : 'danger'">
+            <span class="dl-status-dot"></span>
+            {{ row['class'] }}
+          </span>
+        </ng-template>
+        <ng-template uiTableCell="CLASS" let-row>
+          <span class="dl-status-cell" [ngClass]="isCleanCell(row['CLASS']) ? 'clean' : 'danger'">
+            <span class="dl-status-dot"></span>
+            {{ row['CLASS'] }}
+          </span>
+        </ng-template>
+        <ng-template uiTableCell="Class" let-row>
+          <span class="dl-status-cell" [ngClass]="isCleanCell(row['Class']) ? 'clean' : 'danger'">
+            <span class="dl-status-dot"></span>
+            {{ row['Class'] }}
+          </span>
+        </ng-template>
+        <ng-template uiTableCell="bug" let-row>
+          <span class="dl-status-cell" [ngClass]="isCleanCell(row['bug']) ? 'clean' : 'danger'">
+            <span class="dl-status-dot"></span>
+            {{ isCleanCell(row['bug']) ? '0 (Clean)' : row['bug'] + ' (Buggy)' }}
+          </span>
+        </ng-template>
+        <ng-template uiTableCell="BUG" let-row>
+          <span class="dl-status-cell" [ngClass]="isCleanCell(row['BUG']) ? 'clean' : 'danger'">
+            <span class="dl-status-dot"></span>
+            {{ isCleanCell(row['BUG']) ? '0 (Clean)' : row['BUG'] + ' (Buggy)' }}
+          </span>
+        </ng-template>
+        <ng-template uiTableCell="bugs" let-row>
+          <span class="dl-status-cell" [ngClass]="isCleanCell(row['bugs']) ? 'clean' : 'danger'">
+            <span class="dl-status-dot"></span>
+            {{ isCleanCell(row['bugs']) ? '0 (Clean)' : row['bugs'] + ' (Buggy)' }}
+          </span>
+        </ng-template>
+        <ng-template uiTableCell="defective" let-row>
+          <span class="dl-status-cell" [ngClass]="isCleanCell(row['defective']) ? 'clean' : 'danger'">
+            <span class="dl-status-dot"></span>
+            {{ row['defective'] }}
+          </span>
+        </ng-template>
+        <ng-template uiTableCell="label" let-row>
+          <span class="dl-status-cell" [ngClass]="isCleanCell(row['label']) ? 'clean' : 'danger'">
+            <span class="dl-status-dot"></span>
+            {{ row['label'] }}
+          </span>
+        </ng-template>
       </ui-table>
       <ui-pagination [total]="totalRows"
                      [page]="page"
@@ -59,7 +131,7 @@
     <div *ngIf="preview && viewMode === 'treemap'">
       <ui-treemap
         [items]="classAnalysisList"
-        [title]="dataset.displayName + ' — Architectural Treemap'"
+        [title]="dataset.displayName + ' - Architectural Treemap'"
         subtitle="Box size: Lines of Code (LOC) · Color: Defect risk & anti-pattern severity"
       ></ui-treemap>
     </div>

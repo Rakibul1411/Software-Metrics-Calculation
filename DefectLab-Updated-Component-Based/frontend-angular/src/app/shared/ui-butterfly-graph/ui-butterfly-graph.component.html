@@ -85,7 +85,6 @@
           (mouseleave)="onNodeMouseLeave()"
           [attr.transform]="'translate(' + node.x + ', ' + node.y + ')'"
         >
-          <title>{{ node.name }} ({{ node.loc }} LOC) — Risk: {{ (node.riskScore * 100) | number:'1.0-0' }}%</title>
           <rect
             [attr.width]="node.width"
             [attr.height]="node.height"
@@ -93,7 +92,7 @@
             class="dl-bf-node-rect"
             [class.is-buggy]="node.predictedLabel === 1 || node.riskScore >= 0.5"
           />
-          <text x="10" y="20" class="dl-bf-node-name" [title]="node.name">{{ node.simpleName }}</text>
+          <text x="10" y="20" class="dl-bf-node-name">{{ node.simpleName }}</text>
           <text x="10" y="34" class="dl-bf-node-meta">{{ node.loc }} LOC · {{ (node.riskScore * 100) | number:'1.0-0' }}% Risk</text>
         </g>
 
@@ -109,7 +108,6 @@
         class="dl-bf-center-group"
         [attr.transform]="'translate(' + centerPos.x + ', ' + centerPos.y + ')'"
       >
-        <title>{{ focusClass.className }} ({{ focusClass.loc }} LOC) — Defect Risk: {{ (focusClass.riskScore * 100) | number:'1.0-0' }}%</title>
         <rect
           [attr.width]="centerW"
           [attr.height]="centerH"
@@ -118,10 +116,10 @@
           [class.center-hotspot]="focusClass.riskScore >= 0.5 || focusClass.predictedLabel === 1"
         />
         <text x="14" y="24" class="dl-bf-center-tag">🎯 TARGET CLASS UNDER REVIEW</text>
-        <text x="14" y="46" class="dl-bf-center-name" [title]="focusClass.className">
+        <text x="14" y="46" class="dl-bf-center-name">
           {{ focusClass.className.split('.').pop() }}
         </text>
-        <text x="14" y="64" class="dl-bf-center-package" [title]="focusClass.packageName">
+        <text x="14" y="64" class="dl-bf-center-package">
           {{ focusClass.packageName }}
         </text>
 
@@ -132,10 +130,10 @@
           <text x="68" y="16" class="dl-bf-stat-item">WMC: <tspan font-weight="700">{{ focusClass.wmc }}</tspan></text>
           <text x="134" y="16" class="dl-bf-stat-item">CBO: <tspan font-weight="700">{{ focusClass.cbo }}</tspan></text>
           <text x="0" y="36" class="dl-bf-stat-item" [class.stat-warn]="focusClass.riskScore >= 0.5">
-            Defect Risk: <tspan font-weight="700">{{ (focusClass.riskScore * 100) | number:'1.0-0' }}%</tspan>
+            Risk: <tspan font-weight="700">{{ (focusClass.riskScore * 100) | number:'1.0-0' }}%</tspan>
           </text>
-          <text x="100" y="36" class="dl-bf-stat-item">
-            I: <tspan font-weight="700">{{ focusClass.instability | number:'1.2-2' }}</tspan>
+          <text x="110" y="36" class="dl-bf-stat-item">
+            Instability: <tspan font-weight="700">{{ focusClass.instability | number:'1.2-2' }}</tspan>
           </text>
         </g>
       </g>
@@ -155,7 +153,6 @@
           (mouseleave)="onNodeMouseLeave()"
           [attr.transform]="'translate(' + node.x + ', ' + node.y + ')'"
         >
-          <title>{{ node.name }} ({{ node.loc }} LOC) — Risk: {{ (node.riskScore * 100) | number:'1.0-0' }}%</title>
           <rect
             [attr.width]="node.width"
             [attr.height]="node.height"
@@ -163,7 +160,7 @@
             class="dl-bf-node-rect"
             [class.is-buggy]="node.predictedLabel === 1 || node.riskScore >= 0.5"
           />
-          <text x="10" y="20" class="dl-bf-node-name" [title]="node.name">{{ node.simpleName }}</text>
+          <text x="10" y="20" class="dl-bf-node-name">{{ node.simpleName }}</text>
           <text x="10" y="34" class="dl-bf-node-meta">{{ node.loc }} LOC · {{ (node.riskScore * 100) | number:'1.0-0' }}% Risk</text>
         </g>
 
@@ -201,7 +198,12 @@
     </div>
 
     <!-- Extra Callers / Dependencies Modal Drawer -->
-    <div *ngIf="showExtraDropdown" class="dl-bf-extra-modal">
+    <div
+      *ngIf="showExtraDropdown"
+      class="dl-bf-extra-modal"
+      [class.extra-modal-left]="showExtraDropdown === 'inbound'"
+      [class.extra-modal-right]="showExtraDropdown === 'outbound'"
+    >
       <div class="dl-bf-extra-header">
         <span class="dl-bf-extra-title">
           {{ showExtraDropdown === 'inbound' ? 'All Inbound Callers (' + (inboundNodes.length + extraInboundCount) + ')' : 'All Outbound Dependencies (' + (outboundNodes.length + extraOutboundCount) + ')' }}

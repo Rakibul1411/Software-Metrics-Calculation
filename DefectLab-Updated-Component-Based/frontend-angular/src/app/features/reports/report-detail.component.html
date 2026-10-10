@@ -134,20 +134,29 @@
     <!-- Manual Target Full-Width Tab -->
     <div class="dl-tab-content" *ngIf="activeTab === 'manual' && manualRun">
       <div class="dl-view-toggle-bar">
-        <div class="dl-filter-pills" role="group" aria-label="Filter manual predictions" *ngIf="viewMode === 'table'">
-          <button type="button" class="dl-filter-pill" [class.active]="manualFilter === 'all'" (click)="setManualFilter('all')">
-            All files <span class="dl-pill-count">{{ manualRows.length | number }}</span>
-          </button>
-          <button type="button" class="dl-filter-pill danger" [class.active]="manualFilter === 'buggy'" (click)="setManualFilter('buggy')">
-            Buggy only <span class="dl-pill-count">{{ manualBuggyCount | number }}</span>
-          </button>
-          <button type="button" class="dl-filter-pill success" [class.active]="manualFilter === 'clean'" (click)="setManualFilter('clean')">
-            Clean only <span class="dl-pill-count">{{ manualCleanCount | number }}</span>
-          </button>
+        <div class="dl-heading-with-stats">
+          <div class="dl-label-summary-badges" *ngIf="manualRows.length">
+            <span class="dl-badge-stat badge-stat-clean" title="Clean instances">
+              <span class="dl-status-dot"></span> Clean: <strong>{{ manualCleanCount | number }}</strong>
+            </span>
+            <span class="dl-badge-stat badge-stat-buggy" title="Buggy instances">
+              <span class="dl-status-dot"></span> Buggy: <strong>{{ manualBuggyCount | number }}</strong>
+            </span>
+            <span class="dl-badge-stat badge-stat-muted" title="Defect rate">
+              Defect rate: <strong>{{ manualDefectRate }}</strong>
+            </span>
+          </div>
         </div>
-        <div *ngIf="viewMode === 'treemap'"></div>
 
-        <div class="dl-actions">
+        <div class="dl-section-toolbar-actions">
+          <div class="dl-catalog-filter" *ngIf="manualRows.length && viewMode === 'table'">
+            <span class="dl-filter-label">Filter:</span>
+            <ui-select [options]="manualFilterOptions"
+                       [value]="manualFilter"
+                       (valueChange)="onManualFilterChange($event)">
+            </ui-select>
+          </div>
+
           <ui-view-toggle *ngIf="manualRows.length > 0"
                           [mode]="viewMode"
                           (modeChange)="setViewMode($event)">
@@ -159,7 +168,7 @@
       <div *ngIf="viewMode === 'treemap'">
         <ui-treemap
           [items]="manualTreemapItems"
-          [title]="(manualRun.targetDataset.displayName || 'Manual Target') + ' — Defect Hotspot Treemap'"
+          [title]="(manualRun.targetDataset.displayName || 'Manual Target') + ' - Defect Hotspot Treemap'"
           subtitle="Box Size: LOC & Defect Rank · Color: Defect Probability"
         ></ui-treemap>
       </div>
@@ -188,7 +197,7 @@
               </div>
             </ng-template>
             <ng-template uiTableCell="predictedLabel" let-row>
-              <span class="dl-status-cell" [class.danger]="row.predictedLabel === 1" [class.muted]="row.predictedLabel !== 1">
+              <span class="dl-status-cell" [ngClass]="row.predictedLabel === 1 ? 'danger' : 'clean'">
                 <span class="dl-status-dot"></span>
                 {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}
               </span>
@@ -207,20 +216,34 @@
     <!-- Predefined Target Full-Width Tab -->
     <div class="dl-tab-content" *ngIf="activeTab === 'predefined' && predefinedRun">
       <div class="dl-view-toggle-bar">
-        <div class="dl-filter-pills" role="group" aria-label="Filter predefined predictions" *ngIf="viewMode === 'table'">
-          <button type="button" class="dl-filter-pill" [class.active]="predefinedFilter === 'all'" (click)="setPredefinedFilter('all')">
-            All files <span class="dl-pill-count">{{ predefinedRows.length | number }}</span>
-          </button>
-          <button type="button" class="dl-filter-pill danger" [class.active]="predefinedFilter === 'buggy'" (click)="setPredefinedFilter('buggy')">
-            Predicted Buggy <span class="dl-pill-count">{{ predefinedBuggyCount | number }}</span>
-          </button>
-          <button type="button" class="dl-filter-pill success" [class.active]="predefinedFilter === 'clean'" (click)="setPredefinedFilter('clean')">
-            Predicted Clean <span class="dl-pill-count">{{ predefinedCleanCount | number }}</span>
-          </button>
+        <div class="dl-heading-with-stats">
+          <div class="dl-label-summary-badges" *ngIf="predefinedRows.length">
+            <span class="dl-badge-stat badge-stat-clean" title="Predicted Clean instances">
+              <span class="dl-status-dot"></span> Pred Clean: <strong>{{ predefinedCleanCount | number }}</strong>
+            </span>
+            <span class="dl-badge-stat badge-stat-buggy" title="Predicted Buggy instances">
+              <span class="dl-status-dot"></span> Pred Buggy: <strong>{{ predefinedBuggyCount | number }}</strong>
+            </span>
+            <ng-container *ngIf="predefinedHasActual">
+              <span class="dl-badge-stat badge-stat-clean" title="Actual Clean instances">
+                <span class="dl-status-dot"></span> Actual Clean: <strong>{{ predefinedActualCleanCount | number }}</strong>
+              </span>
+              <span class="dl-badge-stat badge-stat-buggy" title="Actual Buggy instances">
+                <span class="dl-status-dot"></span> Actual Buggy: <strong>{{ predefinedActualBuggyCount | number }}</strong>
+              </span>
+            </ng-container>
+          </div>
         </div>
-        <div *ngIf="viewMode === 'treemap'"></div>
 
-        <div class="dl-actions">
+        <div class="dl-section-toolbar-actions">
+          <div class="dl-catalog-filter" *ngIf="predefinedRows.length && viewMode === 'table'">
+            <span class="dl-filter-label">Filter:</span>
+            <ui-select [options]="predefinedFilterOptions"
+                       [value]="predefinedFilter"
+                       (valueChange)="onPredefinedFilterChange($event)">
+            </ui-select>
+          </div>
+
           <ui-view-toggle *ngIf="predefinedRows.length > 0"
                           [mode]="viewMode"
                           (modeChange)="setViewMode($event)">
@@ -232,7 +255,7 @@
       <div *ngIf="viewMode === 'treemap'">
         <ui-treemap
           [items]="predefinedTreemapItems"
-          [title]="(predefinedRun.targetDataset.displayName || 'Predefined Target') + ' — Defect Hotspot Treemap'"
+          [title]="(predefinedRun.targetDataset.displayName || 'Predefined Target') + ' - Defect Hotspot Treemap'"
           subtitle="Box Size: LOC & Defect Rank · Color: Defect Probability"
         ></ui-treemap>
       </div>
@@ -261,18 +284,18 @@
               </div>
             </ng-template>
             <ng-template uiTableCell="predictedLabel" let-row>
-              <span class="dl-status-cell" [class.danger]="row.predictedLabel === 1" [class.muted]="row.predictedLabel !== 1">
+              <span class="dl-status-cell" [ngClass]="row.predictedLabel === 1 ? 'danger' : 'clean'">
                 <span class="dl-status-dot"></span>
                 {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}
               </span>
             </ng-template>
             <ng-template uiTableCell="actualLabel" let-row>
-              <span *ngIf="row.actualLabel !== null; else noActualPredefined"
-                    class="dl-status-cell" [class.danger]="row.actualLabel === 1" [class.clean]="row.actualLabel === 0">
+              <span *ngIf="row.actualLabel !== null && row.actualLabel !== undefined; else noActualPredefined"
+                    class="dl-status-cell" [ngClass]="row.actualLabel === 1 ? 'danger' : 'clean'">
                 <span class="dl-status-dot"></span>
                 {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
               </span>
-              <ng-template #noActualPredefined><span style="color: var(--muted);">—</span></ng-template>
+              <ng-template #noActualPredefined><span class="dl-status-cell muted">-</span></ng-template>
             </ng-template>
           </ui-table>
           <ui-pagination [total]="filteredPredefinedRows.length" [page]="predefinedPage" [pageSize]="predefinedPageSize" noun="files"
@@ -287,19 +310,33 @@
 
     <!-- Matched Target Comparison Tab -->
     <div class="dl-tab-content" *ngIf="activeTab === 'matched' && showMatchedComparison">
-      <div class="dl-table-toolbar">
-        <div class="dl-filter-pills" role="group" aria-label="Filter matched predictions">
-          <button type="button" class="dl-filter-pill" [class.active]="matchedFilter === 'all'" (click)="setMatchedFilter('all')">
-            All matched <span class="dl-pill-count">{{ matchedRows.length | number }}</span>
-          </button>
-          <button type="button" class="dl-filter-pill danger" [class.active]="matchedFilter === 'buggy'" (click)="setMatchedFilter('buggy')">
-            Buggy in either <span class="dl-pill-count">{{ matchedBuggyCount | number }}</span>
-          </button>
-          <button type="button" class="dl-filter-pill warn" [class.active]="matchedFilter === 'disagree'" (click)="setMatchedFilter('disagree')">
-            Models disagree <span class="dl-pill-count">{{ matchedDisagreeCount | number }}</span>
-          </button>
+      <div class="dl-section-toolbar">
+        <div class="dl-heading-with-stats">
+          <div class="dl-label-summary-badges" *ngIf="matchedRows.length">
+            <span class="dl-badge-stat badge-stat-clean" title="Models agree count">
+              <span class="dl-status-dot"></span> Agree: <strong>{{ modelsAgreeCount | number }}</strong>
+            </span>
+            <span class="dl-badge-stat badge-stat-warn" title="Models disagree count">
+              <span class="dl-status-dot"></span> Disagree: <strong>{{ matchedDisagreeCount | number }}</strong>
+            </span>
+            <span class="dl-badge-stat badge-stat-buggy" title="Buggy in either count">
+              <span class="dl-status-dot"></span> Buggy in either: <strong>{{ matchedBuggyCount | number }}</strong>
+            </span>
+          </div>
         </div>
 
+        <div class="dl-section-toolbar-actions">
+          <div class="dl-catalog-filter">
+            <span class="dl-filter-label">Filter:</span>
+            <ui-select [options]="matchedFilterOptions"
+                       [value]="matchedFilter"
+                       (valueChange)="onMatchedFilterChange($event)">
+            </ui-select>
+          </div>
+        </div>
+      </div>
+
+      <div class="dl-table-toolbar">
         <ui-search-bar
           placeholder="Search by file identifier…"
           [query]="matchedSearch"
@@ -319,24 +356,24 @@
       <div class="dl-table-box" *ngIf="filteredMatchedRows.length; else noMatchedMatches">
         <ui-table [columns]="matchedColumns" [rows]="pagedMatchedRows" trackByKey="identifier">
           <ng-template uiTableCell="manualPrediction" let-row>
-            <span class="dl-status-cell" [class.danger]="row.manualPrediction === 1" [class.muted]="row.manualPrediction !== 1">
+            <span class="dl-status-cell" [ngClass]="row.manualPrediction === 1 ? 'danger' : 'clean'">
               <span class="dl-status-dot"></span>
               {{ row.manualPrediction === 1 ? 'Buggy' : 'Clean' }}
             </span>
           </ng-template>
           <ng-template uiTableCell="predefinedPrediction" let-row>
-            <span class="dl-status-cell" [class.danger]="row.predefinedPrediction === 1" [class.muted]="row.predefinedPrediction !== 1">
+            <span class="dl-status-cell" [ngClass]="row.predefinedPrediction === 1 ? 'danger' : 'clean'">
               <span class="dl-status-dot"></span>
               {{ row.predefinedPrediction === 1 ? 'Buggy' : 'Clean' }}
             </span>
           </ng-template>
           <ng-template uiTableCell="actualLabel" let-row>
-            <span *ngIf="row.actualLabel !== null; else noActualMatched"
-                  class="dl-status-cell" [class.danger]="row.actualLabel === 1" [class.clean]="row.actualLabel === 0">
+            <span *ngIf="row.actualLabel !== null && row.actualLabel !== undefined; else noActualMatched"
+                  class="dl-status-cell" [ngClass]="row.actualLabel === 1 ? 'danger' : 'clean'">
               <span class="dl-status-dot"></span>
               {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
             </span>
-            <ng-template #noActualMatched><span style="color: var(--muted);">—</span></ng-template>
+            <ng-template #noActualMatched><span class="dl-status-cell muted">-</span></ng-template>
           </ng-template>
           <ng-template uiTableCell="manualResult" let-row>
             <span *ngIf="row.manualCorrect !== null; else noManualResult"
@@ -344,7 +381,7 @@
               <span class="dl-status-dot"></span>
               {{ correctness(row.manualCorrect) }}
             </span>
-            <ng-template #noManualResult><span style="color: var(--muted);">—</span></ng-template>
+            <ng-template #noManualResult><span class="dl-status-cell muted">-</span></ng-template>
           </ng-template>
           <ng-template uiTableCell="predefinedResult" let-row>
             <span *ngIf="row.predefinedCorrect !== null; else noPredefinedResult"
@@ -352,7 +389,7 @@
               <span class="dl-status-dot"></span>
               {{ correctness(row.predefinedCorrect) }}
             </span>
-            <ng-template #noPredefinedResult><span style="color: var(--muted);">—</span></ng-template>
+            <ng-template #noPredefinedResult><span class="dl-status-cell muted">-</span></ng-template>
           </ng-template>
           <ng-template uiTableCell="modelsAgree" let-row>
             <span class="dl-tag-mono" [style.color]="row.modelsAgree ? '#10b981' : '#f59e0b'">

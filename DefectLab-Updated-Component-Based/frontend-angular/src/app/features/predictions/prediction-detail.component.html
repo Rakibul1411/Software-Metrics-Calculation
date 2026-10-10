@@ -43,15 +43,60 @@
   </div>
 
   <div class="dl-detail-section" *ngIf="run">
-    <h3>Predicted classes</h3>
+    <div class="dl-section-toolbar">
+      <div class="dl-heading-with-stats">
+        <h3>Predicted classes</h3>
+        <div class="dl-label-summary-badges" *ngIf="run.predictions.length">
+          <span class="dl-badge-stat badge-stat-clean" title="Predicted Clean instances">
+            <span class="dl-status-dot"></span> Pred Clean: <strong>{{ predictionStats.predClean | number }}</strong>
+          </span>
+          <span class="dl-badge-stat badge-stat-buggy" title="Predicted Buggy instances">
+            <span class="dl-status-dot"></span> Pred Buggy: <strong>{{ predictionStats.predBuggy | number }}</strong>
+          </span>
+          <ng-container *ngIf="predictionStats.hasActual">
+            <span class="dl-badge-stat badge-stat-clean" title="Actual Clean instances">
+              <span class="dl-status-dot"></span> Actual Clean: <strong>{{ predictionStats.actualClean | number }}</strong>
+            </span>
+            <span class="dl-badge-stat badge-stat-buggy" title="Actual Buggy instances">
+              <span class="dl-status-dot"></span> Actual Buggy: <strong>{{ predictionStats.actualBuggy | number }}</strong>
+            </span>
+          </ng-container>
+        </div>
+      </div>
+
+      <div class="dl-section-toolbar-actions" *ngIf="run.predictions.length">
+        <div class="dl-catalog-filter">
+          <span class="dl-filter-label">Filter:</span>
+          <ui-select [options]="filterOptions"
+                     [value]="filter"
+                     (valueChange)="onFilterChange($event)">
+          </ui-select>
+        </div>
+      </div>
+    </div>
+
     <div class="dl-table-box" *ngIf="run.predictions.length; else emptyPredictions">
       <ui-table [columns]="predictionDetailColumns" [rows]="pagedPredictions"
                 trackByKey="classIdentifier">
         <ng-template uiTableCell="defectProbability" let-row>{{ row.defectProbability | number:'1.4-4' }}</ng-template>
-        <ng-template uiTableCell="predictedLabel" let-row>{{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}</ng-template>
-        <ng-template uiTableCell="actualLabel" let-row>{{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}</ng-template>
+        <ng-template uiTableCell="predictedLabel" let-row>
+          <span class="dl-status-cell" [ngClass]="row.predictedLabel === 1 ? 'danger' : 'clean'">
+            <span class="dl-status-dot"></span>
+            {{ row.predictedLabel === 1 ? 'Buggy' : 'Clean' }}
+          </span>
+        </ng-template>
+        <ng-template uiTableCell="actualLabel" let-row>
+          <span *ngIf="row.actualLabel !== null && row.actualLabel !== undefined; else noActual"
+                class="dl-status-cell" [ngClass]="row.actualLabel === 1 ? 'danger' : 'clean'">
+            <span class="dl-status-dot"></span>
+            {{ row.actualLabel === 1 ? 'Buggy' : 'Clean' }}
+          </span>
+          <ng-template #noActual>
+            <span class="dl-status-cell muted">-</span>
+          </ng-template>
+        </ng-template>
       </ui-table>
-      <ui-pagination [total]="run.predictions.length" [page]="page" [pageSize]="pageSize" noun="predictions"
+      <ui-pagination [total]="totalPredictions" [page]="page" [pageSize]="pageSize" noun="predictions"
                      (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
       </ui-pagination>
     </div>

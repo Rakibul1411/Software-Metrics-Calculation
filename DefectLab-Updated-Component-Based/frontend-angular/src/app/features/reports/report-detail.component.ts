@@ -12,6 +12,7 @@ import {
 } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
+import { SelectOption } from '../../shared/ui-select/ui-select.model';
 import { MatchedPredictionRow, ReportDetailView, ReportsFacade } from './reports.facade';
 
 import { CodeSmellService } from '../../core/services/code-smell.service';
@@ -89,12 +90,12 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
 
   predefinedPage = 1;
   predefinedPageSize = 10;
-  predefinedFilter: 'all' | 'buggy' | 'clean' = 'all';
+  predefinedFilter: 'all' | 'buggy' | 'clean' | 'actual_buggy' | 'actual_clean' = 'all';
   predefinedSearch = '';
 
   matchedPage = 1;
   matchedPageSize = 10;
-  matchedFilter: 'all' | 'disagree' | 'buggy' = 'all';
+  matchedFilter: 'all' | 'disagree' | 'agree' | 'buggy' = 'all';
   matchedSearch = '';
 
   get manualRows(): PredictionRow[] {
@@ -128,8 +129,53 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     return this.manualRows.filter(r => r.predictedLabel === 0).length;
   }
 
+  get manualDefectRate(): string {
+    const total = this.manualRows.length;
+    return total > 0 ? ((this.manualBuggyCount / total) * 100).toFixed(1) + '%' : '0%';
+  }
+
+  get manualFilterOptions(): SelectOption[] {
+    return [
+      { value: 'all', label: `All files (${this.manualRows.length.toLocaleString()})` },
+      { value: 'clean', label: `Clean only (${this.manualCleanCount.toLocaleString()})` },
+      { value: 'buggy', label: `Buggy only (${this.manualBuggyCount.toLocaleString()})` }
+    ];
+  }
+
   get predefinedRows(): PredictionRow[] {
     return this.item?.predefinedRows ?? [];
+  }
+
+  get predefinedHasActual(): boolean {
+    return this.predefinedRows.some(r => r.actualLabel !== null && r.actualLabel !== undefined);
+  }
+
+  get predefinedActualBuggyCount(): number {
+    return this.predefinedRows.filter(r => r.actualLabel === 1).length;
+  }
+
+  get predefinedActualCleanCount(): number {
+    return this.predefinedRows.filter(r => r.actualLabel === 0).length;
+  }
+
+  get predefinedDefectRate(): string {
+    const total = this.predefinedRows.length;
+    return total > 0 ? ((this.predefinedBuggyCount / total) * 100).toFixed(1) + '%' : '0%';
+  }
+
+  get predefinedFilterOptions(): SelectOption[] {
+    const opts: SelectOption[] = [
+      { value: 'all', label: `All files (${this.predefinedRows.length.toLocaleString()})` },
+      { value: 'clean', label: `Predicted Clean (${this.predefinedCleanCount.toLocaleString()})` },
+      { value: 'buggy', label: `Predicted Buggy (${this.predefinedBuggyCount.toLocaleString()})` }
+    ];
+    if (this.predefinedHasActual) {
+      opts.push(
+        { value: 'actual_clean', label: `Actual Clean (${this.predefinedActualCleanCount.toLocaleString()})` },
+        { value: 'actual_buggy', label: `Actual Buggy (${this.predefinedActualBuggyCount.toLocaleString()})` }
+      );
+    }
+    return opts;
   }
 
   get filteredPredefinedRows(): PredictionRow[] {
@@ -138,6 +184,10 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
       rows = rows.filter(r => r.predictedLabel === 1);
     } else if (this.predefinedFilter === 'clean') {
       rows = rows.filter(r => r.predictedLabel === 0);
+    } else if (this.predefinedFilter === 'actual_buggy') {
+      rows = rows.filter(r => r.actualLabel === 1);
+    } else if (this.predefinedFilter === 'actual_clean') {
+      rows = rows.filter(r => r.actualLabel === 0);
     }
     if (this.predefinedSearch.trim()) {
       const q = this.predefinedSearch.trim().toLowerCase();
@@ -163,10 +213,21 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     return this.item?.matchedRows ?? [];
   }
 
+  get matchedFilterOptions(): SelectOption[] {
+    return [
+      { value: 'all', label: `All matched (${this.matchedRows.length.toLocaleString()})` },
+      { value: 'agree', label: `Models agree (${this.modelsAgreeCount.toLocaleString()})` },
+      { value: 'disagree', label: `Models disagree (${this.matchedDisagreeCount.toLocaleString()})` },
+      { value: 'buggy', label: `Buggy in either (${this.matchedBuggyCount.toLocaleString()})` }
+    ];
+  }
+
   get filteredMatchedRows(): MatchedPredictionRow[] {
     let rows = this.matchedRows;
     if (this.matchedFilter === 'disagree') {
       rows = rows.filter(r => !r.modelsAgree);
+    } else if (this.matchedFilter === 'agree') {
+      rows = rows.filter(r => r.modelsAgree);
     } else if (this.matchedFilter === 'buggy') {
       rows = rows.filter(r => r.manualPrediction === 1 || r.predefinedPrediction === 1);
     }
@@ -195,13 +256,23 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     this.manualPage = 1;
   }
 
+  onManualFilterChange(val: string | number | null): void {
+    this.manualFilter = (val as 'all' | 'buggy' | 'clean') || 'all';
+    this.manualPage = 1;
+  }
+
   onManualSearch(q: string): void {
     this.manualSearch = q;
     this.manualPage = 1;
   }
 
-  setPredefinedFilter(filter: 'all' | 'buggy' | 'clean'): void {
+  setPredefinedFilter(filter: 'all' | 'buggy' | 'clean' | 'actual_buggy' | 'actual_clean'): void {
     this.predefinedFilter = filter;
+    this.predefinedPage = 1;
+  }
+
+  onPredefinedFilterChange(val: string | number | null): void {
+    this.predefinedFilter = (val as 'all' | 'buggy' | 'clean' | 'actual_buggy' | 'actual_clean') || 'all';
     this.predefinedPage = 1;
   }
 
@@ -210,8 +281,13 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     this.predefinedPage = 1;
   }
 
-  setMatchedFilter(filter: 'all' | 'disagree' | 'buggy'): void {
+  setMatchedFilter(filter: 'all' | 'disagree' | 'agree' | 'buggy'): void {
     this.matchedFilter = filter;
+    this.matchedPage = 1;
+  }
+
+  onMatchedFilterChange(val: string | number | null): void {
+    this.matchedFilter = (val as 'all' | 'disagree' | 'agree' | 'buggy') || 'all';
     this.matchedPage = 1;
   }
 

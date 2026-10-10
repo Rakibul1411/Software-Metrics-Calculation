@@ -3,13 +3,10 @@ import { Observable, forkJoin, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import {
   DashboardData,
-  DatasetPreview,
   DatasetSummary,
   PredictionRunSummary
 } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
-import { CodeSmellService } from '../../core/services/code-smell.service';
-import { ClassAnalysisResult, CodeSmell } from '../../core/models/code-smell.model';
 import { ChartData } from '../../shared/ui-bar-chart/ui-bar-chart.model';
 
 /** Datasets shown in the volume chart before the tail is left to the catalog. */
@@ -17,36 +14,17 @@ const VOLUME_LIMIT = 8;
 /** Scored runs compared side by side; past three, colour stops being readable. */
 const QUALITY_LIMIT = 3;
 
-export interface TopHotspot {
+export interface TopPrediction {
   classIdentifier: string;
   simpleName: string;
   packageName: string;
   defectProbability: number;
   riskRank: number;
+  riskBand: 'HIGH' | 'MEDIUM' | 'LOW';
+  predictedLabel: number;
   runId: number;
   targetDatasetName: string;
   reportKey: string;
-  loc: number;
-  wmc: number;
-  cbo: number;
-  lcom: number;
-  blastRadius: number;
-  maintainabilityIndex: number;
-  maintainabilityRating: string;
-  smells: CodeSmell[];
-  primarySmell?: string;
-}
-
-export interface ArchitecturalHealthStats {
-  totalAnalyzedClasses: number;
-  totalGodClasses: number;
-  totalSpaghettiCoupling: number;
-  totalIncoherentModules: number;
-  overallMaintainabilityIndex: number;
-  maintainabilityRating: 'A' | 'B' | 'C';
-  cleanClassesCount: number;
-  warningClassesCount: number;
-  criticalHotspotsCount: number;
 }
 
 export interface DefectStats {
@@ -76,22 +54,16 @@ export interface DashboardView {
   quality: ChartData;
   balance: ChartData;
   defectStats: DefectStats;
-  architecturalStats: ArchitecturalHealthStats;
-  topHotspots: TopHotspot[];
+  topPredictions: TopPrediction[];
 }
 
 /**
- * Owns the overview screen's read model. The dashboard endpoint only carries
- * the counters and the two recent lists, so the charts are aggregated here
- * from the dataset and prediction-run collections the API already exposes —
- * the component stays a template binding surface.
+ * Owns the overview screen's read model. Charts and counters are aggregated
+ * here from dataset and prediction-run collections exposed by the API.
  */
 @Injectable({ providedIn: 'root' })
 export class DashboardFacade {
-  constructor(
-    private readonly api: DefectLabApiService,
-    private readonly codeSmellService: CodeSmellService
-  ) {}
+  constructor(private readonly api: DefectLabApiService) {}
 
   load(): Observable<DashboardView> {
     return forkJoin({
@@ -102,39 +74,17 @@ export class DashboardFacade {
       switchMap(result => {
         const latestRun = result.runs[0];
         if (!latestRun) {
-          return of(this.assemble(result.data, result.datasets, result.runs, [], this.computeArchStats([])));
+          return of(this.assemble(result.data, result.datasets, result.runs, []));
         }
 
         const reportKey = latestRun.comparisonGroupId || `run-${latestRun.id}`;
 
-        const predictions$ = this.api.predictions(latestRun.id, true, 6).pipe(
-          catchError(() => of([]))
-        );
-        const preview$ = latestRun.targetDataset?.id
-          ? this.api.previewDataset(latestRun.targetDataset.id, 0, 5000).pipe(
-              catchError(() => of(null))
-            )
-          : of(null);
-
-        return forkJoin({
-          predictions: predictions$,
-          preview: preview$
-        }).pipe(
-          map(({ predictions, preview }) => {
-            const dictRows = preview ? this.toDictRows(preview) : [];
-            const analyzedAll = dictRows.length
-              ? this.codeSmellService.parseClassAnalysisList(dictRows)
-              : [];
-
-            const matchedItems = this.codeSmellService.parsePredictionWithDatasetRows(
-              predictions, dictRows);
-
-            const hotspots: TopHotspot[] = predictions.map((p, idx) => {
-              const matched = matchedItems[idx];
-              const simpleName = matched?.className.split('.').pop() || p.classIdentifier.split('.').pop() || p.classIdentifier;
-              const lastDot = matched?.className.lastIndexOf('.') ?? -1;
-              const packageName = lastDot > 0 ? matched.className.substring(0, lastDot) : '(root package)';
-              const primarySmell = matched?.smells[0]?.name;
+        return this.api.predictions(latestRun.id, true, 6).pipe(
+          map(predictions => {
+            const topPredictions: TopPrediction[] = (predictions || []).map(p => {
+              const simpleName = p.classIdentifier.split('.').pop() || p.classIdentifier;
+              const lastDot = p.classIdentifier.lastIndexOf('.');
+              const packageName = lastDot > 0 ? p.classIdentifier.substring(0, lastDot) : '(root package)';
 
               return {
                 classIdentifier: p.classIdentifier,
@@ -142,99 +92,22 @@ export class DashboardFacade {
                 packageName,
                 defectProbability: p.defectProbability,
                 riskRank: p.riskRank,
+                riskBand: p.riskBand || (p.defectProbability >= 0.7 ? 'HIGH' : (p.defectProbability >= 0.4 ? 'MEDIUM' : 'LOW')),
+                predictedLabel: p.predictedLabel,
                 runId: latestRun.id,
                 targetDatasetName: latestRun.targetDataset.displayName,
-                reportKey,
-                loc: matched?.loc ?? Math.round(p.defectProbability * 600),
-                wmc: matched?.wmc ?? Math.round(p.defectProbability * 25),
-                cbo: matched?.cbo ?? Math.round(p.defectProbability * 15),
-                lcom: matched?.lcom ?? 0,
-                blastRadius: matched?.blastRadius ?? (matched?.ca || 0),
-                maintainabilityIndex: matched?.maintainabilityIndex ?? 70,
-                maintainabilityRating: matched?.maintainabilityRating ?? 'B',
-                smells: matched?.smells ?? [],
-                primarySmell
+                reportKey
               };
             });
 
-            hotspots.sort((a, b) => (a.riskRank ?? 0) - (b.riskRank ?? 0) || (b.defectProbability ?? 0) - (a.defectProbability ?? 0));
+            topPredictions.sort((a, b) => (a.riskRank ?? 0) - (b.riskRank ?? 0) || (b.defectProbability ?? 0) - (a.defectProbability ?? 0));
 
-            const archStats = this.computeArchStats(analyzedAll);
-
-            return this.assemble(
-              result.data,
-              result.datasets,
-              result.runs,
-              hotspots,
-              archStats
-            );
+            return this.assemble(result.data, result.datasets, result.runs, topPredictions);
           }),
-          catchError(() =>
-            of(this.assemble(result.data, result.datasets, result.runs, [], this.computeArchStats([])))
-          )
+          catchError(() => of(this.assemble(result.data, result.datasets, result.runs, [])))
         );
       })
     );
-  }
-
-  private toDictRows(preview: DatasetPreview): Array<Record<string, string | number>> {
-    if (!preview?.headers || !preview?.rows) return [];
-    return preview.rows.map(rowVals => {
-      const obj: Record<string, string | number> = {};
-      preview.headers.forEach((h, i) => {
-        const val = rowVals[i];
-        const num = Number(val);
-        const parsed = !isNaN(num) && val !== '' && val !== null && val !== undefined ? num : val;
-        obj[h] = parsed;
-        obj[h.toLowerCase()] = parsed;
-      });
-      return obj;
-    });
-  }
-
-  private computeArchStats(items: ClassAnalysisResult[]): ArchitecturalHealthStats {
-    if (!items || items.length === 0) {
-      return {
-        totalAnalyzedClasses: 0,
-        totalGodClasses: 0,
-        totalSpaghettiCoupling: 0,
-        totalIncoherentModules: 0,
-        overallMaintainabilityIndex: 75,
-        maintainabilityRating: 'B',
-        cleanClassesCount: 0,
-        warningClassesCount: 0,
-        criticalHotspotsCount: 0
-      };
-    }
-
-    const totalGodClasses = items.filter(it => it.smells.some(s => s.type === 'GOD_CLASS')).length;
-    const totalSpaghettiCoupling = items.filter(it => it.smells.some(s => s.type === 'SPAGHETTI_COUPLING')).length;
-    const totalIncoherentModules = items.filter(it => it.smells.some(s => s.type === 'INCOHERENT_MODULE')).length;
-    const totalMi = items.reduce((sum, it) => sum + (it.maintainabilityIndex || 70), 0);
-    const overallMi = Math.round(totalMi / items.length);
-
-    const maintainabilityRating: 'A' | 'B' | 'C' =
-      overallMi >= 75 ? 'A' : (overallMi >= 55 ? 'B' : 'C');
-
-    const criticalHotspotsCount = items.filter(
-      it => it.riskScore >= 0.6 || it.smells.some(s => s.severity === 'CRITICAL')
-    ).length;
-    const warningClassesCount = items.filter(
-      it => (it.riskScore >= 0.35 && it.riskScore < 0.6) || (it.smells.length > 0 && !it.smells.some(s => s.severity === 'CRITICAL'))
-    ).length;
-    const cleanClassesCount = Math.max(0, items.length - criticalHotspotsCount - warningClassesCount);
-
-    return {
-      totalAnalyzedClasses: items.length,
-      totalGodClasses,
-      totalSpaghettiCoupling,
-      totalIncoherentModules,
-      overallMaintainabilityIndex: overallMi,
-      maintainabilityRating,
-      cleanClassesCount,
-      warningClassesCount,
-      criticalHotspotsCount
-    };
   }
 
   originLabel(value: string): string {
@@ -253,8 +126,7 @@ export class DashboardFacade {
     data: DashboardData,
     datasets: DatasetSummary[],
     runs: PredictionRunSummary[],
-    topHotspots: TopHotspot[] = [],
-    architecturalStats?: ArchitecturalHealthStats
+    topPredictions: TopPrediction[] = []
   ): DashboardView {
     return {
       data,
@@ -266,8 +138,7 @@ export class DashboardFacade {
       quality: this.qualityChart(runs),
       balance: this.balanceChart(runs),
       defectStats: this.calculateDefectStats(runs),
-      architecturalStats: architecturalStats || this.computeArchStats([]),
-      topHotspots
+      topPredictions
     };
   }
 

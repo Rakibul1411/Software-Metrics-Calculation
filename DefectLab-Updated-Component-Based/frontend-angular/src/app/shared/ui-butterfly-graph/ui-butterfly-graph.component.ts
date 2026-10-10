@@ -258,9 +258,32 @@ export class UiButterflyGraphComponent implements OnChanges {
       const mouseX = event.clientX - rect.left + scrollLeft;
       const mouseY = event.clientY - rect.top + scrollTop;
 
+      const tooltipEl = container.querySelector('.dl-bf-tooltip') as HTMLElement | null;
+      const tooltipWidth = tooltipEl ? tooltipEl.offsetWidth : 260;
+      const tooltipHeight = tooltipEl ? tooltipEl.offsetHeight : 130;
+
+      let x = mouseX + 16;
+      let y = mouseY + 16;
+
+      // Flip left if overflowing visible container right boundary
+      if (mouseX + 16 + tooltipWidth > rect.width - 12) {
+        x = mouseX - tooltipWidth - 16;
+      }
+
+      // Flip up if overflowing visible container bottom boundary
+      if (mouseY + 16 + tooltipHeight > rect.height - 12) {
+        y = mouseY - tooltipHeight - 16;
+      }
+
+      // Hard-clamp within container viewport bounds so it is never clipped
+      const minX = scrollLeft + 12;
+      const maxX = Math.max(minX, rect.width + scrollLeft - tooltipWidth - 12);
+      const minY = scrollTop + 12;
+      const maxY = Math.max(minY, rect.height + scrollTop - tooltipHeight - 12);
+
       this.tooltipPos = {
-        x: mouseX + 16,
-        y: mouseY + 16
+        x: Math.min(maxX, Math.max(minX, x)),
+        y: Math.min(maxY, Math.max(minY, y))
       };
     }
   }

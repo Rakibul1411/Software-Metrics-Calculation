@@ -1518,6 +1518,130 @@ ui-page-header + .dl-detail-section,
 .dl-status-cell.muted { color: var(--muted); }
 .dl-status-cell.muted .dl-status-dot { background: var(--muted); opacity: 0.45; }
 
+/* Section toolbars & stat badges */
+.dl-section-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.dl-section-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.dl-heading-with-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.dl-heading-with-stats h3 {
+  margin: 0;
+}
+
+.dl-label-summary-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dl-badge-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  color: var(--ink-heading);
+}
+
+.dl-badge-stat strong {
+  font-weight: 700;
+}
+
+.dl-badge-stat.badge-stat-clean {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #059669;
+}
+.dl-badge-stat.badge-stat-clean .dl-status-dot {
+  background: #10b981;
+}
+
+.dl-badge-stat.badge-stat-buggy,
+.dl-badge-stat.badge-stat-danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #dc2626;
+}
+.dl-badge-stat.badge-stat-buggy .dl-status-dot,
+.dl-badge-stat.badge-stat-danger .dl-status-dot {
+  background: #ef4444;
+}
+
+.dl-badge-stat.badge-stat-warn {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #d97706;
+}
+.dl-badge-stat.badge-stat-warn .dl-status-dot {
+  background: #f59e0b;
+}
+
+.dl-badge-stat.badge-stat-info {
+  background: rgba(9, 105, 218, 0.08);
+  border-color: rgba(9, 105, 218, 0.25);
+  color: #0969da;
+}
+.dl-badge-stat.badge-stat-info .dl-status-dot {
+  background: #0969da;
+}
+
+.dl-badge-stat.badge-stat-muted {
+  background: var(--surface-alt);
+  border-color: var(--line);
+  color: var(--muted);
+}
+.dl-badge-stat.badge-stat-muted .dl-status-dot {
+  background: var(--muted);
+}
+
+:root[data-theme='dark'] .dl-badge-stat.badge-stat-clean {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+:root[data-theme='dark'] .dl-badge-stat.badge-stat-buggy,
+:root[data-theme='dark'] .dl-badge-stat.badge-stat-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+:root[data-theme='dark'] .dl-badge-stat.badge-stat-warn {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+:root[data-theme='dark'] .dl-badge-stat.badge-stat-info {
+  background: rgba(56, 139, 253, 0.15);
+  border-color: rgba(56, 139, 253, 0.35);
+  color: #58a6ff;
+}
+
 /* Catalog filters & summary */
 .dl-catalog-stats {
   padding-bottom: var(--space-4);
@@ -4867,8 +4991,8 @@ ui-detail-fields { display: contents; }
 /* ── Inspector Sub-Tabs & Expanded Width ─────────────────────────────────── */
 
 .dl-treemap-inspector.inspector-expanded {
-  width: 580px;
-  max-width: 90vw;
+  width: 640px;
+  max-width: 92vw;
   transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -5198,7 +5322,7 @@ ui-detail-fields { display: contents; }
 /* Butterfly Node Tooltip */
 .dl-bf-tooltip {
   position: absolute;
-  z-index: 50;
+  z-index: 100;
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
@@ -5207,7 +5331,10 @@ ui-detail-fields { display: contents; }
   pointer-events: none;
   min-width: 220px;
   max-width: 320px;
+  box-sizing: border-box;
   font-size: 12px;
+  line-height: 1.4;
+  animation: dl-fade-in 0.12s ease;
 }
 
 /* Butterfly Extra Classes Modal */
@@ -5225,6 +5352,14 @@ ui-detail-fields { display: contents; }
   flex-direction: column;
   overflow: hidden;
   animation: dl-fade-in 0.15s ease;
+}
+
+.dl-bf-extra-modal.extra-modal-left {
+  left: 16px;
+}
+
+.dl-bf-extra-modal.extra-modal-right {
+  right: 16px;
 }
 
 .dl-bf-extra-header {

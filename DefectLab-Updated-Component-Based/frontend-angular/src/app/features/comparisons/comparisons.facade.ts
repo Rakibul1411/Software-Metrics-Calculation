@@ -118,11 +118,11 @@ export class ComparisonsFacade {
 
   number(value: number | null | undefined): string {
     return value === null || value === undefined || !Number.isFinite(value)
-      ? '—' : value.toFixed(4);
+      ? '-' : value.toFixed(4);
   }
 
   percentage(value: number | null | undefined): string {
     return value === null || value === undefined || !Number.isFinite(value)
-      ? '—' : `${value.toFixed(2)}%`;
+      ? '-' : `${value.toFixed(2)}%`;
   }
 }
