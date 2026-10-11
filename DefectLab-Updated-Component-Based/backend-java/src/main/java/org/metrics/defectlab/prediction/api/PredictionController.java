@@ -92,6 +92,14 @@ public class PredictionController {
         return ResponseEntity.ok(getPredictionSummaryUseCase.detail(userId, run));
     }
 
+    @GetMapping("/{id}/coral-tsne")
+    public ResponseEntity<Map<String, Object>> coralTsne(
+            @PathVariable("id") Long id, HttpServletRequest request) {
+        Long userId = currentUser.requireUserId(request);
+        PredictionRun run = getPredictionRunUseCase.require(userId, id);
+        return ResponseEntity.ok(getPredictionSummaryUseCase.coralTsne(userId, run));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> delete(
             @PathVariable("id") Long id, HttpServletRequest request) throws IOException {

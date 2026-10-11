@@ -19,4 +19,15 @@
     <ui-icon name="chart" [size]="14"></ui-icon>
     Hotspot Treemap
   </button>
+  <button
+    *ngIf="showCoralTsne"
+    type="button"
+    class="dl-view-btn"
+    [class.active]="mode === 'tsne'"
+    (click)="selectMode('tsne')"
+    [title]="tsneTitle"
+  >
+    <ui-icon name="scatter" [size]="14"></ui-icon>
+    CORAL t-SNE
+  </button>
 </div>

@@ -28,7 +28,7 @@ public class RestMlServiceClient implements MlServiceClient {
                            @Value("${ml.service.token:local-development-token}") String token) {
         this.restTemplate = builder
                 .setConnectTimeout(Duration.ofSeconds(10))
-                .setReadTimeout(Duration.ofMinutes(10))
+                .setReadTimeout(Duration.ofSeconds(60))
                 .build();
         this.baseUrl = baseUrl.replaceAll("/+$", "");
         this.token = token;
@@ -44,6 +44,12 @@ public class RestMlServiceClient implements MlServiceClient {
     @SuppressWarnings("unchecked")
     public Map<String, Object> evaluate(Map<String, Object> request) {
         return post("/ml/evaluate", request, Map.class);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> coralTsne(Map<String, Object> request) {
+        return post("/ml/coral-tsne", request, Map.class);
     }
 
     private <T> T post(String path, Object body, Class<T> responseType) {

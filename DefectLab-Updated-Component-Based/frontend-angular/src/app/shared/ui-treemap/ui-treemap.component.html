@@ -179,11 +179,51 @@
       </button>
     </div>
 
+    <!-- Color Palette Switcher -->
+    <div class="dl-treemap-palette-selector">
+      <span class="dl-palette-label">Palette:</span>
+      <div class="dl-palette-pills">
+        <button
+          type="button"
+          class="dl-palette-btn"
+          [class.active]="palette === 'soft'"
+          (click)="setPalette('soft')"
+          title="Light & Modern (Emerald / Amber / Rose)"
+        >
+          Soft Light
+        </button>
+        <button
+          type="button"
+          class="dl-palette-btn"
+          [class.active]="palette === 'pastel'"
+          (click)="setPalette('pastel')"
+          title="Light Pastel (Mint / Gold / Coral)"
+        >
+          Pastel
+        </button>
+        <button
+          type="button"
+          class="dl-palette-btn"
+          [class.active]="palette === 'cool'"
+          (click)="setPalette('cool')"
+          title="Cool Slate (Cyan / Lavender / Pink)"
+        >
+          Cool Slate
+        </button>
+      </div>
+    </div>
+
     <div class="dl-treemap-legend">
       <span class="dl-legend-label">Risk Scale:</span>
-      <span class="dl-legend-item"><span class="dl-legend-box box-clean"></span> Low Risk (&lt;35%)</span>
-      <span class="dl-legend-item"><span class="dl-legend-box box-warning"></span> Elevated (35–59%)</span>
-      <span class="dl-legend-item"><span class="dl-legend-box box-critical"></span> Defect Hotspot (≥60%)</span>
+      <span class="dl-legend-item">
+        <span class="dl-legend-box" [style.background]="paletteColors.clean"></span> Low Risk (&lt;35%)
+      </span>
+      <span class="dl-legend-item">
+        <span class="dl-legend-box" [style.background]="paletteColors.warning"></span> Elevated (35–59%)
+      </span>
+      <span class="dl-legend-item">
+        <span class="dl-legend-box" [style.background]="paletteColors.hotspot"></span> Defect Hotspot (≥60%)
+      </span>
     </div>
   </div>
 

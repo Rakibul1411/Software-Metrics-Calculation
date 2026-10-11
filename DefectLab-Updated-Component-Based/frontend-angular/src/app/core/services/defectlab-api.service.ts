@@ -6,6 +6,7 @@ import {
   PredictionRunDetail,
   PredictionRunGroup,
   PredictionRunSummary,
+  CoralTsneResponse,
   DashboardData,
   DatasetFamily,
   DatasetType,
@@ -138,6 +139,11 @@ export class DefectLabApiService {
   predictionRun(id: number): Observable<PredictionRunDetail> {
     return this.http.get<PredictionRunDetail>(
       `${this.api}/predictions/${id}`, this.options);
+  }
+
+  getCoralTsne(id: number): Observable<CoralTsneResponse> {
+    return this.http.get<CoralTsneResponse>(
+      `${this.api}/predictions/${id}/coral-tsne`, this.options);
   }
 
   runPrediction(payload: Record<string, unknown>): Observable<PredictionExecution> {

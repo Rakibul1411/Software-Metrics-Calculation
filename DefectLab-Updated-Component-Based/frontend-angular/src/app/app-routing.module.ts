@@ -19,27 +19,27 @@ import { ReportsComponent } from './features/reports/reports.component';
 import { ShellComponent } from './features/shell/shell.component';
 
 const routes: Routes = [
-  { path: 'login', component: AuthPageComponent, canActivate: [guestGuard], title: 'Sign In — DefectLab' },
+  { path: 'login', component: AuthPageComponent, canActivate: [guestGuard], title: 'Sign In - DefectLab' },
   {
     path: '',
     component: ShellComponent,
     canActivate: [authGuard],
     children: [
       // Primary meaningful domain routes
-      { path: 'dashboard', component: OverviewComponent, title: 'Dashboard — DefectLab' },
-      { path: 'source-analysis', component: AnalyzeComponent, title: 'Source Analysis — DefectLab' },
-      { path: 'metric-storage/new', component: DatasetCreateComponent, title: 'Add Dataset — DefectLab' },
-      { path: 'metric-storage/:id', component: DatasetDetailComponent, title: 'Dataset Details — DefectLab' },
-      { path: 'metric-storage', component: DatasetsComponent, title: 'Metric Storage — DefectLab' },
-      { path: 'defect-predictions/new', component: PredictionCreateComponent, title: 'Run Prediction — DefectLab' },
-      { path: 'defect-predictions/:id', component: PredictionDetailComponent, title: 'Prediction Run Details — DefectLab' },
-      { path: 'defect-predictions', component: PredictionsComponent, title: 'Defect Predictions — DefectLab' },
-      { path: 'metric-comparisons/new', component: ComparisonCreateComponent, title: 'New Comparison — DefectLab' },
-      { path: 'metric-comparisons/:id', component: ComparisonDetailComponent, title: 'Metric Comparison Details — DefectLab' },
-      { path: 'metric-comparisons', component: ComparisonsComponent, title: 'Metric Comparisons — DefectLab' },
-      { path: 'prediction-reports/:groupKey', component: ReportDetailComponent, title: 'Prediction Report Details — DefectLab' },
-      { path: 'prediction-reports', component: ReportsComponent, title: 'Prediction Reports — DefectLab' },
-      { path: 'account-settings', component: AccountComponent, title: 'Account Settings — DefectLab' },
+      { path: 'dashboard', component: OverviewComponent, title: 'Dashboard - DefectLab' },
+      { path: 'source-analysis', component: AnalyzeComponent, title: 'Source Analysis - DefectLab' },
+      { path: 'metric-storage/new', component: DatasetCreateComponent, title: 'Add Dataset - DefectLab' },
+      { path: 'metric-storage/:id', component: DatasetDetailComponent, title: 'Dataset Details - DefectLab' },
+      { path: 'metric-storage', component: DatasetsComponent, title: 'Metric Storage - DefectLab' },
+      { path: 'defect-predictions/new', component: PredictionCreateComponent, title: 'Run Prediction - DefectLab' },
+      { path: 'defect-predictions/:id', component: PredictionDetailComponent, title: 'Prediction Run Details - DefectLab' },
+      { path: 'defect-predictions', component: PredictionsComponent, title: 'Defect Predictions - DefectLab' },
+      { path: 'metric-comparisons/new', component: ComparisonCreateComponent, title: 'New Comparison - DefectLab' },
+      { path: 'metric-comparisons/:id', component: ComparisonDetailComponent, title: 'Metric Comparison Details - DefectLab' },
+      { path: 'metric-comparisons', component: ComparisonsComponent, title: 'Metric Comparisons - DefectLab' },
+      { path: 'prediction-reports/:groupKey', component: ReportDetailComponent, title: 'Prediction Report Details - DefectLab' },
+      { path: 'prediction-reports', component: ReportsComponent, title: 'Prediction Reports - DefectLab' },
+      { path: 'account-settings', component: AccountComponent, title: 'Account Settings - DefectLab' },
 
       // Aliases and backwards-compatible redirects
       { path: 'overview', redirectTo: 'dashboard', pathMatch: 'full' },

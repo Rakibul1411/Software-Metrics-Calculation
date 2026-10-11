@@ -27,6 +27,7 @@ class PipelineOutcome:
     covariance_distance_after: float | None
     predictions: list[dict]
     warnings: list[str]
+    coral_tsne: dict | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -42,6 +43,7 @@ class PipelineOutcome:
             "covarianceDistanceAfter": self.covariance_distance_after,
             "predictions": self.predictions,
             "warnings": self.warnings,
+            "coralTsne": self.coral_tsne,
         }
 
 
@@ -154,6 +156,19 @@ def run(
             "riskBand": risk,
         })
 
+    coral_tsne_data = None
+    if apply_coral:
+        try:
+            from app.services.coral_tsne_service import compute_coral_tsne
+            coral_tsne_data = compute_coral_tsne(
+                source=source,
+                target=target,
+                coral_regularization=coral_regularization,
+                seed=seed,
+            )
+        except Exception:
+            coral_tsne_data = None
+
     return PipelineOutcome(
         family=source.profile.family,
         model_name="KNN",
@@ -167,6 +182,7 @@ def run(
         covariance_distance_after=dist_after,
         predictions=predictions,
         warnings=warnings,
+        coral_tsne=coral_tsne_data,
     )
 
 

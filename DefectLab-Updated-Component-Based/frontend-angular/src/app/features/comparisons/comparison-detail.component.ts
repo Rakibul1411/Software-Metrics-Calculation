@@ -6,6 +6,7 @@ import {
   InstanceMetricComparisonRow,
   MetricComparisonDetail
 } from '../../core/models/defectlab.model';
+import { SelectOption } from '../../shared/ui-select/ui-select.model';
 import { ComparisonsFacade } from './comparisons.facade';
 
 @Component({
@@ -22,6 +23,7 @@ export class ComparisonDetailComponent extends BaseDetailComponent<MetricCompari
   metricPageSize = 10;
   filePage = 1;
   filePageSize = 10;
+  statusFilter: string = 'ALL';
 
   constructor(readonly facade: ComparisonsFacade) {
     super();
@@ -53,9 +55,82 @@ export class ComparisonDetailComponent extends BaseDetailComponent<MetricCompari
     return this.facade.instanceRows(this.item);
   }
 
+  get statusCounts(): {
+    total: number;
+    exact: number;
+    close: number;
+    mismatch: number;
+    notComparable: number;
+  } {
+    let exact = 0;
+    let close = 0;
+    let mismatch = 0;
+    let notComparable = 0;
+    for (const r of this.instanceRows) {
+      if (r.status === 'EXACT_MATCH') exact++;
+      else if (r.status === 'CLOSE_MATCH') close++;
+      else if (r.status === 'MISMATCH') mismatch++;
+      else if (r.status === 'NOT_COMPARABLE') notComparable++;
+    }
+    return {
+      total: this.instanceRows.length,
+      exact,
+      close,
+      mismatch,
+      notComparable
+    };
+  }
+
+  get statusFilterOptions(): SelectOption[] {
+    const s = this.statusCounts;
+    return [
+      { value: 'ALL', label: `All statuses (${s.total.toLocaleString()})` },
+      { value: 'EXACT_MATCH', label: `Exact match (${s.exact.toLocaleString()})` },
+      { value: 'CLOSE_MATCH', label: `Close match (${s.close.toLocaleString()})` },
+      { value: 'MISMATCH', label: `Mismatch (${s.mismatch.toLocaleString()})` },
+      { value: 'NOT_COMPARABLE', label: `Not comparable (${s.notComparable.toLocaleString()})` }
+    ];
+  }
+
+  onStatusFilterChange(value: string | number | null): void {
+    this.statusFilter = (value as string) || 'ALL';
+    this.filePage = 1;
+  }
+
+  get filteredInstanceRows(): InstanceMetricComparisonRow[] {
+    if (this.statusFilter === 'ALL') {
+      return this.instanceRows;
+    }
+    return this.instanceRows.filter(r => r.status === this.statusFilter);
+  }
+
+  get totalInstanceRows(): number {
+    return this.filteredInstanceRows.length;
+  }
+
   get pagedInstanceRows(): InstanceMetricComparisonRow[] {
     const start = (this.filePage - 1) * this.filePageSize;
-    return this.instanceRows.slice(start, start + this.filePageSize);
+    return this.filteredInstanceRows.slice(start, start + this.filePageSize);
+  }
+
+  formatStatus(status: string): string {
+    switch (status) {
+      case 'EXACT_MATCH': return 'Exact Match';
+      case 'CLOSE_MATCH': return 'Close Match';
+      case 'MISMATCH': return 'Mismatch';
+      case 'NOT_COMPARABLE': return 'Not Comparable';
+      default: return status || '-';
+    }
+  }
+
+  statusTone(status: string): string {
+    switch (status) {
+      case 'EXACT_MATCH': return 'clean';
+      case 'CLOSE_MATCH': return 'warn';
+      case 'MISMATCH': return 'danger';
+      case 'NOT_COMPARABLE': return 'muted';
+      default: return 'muted';
+    }
   }
 
   get instanceMetricStats(): AggregateMetricComparisonRow[] {
@@ -114,6 +189,7 @@ export class ComparisonDetailComponent extends BaseDetailComponent<MetricCompari
   override load(id: number): void {
     this.metricPage = 1;
     this.filePage = 1;
+    this.statusFilter = 'ALL';
     super.load(id);
   }
 

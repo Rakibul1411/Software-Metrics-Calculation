@@ -14,5 +14,7 @@ public interface GetPredictionSummaryUseCase {
 
     Map<String, Object> detail(Long userId, PredictionRun run);
 
+    Map<String, Object> coralTsne(Long userId, PredictionRun run);
+
     List<Map<String, Object>> grouped(Long userId);
 }

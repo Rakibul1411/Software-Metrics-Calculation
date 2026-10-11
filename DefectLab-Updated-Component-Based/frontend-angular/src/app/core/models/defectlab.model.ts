@@ -85,6 +85,39 @@ export interface PredictionRow {
   riskBand: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
+export interface CoralTsnePoint {
+  id: string;
+  x: number;
+  y: number;
+  domain: 'source' | 'target' | 'source_aligned';
+  label: number | null;
+}
+
+export interface DomainStats {
+  centerX: number;
+  centerY: number;
+  radiusX: number;
+  radiusY: number;
+}
+
+export interface CoralTsneResponse {
+  covarianceDistanceBefore: number;
+  covarianceDistanceAfter: number;
+  reductionPercent: number;
+  sourceSampleCount: number;
+  targetSampleCount: number;
+  featuresAlignedCount: number;
+  coralRegularization: number;
+  before: CoralTsnePoint[];
+  after: CoralTsnePoint[];
+  stats?: {
+    beforeSource: DomainStats;
+    beforeTarget: DomainStats;
+    afterSource: DomainStats;
+    afterTarget: DomainStats;
+  };
+}
+
 export interface PredictionRunSummary {
   id: number;
   comparisonGroupId: string | null;
@@ -97,6 +130,7 @@ export interface PredictionRunSummary {
   reportFileAvailable: boolean;
   summary: PredictionSummary;
   evaluation: EvaluationMetrics | null;
+  coralTsne?: CoralTsneResponse;
 }
 
 export interface PredictionRunDetail extends PredictionRunSummary {

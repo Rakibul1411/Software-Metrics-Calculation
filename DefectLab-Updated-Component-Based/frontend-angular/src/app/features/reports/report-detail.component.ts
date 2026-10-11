@@ -8,10 +8,13 @@ import {
   MetricValue,
   PredictionRow,
   PredictionRunGroup,
-  PredictionRunSummary
+  PredictionRunSummary,
+  CoralTsneResponse
 } from '../../core/models/defectlab.model';
 import { DefectLabApiService } from '../../core/services/defectlab-api.service';
 import { DetailField } from '../../shared/ui-detail-fields/ui-detail-fields.model';
+import { SelectOption } from '../../shared/ui-select/ui-select.model';
+import { ViewMode } from '../../shared/ui-view-toggle/ui-view-toggle.component';
 import { MatchedPredictionRow, ReportDetailView, ReportsFacade } from './reports.facade';
 
 import { CodeSmellService } from '../../core/services/code-smell.service';
@@ -26,8 +29,11 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
   protected readonly listRoute = ['/prediction-reports'];
   protected readonly missingMessage = 'The report group was not specified.';
   protected override readonly routeParam = 'groupKey';
+  protected override autoRefreshEnabled = false;
 
-  viewMode: 'table' | 'treemap' = 'table';
+  viewMode: ViewMode = 'table';
+  coralTsneData: CoralTsneResponse | null = null;
+  loadingCoralTsne = false;
   manualDatasetRows: Array<Record<string, string | number>> = [];
   predefinedDatasetRows: Array<Record<string, string | number>> = [];
 
@@ -42,8 +48,64 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     super();
   }
 
-  setViewMode(mode: 'table' | 'treemap'): void {
+  get isCoralEnabled(): boolean {
+    const run = this.activeRun;
+    return !!(run?.modelConfig?.coral);
+  }
+
+  get activeRun(): PredictionRunSummary | null {
+    if (this.activeTab === 'manual') return this.manualRun;
+    if (this.activeTab === 'predefined') return this.predefinedRun;
+    return this.manualRun || this.predefinedRun;
+  }
+
+  setViewMode(mode: ViewMode): void {
     this.viewMode = mode;
+    if (mode === 'tsne') {
+      this.loadCoralTsne();
+    }
+  }
+
+  onTabChange(tab: 'manual' | 'predefined' | 'matched'): void {
+    this.activeTab = tab;
+    if (this.viewMode === 'tsne') {
+      const run = this.activeRun;
+      if (run?.coralTsne) {
+        this.coralTsneData = run.coralTsne;
+        this.loadingCoralTsne = false;
+      } else if (run?.id && run.modelConfig?.coral) {
+        this.coralTsneData = null;
+        this.loadCoralTsne();
+      }
+    }
+  }
+
+  loadCoralTsne(force = false): void {
+    const run = this.activeRun;
+    if (!run?.id) return;
+
+    if (!force && run.coralTsne) {
+      this.coralTsneData = run.coralTsne;
+      this.loadingCoralTsne = false;
+      return;
+    }
+
+    if (this.loadingCoralTsne) return;
+
+    this.loadingCoralTsne = true;
+    this.api.getCoralTsne(run.id).subscribe({
+      next: res => {
+        this.coralTsneData = res;
+        this.loadingCoralTsne = false;
+        if (run) {
+          run.coralTsne = res;
+        }
+      },
+      error: err => {
+        console.error('Failed to load CORAL t-SNE', err);
+        this.loadingCoralTsne = false;
+      }
+    });
   }
 
   updateTreemapItems(view?: ReportDetailView): void {
@@ -89,12 +151,12 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
 
   predefinedPage = 1;
   predefinedPageSize = 10;
-  predefinedFilter: 'all' | 'buggy' | 'clean' = 'all';
+  predefinedFilter: 'all' | 'buggy' | 'clean' | 'actual_buggy' | 'actual_clean' = 'all';
   predefinedSearch = '';
 
   matchedPage = 1;
   matchedPageSize = 10;
-  matchedFilter: 'all' | 'disagree' | 'buggy' = 'all';
+  matchedFilter: 'all' | 'disagree' | 'agree' | 'buggy' = 'all';
   matchedSearch = '';
 
   get manualRows(): PredictionRow[] {
@@ -128,8 +190,53 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     return this.manualRows.filter(r => r.predictedLabel === 0).length;
   }
 
+  get manualDefectRate(): string {
+    const total = this.manualRows.length;
+    return total > 0 ? ((this.manualBuggyCount / total) * 100).toFixed(1) + '%' : '0%';
+  }
+
+  get manualFilterOptions(): SelectOption[] {
+    return [
+      { value: 'all', label: `All files (${this.manualRows.length.toLocaleString()})` },
+      { value: 'clean', label: `Clean only (${this.manualCleanCount.toLocaleString()})` },
+      { value: 'buggy', label: `Buggy only (${this.manualBuggyCount.toLocaleString()})` }
+    ];
+  }
+
   get predefinedRows(): PredictionRow[] {
     return this.item?.predefinedRows ?? [];
+  }
+
+  get predefinedHasActual(): boolean {
+    return this.predefinedRows.some(r => r.actualLabel !== null && r.actualLabel !== undefined);
+  }
+
+  get predefinedActualBuggyCount(): number {
+    return this.predefinedRows.filter(r => r.actualLabel === 1).length;
+  }
+
+  get predefinedActualCleanCount(): number {
+    return this.predefinedRows.filter(r => r.actualLabel === 0).length;
+  }
+
+  get predefinedDefectRate(): string {
+    const total = this.predefinedRows.length;
+    return total > 0 ? ((this.predefinedBuggyCount / total) * 100).toFixed(1) + '%' : '0%';
+  }
+
+  get predefinedFilterOptions(): SelectOption[] {
+    const opts: SelectOption[] = [
+      { value: 'all', label: `All files (${this.predefinedRows.length.toLocaleString()})` },
+      { value: 'clean', label: `Predicted Clean (${this.predefinedCleanCount.toLocaleString()})` },
+      { value: 'buggy', label: `Predicted Buggy (${this.predefinedBuggyCount.toLocaleString()})` }
+    ];
+    if (this.predefinedHasActual) {
+      opts.push(
+        { value: 'actual_clean', label: `Actual Clean (${this.predefinedActualCleanCount.toLocaleString()})` },
+        { value: 'actual_buggy', label: `Actual Buggy (${this.predefinedActualBuggyCount.toLocaleString()})` }
+      );
+    }
+    return opts;
   }
 
   get filteredPredefinedRows(): PredictionRow[] {
@@ -138,6 +245,10 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
       rows = rows.filter(r => r.predictedLabel === 1);
     } else if (this.predefinedFilter === 'clean') {
       rows = rows.filter(r => r.predictedLabel === 0);
+    } else if (this.predefinedFilter === 'actual_buggy') {
+      rows = rows.filter(r => r.actualLabel === 1);
+    } else if (this.predefinedFilter === 'actual_clean') {
+      rows = rows.filter(r => r.actualLabel === 0);
     }
     if (this.predefinedSearch.trim()) {
       const q = this.predefinedSearch.trim().toLowerCase();
@@ -163,10 +274,21 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     return this.item?.matchedRows ?? [];
   }
 
+  get matchedFilterOptions(): SelectOption[] {
+    return [
+      { value: 'all', label: `All matched (${this.matchedRows.length.toLocaleString()})` },
+      { value: 'agree', label: `Models agree (${this.modelsAgreeCount.toLocaleString()})` },
+      { value: 'disagree', label: `Models disagree (${this.matchedDisagreeCount.toLocaleString()})` },
+      { value: 'buggy', label: `Buggy in either (${this.matchedBuggyCount.toLocaleString()})` }
+    ];
+  }
+
   get filteredMatchedRows(): MatchedPredictionRow[] {
     let rows = this.matchedRows;
     if (this.matchedFilter === 'disagree') {
       rows = rows.filter(r => !r.modelsAgree);
+    } else if (this.matchedFilter === 'agree') {
+      rows = rows.filter(r => r.modelsAgree);
     } else if (this.matchedFilter === 'buggy') {
       rows = rows.filter(r => r.manualPrediction === 1 || r.predefinedPrediction === 1);
     }
@@ -195,13 +317,23 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     this.manualPage = 1;
   }
 
+  onManualFilterChange(val: string | number | null): void {
+    this.manualFilter = (val as 'all' | 'buggy' | 'clean') || 'all';
+    this.manualPage = 1;
+  }
+
   onManualSearch(q: string): void {
     this.manualSearch = q;
     this.manualPage = 1;
   }
 
-  setPredefinedFilter(filter: 'all' | 'buggy' | 'clean'): void {
+  setPredefinedFilter(filter: 'all' | 'buggy' | 'clean' | 'actual_buggy' | 'actual_clean'): void {
     this.predefinedFilter = filter;
+    this.predefinedPage = 1;
+  }
+
+  onPredefinedFilterChange(val: string | number | null): void {
+    this.predefinedFilter = (val as 'all' | 'buggy' | 'clean' | 'actual_buggy' | 'actual_clean') || 'all';
     this.predefinedPage = 1;
   }
 
@@ -210,8 +342,13 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     this.predefinedPage = 1;
   }
 
-  setMatchedFilter(filter: 'all' | 'disagree' | 'buggy'): void {
+  setMatchedFilter(filter: 'all' | 'disagree' | 'agree' | 'buggy'): void {
     this.matchedFilter = filter;
+    this.matchedPage = 1;
+  }
+
+  onMatchedFilterChange(val: string | number | null): void {
+    this.matchedFilter = (val as 'all' | 'disagree' | 'agree' | 'buggy') || 'all';
     this.matchedPage = 1;
   }
 
@@ -302,8 +439,9 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
     this.manualPage = 1;
     this.predefinedPage = 1;
     this.matchedPage = 1;
-    this.manualDatasetRows = [];
-    this.predefinedDatasetRows = [];
+    if (!this.item || this.readRouteKey() !== key) {
+      this.coralTsneData = null;
+    }
     super.load(key);
   }
 
@@ -327,6 +465,11 @@ export class ReportDetailComponent extends BaseDetailComponent<ReportDetailView,
           } else if (view.manualRun && !view.predefinedRun) {
             this.activeTab = 'manual';
           }
+        }
+        if (view.manualRun?.coralTsne) {
+          this.coralTsneData = view.manualRun.coralTsne;
+        } else if (view.predefinedRun?.coralTsne) {
+          this.coralTsneData = view.predefinedRun.coralTsne;
         }
         this.updateTreemapItems(view);
         this.clampPages();

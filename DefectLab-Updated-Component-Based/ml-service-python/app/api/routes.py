@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.domain import evaluation, prediction_pipeline
 from app.domain.dataset_preparation import SchemaError, prepare
+from app.services.coral_tsne_service import compute_coral_tsne
 
 logger = logging.getLogger("defectlab.ml.api")
 router = APIRouter()
@@ -98,3 +99,30 @@ def evaluate_predictions(payload: dict[str, Any]) -> dict[str, Any]:
     except ValueError as err:
         logger.warning("Evaluation failed: %s", err)
         raise HTTPException(status_code=422, detail=str(err)) from err
+
+
+@router.post("/coral-tsne")
+def run_coral_tsne(payload: dict[str, Any]) -> dict[str, Any]:
+    try:
+        source_rows = payload.get("sourceRows") or []
+        target_rows = payload.get("targetRows") or []
+        family = payload.get("family")
+        coral_reg = float(payload.get("coralRegularization", 1.0))
+        seed = int(payload.get("seed", 42))
+
+        if not source_rows or not target_rows:
+            raise SchemaError("Both sourceRows and targetRows are required for CORAL t-SNE projection.")
+
+        source = prepare(source_rows, family=family, require_labels=False)
+        target = prepare(target_rows, family=family, require_labels=False)
+
+        return compute_coral_tsne(
+            source=source,
+            target=target,
+            coral_regularization=coral_reg,
+            seed=seed,
+        )
+    except (SchemaError, ValueError) as err:
+        logger.warning("CORAL t-SNE calculation failed: %s", err)
+        raise HTTPException(status_code=422, detail=str(err)) from err
+

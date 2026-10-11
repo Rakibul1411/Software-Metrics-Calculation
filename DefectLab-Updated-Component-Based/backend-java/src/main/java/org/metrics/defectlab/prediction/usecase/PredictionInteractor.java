@@ -315,6 +315,9 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
         metadata.put("evaluation", evaluation.isEmpty() ? null : evaluation);
         metadata.put("predictions", predictions);
         metadata.put("warnings", mlResponse.getOrDefault("warnings", List.of()));
+        if (mlResponse.containsKey("coralTsne") && mlResponse.get("coralTsne") != null) {
+            metadata.put("coralTsne", mlResponse.get("coralTsne"));
+        }
         return metadata;
     }
 
@@ -432,6 +435,9 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
         body.put("reportFileAvailable", true);
         body.put("summary", canonicalSummary(metadata.get("summary")));
         body.put("evaluation", metadata.get("evaluation"));
+        if (metadata.containsKey("coralTsne") && metadata.get("coralTsne") != null) {
+            body.put("coralTsne", metadata.get("coralTsne"));
+        }
         return body;
     }
 
@@ -440,10 +446,54 @@ public class PredictionInteractor implements ExecutePredictionUseCase, ListPredi
         Map<String, Object> body = summary(userId, run);
         Map<String, Object> metadata = readMetadata(run);
         body.put("warnings", metadata.getOrDefault("warnings", List.of()));
+        if (metadata.containsKey("coralTsne") && metadata.get("coralTsne") != null) {
+            body.put("coralTsne", metadata.get("coralTsne"));
+        }
         MetricDataset target = getDatasetUseCase.require(userId, run.getTargetDatasetId());
         List<Map<String, Object>> sorted = sortPredictionsRowWise(predictionRows(metadata), target);
         body.put("predictions", sorted.stream().limit(100).toList());
         return body;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> coralTsne(Long userId, PredictionRun run) {
+        Map<String, Object> metadata = readMetadata(run);
+        if (metadata.containsKey("coralTsne") && metadata.get("coralTsne") instanceof Map) {
+            return (Map<String, Object>) metadata.get("coralTsne");
+        }
+        MetricDataset source = getDatasetUseCase.require(userId, run.getSourceDatasetId());
+        MetricDataset target = getDatasetUseCase.require(userId, run.getTargetDatasetId());
+        DatasetTable sourceTable;
+        DatasetTable targetTable;
+        try {
+            sourceTable = loadDatasetTableUseCase.load(source);
+            targetTable = loadDatasetTableUseCase.load(target);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to load dataset files for CORAL t-SNE projection", e);
+        }
+
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("sourceRows", asRowMaps(sourceTable));
+        request.put("targetRows", asRowMaps(targetTable));
+        request.put("family", source.getDatasetFamily().name());
+        request.put("coralRegularization", 1.0);
+        request.put("seed", DEFAULT_SEED);
+
+        Map<String, Object> coralTsneResult = mlServiceClient.coralTsne(request);
+
+        if (run.getReportFilePath() != null) {
+            Path path = metadataPath(Paths.get(run.getReportFilePath()));
+            if (Files.isRegularFile(path)) {
+                try {
+                    Map<String, Object> updated = new LinkedHashMap<>(metadata);
+                    updated.put("coralTsne", coralTsneResult);
+                    Files.writeString(path, writeJson(updated), StandardCharsets.UTF_8);
+                } catch (IOException ignored) {
+                }
+            }
+        }
+        return coralTsneResult;
     }
 
     @Override

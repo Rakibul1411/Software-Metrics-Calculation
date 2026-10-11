@@ -9,6 +9,8 @@ public interface MlServiceClient {
 
     Map<String, Object> evaluate(Map<String, Object> request);
 
+    Map<String, Object> coralTsne(Map<String, Object> request);
+
     class MlServiceException extends RuntimeException {
         public MlServiceException(String message) {
             super(message);
